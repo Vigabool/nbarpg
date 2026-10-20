@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState, type ReactNode } from 'react';
 import type { SeasonData } from '../data/types';
+import { autoDraft } from '../app/autoDraft';
 import { MOVES_PER_CHAPTER, currentWeek, rosterCost, rosterMoves, type SaveGame } from '../app/game';
 import { eligiblePlayers } from '../engine/calibration';
 import { computeSalary, gearDamage, seasonTier, type SalaryBreakdown } from '../engine/rating';
@@ -138,7 +139,23 @@ export function RosterBuilder({ data, game, onChange }: { data: SeasonData; game
   return (
     <div className="stack">
       <div className="stack" style={{ gap: 4 }}>
-        <h1>{isChapterMove ? 'New chapter: roster moves' : 'Build your roster'}</h1>
+        <div className="spread">
+          <h1>{isChapterMove ? 'New chapter: roster moves' : 'Build your roster'}</h1>
+          {!isChapterMove && (
+            <button
+              className="btn small"
+              onClick={() => {
+                const d = autoDraft(data, week);
+                if (!d) return;
+                setSlots(d.slots);
+                setReserves(d.reserves);
+              }}
+              title="Fill the roster automatically: strong starters, cheap reserves"
+            >
+              Auto-draft
+            </button>
+          )}
+        </div>
         <p className="muted small">
           {isChapterMove
             ? `Release and sign up to ${MOVES_PER_CHAPTER} players under the cap. Hero progress stays with the heroes.`
