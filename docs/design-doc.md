@@ -383,6 +383,37 @@ Single player comes first, but these choices keep the door open:
 | Fallen heroes | Out for the current battle only |
 | Called Shot | Multiplayer feature |
 
+### Implementation decisions (milestones 1–3)
+
+Gaps in the rules above, filled in for the first build. All live in `src/rules/` config unless noted.
+
+| Topic | Decision |
+| --- | --- |
+| Goblin targeting | No rows: goblins use the default targeting (taunter → Warrior → lowest HP) |
+| Goblin accuracy | No randomness, so team FG% sets goblin damage instead: under 43% → 2, under 50% → 3, otherwise 4 |
+| Minions per team | Counted once per opposing team-game, even if two heroes picked the same game |
+| Goblins per wave | 50% / 25% / 25%, weakest goblins first |
+| Champions per wave | Wave 2 gets the weaker half (rounded up), wave 3 the rest plus the Warlord |
+| Warlord not a mirror | If the best opposing performance isn't one of the five mirrors, it still becomes the Warlord, using the Champion type it rates highest in |
+| Champion tiers | Warlock: PTS (Ranger thresholds). Hunter: PTS, ±1 tier for FG% ≥ 55% / < 40% (10+ FGA). Ogre: Warrior Rating. Assassin: 3 × STL (Rogue thresholds). Shaman: AST (Cleric thresholds) |
+| Champion HP / damage | Linear steps from Cold to Elite across the doc's ranges (`monsters.json`) |
+| "Every 3rd round" | Battle rounds 3, 6, 9, 12 |
+| Warlock | Taunt still applies; otherwise targets the lower-HP of Wizard and Cleric. Every 3rd round curses all heroes: −2 damage for their next 2 turns |
+| Ogre | Every 3rd round its hit also knocks the target prone (skips its next turn) |
+| Hunter | Only monster that ignores taunt; lowest armor, ties to lowest HP |
+| Shaman | Heals the most injured monster (4–8 by tier) and gives the horde +2 armor through the next round; attacks only when nothing is injured |
+| Stagger | Spent on the Champion's first actions after it arrives |
+| Summons | Act after the party phase and bite the lowest-HP enemy. The Bear taunts the hardest-hitting untaunted enemy. Summons are valid targets for "lowest HP" targeting |
+| Longsword | Can only target an enemy that attacked the Ranger last round |
+| Double Strike | Two Longbow attacks; if the first kills, the second hits the weakest enemy |
+| Crits / Empower | Multiply the whole next damaging action (all its targets), stack multiplicatively, then are consumed |
+| Pool penalties | Cleric pays −2 for every turnover, on top of the universal −2 per turnover above 2. Triple-double gives +12 total (not +18). Pool floor 0 |
+| Season tier | Season averages are rated against the single-game thresholds (sets gear and salary) |
+| Roster pool | Players with 10+ games and 15+ minutes per game |
+| Chapters | 4 weeks; up to 3 roster moves between chapters |
+| PP split | Party PP divided evenly (fractions kept); spotlight PP to that hero. Bounties not yet implemented |
+| Wave transitions | The next wave arrives immediately; heroes who haven't acted can hit it that round |
+
 ### Still open
 
 - [ ] Calibrate tier thresholds against 2025–26 game logs (Milestone 1)
