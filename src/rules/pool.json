@@ -1,0 +1,8 @@
+{
+  "freeTurnovers": 2,
+  "penaltyPerExtraTurnover": -2,
+  "doubleDouble": { "pool": 6 },
+  "tripleDouble": { "pool": 12 },
+  "doubleDoubleStats": ["pts", "reb", "ast", "stl", "blk"],
+  "minimumPool": 0
+}

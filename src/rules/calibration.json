@@ -1,0 +1,11 @@
+{
+  "minMinutes": 20,
+  "percentiles": { "average": 20, "good": 50, "great": 75, "elite": 92 },
+  "comparisonPools": {
+    "wizard": { "description": "Players averaging 3+ 3PA", "seasonMin": { "fg3a": 3 } },
+    "rogue": { "description": "All players", "seasonMin": {} },
+    "ranger": { "description": "All players", "seasonMin": {} },
+    "warrior": { "description": "Players averaging 5+ rebounds", "seasonMin": { "reb": 5 } },
+    "cleric": { "description": "Players averaging 3+ assists", "seasonMin": { "ast": 3 } }
+  }
+}

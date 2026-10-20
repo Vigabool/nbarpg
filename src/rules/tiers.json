@@ -1,0 +1,13 @@
+{
+  "order": ["cold", "average", "good", "great", "elite"],
+  "pool": { "cold": 12, "average": 20, "good": 28, "great": 36, "elite": 45 },
+  "gearDamage": { "cold": 3, "average": 4, "good": 5, "great": 6, "elite": 7 },
+  "thresholdSource": "design-doc (uncalibrated)",
+  "thresholds": {
+    "wizard": { "average": 2, "good": 3, "great": 4, "elite": 6 },
+    "rogue": { "average": 3, "good": 6, "great": 9, "elite": 12 },
+    "ranger": { "average": 10, "good": 18, "great": 26, "elite": 35 },
+    "warrior": { "average": 7, "good": 13, "great": 18, "elite": 24 },
+    "cleric": { "average": 3, "good": 6, "great": 9, "elite": 12 }
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "roundCap": 12,
+  "specialEveryNRounds": 3,
+  "warlockCurse": { "damageReduction": 2, "rounds": 2 },
+  "assassinDrain": 2,
+  "shaman": { "healByTier": { "cold": 4, "average": 5, "good": 6, "great": 7, "elite": 8 }, "shieldArmor": 2 },
+  "summonsAppearInLowestHpTargeting": true
+}

@@ -1,0 +1,8 @@
+{
+  "cap": 140,
+  "rosterSize": 8,
+  "heroSlots": 5,
+  "byTier": { "cold": 4, "average": 10, "good": 18, "great": 28, "elite": 40 },
+  "versatility": { "minTier": "great", "premiumPerExtraClass": 5 },
+  "eligibility": { "minGames": 10, "minMinutesPerGame": 15 }
+}

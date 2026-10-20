@@ -1,0 +1,111 @@
+{
+  "wizard": {
+    "name": "Wizard",
+    "role": "Offense, burst",
+    "poolName": "Spell Pool",
+    "hp": 22,
+    "rating": { "fg3m": 1 },
+    "ratingLabel": "3PM",
+    "modifiers": [
+      { "type": "percentage", "label": "3P%", "made": "fg3m", "attempts": "fg3a", "minAttempts": 5, "bonusAtOrAbove": 0.4, "bonus": 4, "penaltyBelow": 0.3, "penalty": -4 }
+    ],
+    "gear": [
+      { "id": "staff", "name": "Staff", "description": "G damage to 1 enemy", "target": { "type": "enemy" }, "effects": [{ "type": "damage", "amount": "gear" }] }
+    ],
+    "passives": [],
+    "abilities": [
+      { "id": "magic-missile", "name": "Magic Missile", "cost": 3, "description": "6 damage to 1 target, not reduced by armor", "target": { "type": "enemy" }, "effects": [{ "type": "damage", "amount": 6, "pierce": true }] },
+      { "id": "lightning-bolt", "name": "Lightning Bolt", "cost": 7, "description": "14 damage to 1 target", "target": { "type": "enemy" }, "effects": [{ "type": "damage", "amount": 14 }] },
+      { "id": "fireball", "name": "Fireball", "cost": 10, "description": "8 damage to up to 3 targets", "target": { "type": "enemies", "count": 3 }, "effects": [{ "type": "damage", "amount": 8 }] },
+      { "id": "chain-lightning", "name": "Chain Lightning", "unlock": "signature", "description": "10 damage to every enemy in the wave", "target": { "type": "allEnemies" }, "effects": [{ "type": "damage", "amount": 10 }] },
+      { "id": "meteor", "name": "Meteor", "unlock": "legendary", "description": "20 damage to every enemy in the wave", "target": { "type": "allEnemies" }, "effects": [{ "type": "damage", "amount": 20 }] }
+    ]
+  },
+  "rogue": {
+    "name": "Rogue",
+    "role": "Offense, crits",
+    "poolName": "Trick Pool",
+    "hp": 25,
+    "rating": { "stl": 3, "ftm": 1 },
+    "ratingLabel": "3×STL + FTM",
+    "modifiers": [],
+    "gear": [
+      { "id": "dagger", "name": "Dagger", "description": "G damage to 1 enemy", "target": { "type": "enemy" }, "effects": [{ "type": "damage", "amount": "gear" }] }
+    ],
+    "passives": [],
+    "abilities": [
+      { "id": "backstab", "name": "Backstab", "cost": 5, "description": "10 damage; doubled if the target is taunted by someone else", "target": { "type": "enemy" }, "effects": [{ "type": "damage", "amount": 10, "doubleIfTauntedByOther": true }] },
+      { "id": "venom-strike", "name": "Venom Strike", "cost": 6, "description": "4 damage + poison: 3 damage per round for 3 rounds", "target": { "type": "enemy" }, "effects": [{ "type": "damage", "amount": 4 }, { "type": "poison", "perRound": 3, "rounds": 3 }] },
+      { "id": "ready-crit", "name": "Ready Crit", "cost": 4, "description": "Next attack (gear or ability) deals double damage", "target": { "type": "self" }, "effects": [{ "type": "nextAttackMultiplier", "multiplier": 2 }] },
+      { "id": "shadowstep", "name": "Shadowstep", "unlock": "signature", "description": "Untargetable for 1 round; next attack is a guaranteed crit", "target": { "type": "self" }, "effects": [{ "type": "untargetable", "rounds": 1 }, { "type": "nextAttackMultiplier", "multiplier": 2 }] },
+      { "id": "assassinate", "name": "Assassinate", "unlock": "legendary", "description": "Instantly defeat any non-boss enemy", "target": { "type": "enemy", "nonBoss": true }, "effects": [{ "type": "instakill" }] }
+    ]
+  },
+  "ranger": {
+    "name": "Ranger",
+    "role": "Hybrid, summons",
+    "poolName": "Tactics Pool",
+    "hp": 30,
+    "rating": { "pts": 1 },
+    "ratingLabel": "PTS",
+    "modifiers": [
+      { "type": "percentage", "label": "FG%", "made": "fgm", "attempts": "fga", "minAttempts": 10, "bonusAtOrAbove": 0.55, "bonus": 4, "penaltyBelow": 0.4, "penalty": -4 }
+    ],
+    "gear": [
+      { "id": "longbow", "name": "Longbow", "description": "G damage to any enemy", "target": { "type": "enemy" }, "effects": [{ "type": "damage", "amount": "gear" }] },
+      { "id": "longsword", "name": "Longsword", "description": "G + 2 damage to an enemy that attacked the Ranger last round", "target": { "type": "enemy", "attackedSelfLastRound": true }, "effects": [{ "type": "damage", "amount": "gear", "bonus": 2 }] }
+    ],
+    "passives": [],
+    "abilities": [
+      { "id": "double-strike", "name": "Double Strike", "cost": 5, "description": "Two Longbow attacks", "target": { "type": "enemy" }, "effects": [{ "type": "gearAttack", "times": 2 }] },
+      { "id": "aimed-shot", "name": "Aimed Shot", "cost": 6, "description": "12 damage, ignores armor", "target": { "type": "enemy" }, "effects": [{ "type": "damage", "amount": 12, "pierce": true }] },
+      { "id": "summon-wolf", "name": "Summon Wolf", "cost": 8, "description": "Wolf: 12 HP, 4 damage per round", "target": { "type": "none" }, "effects": [{ "type": "summon", "unit": "wolf", "count": 1 }] },
+      { "id": "summon-bear", "name": "Summon Bear", "cost": 14, "description": "Bear: 25 HP, 5 damage per round, taunts 1 enemy each round", "target": { "type": "none" }, "effects": [{ "type": "summon", "unit": "bear", "count": 1 }] },
+      { "id": "volley", "name": "Volley", "unlock": "signature", "description": "6 damage to every enemy in the wave", "target": { "type": "allEnemies" }, "effects": [{ "type": "damage", "amount": 6 }] },
+      { "id": "call-of-the-pack", "name": "Call of the Pack", "unlock": "legendary", "description": "Summon a Bear and two Wolves", "target": { "type": "none" }, "effects": [{ "type": "summon", "unit": "bear", "count": 1 }, { "type": "summon", "unit": "wolf", "count": 2 }] }
+    ]
+  },
+  "warrior": {
+    "name": "Warrior",
+    "role": "Defense, tank",
+    "poolName": "Tank Pool",
+    "hp": 40,
+    "rating": { "dreb": 1, "oreb": 2, "blk": 3 },
+    "ratingLabel": "DREB + 2×OREB + 3×BLK",
+    "modifiers": [],
+    "gear": [
+      { "id": "axe", "name": "Axe", "description": "G damage to 1 enemy", "target": { "type": "enemy" }, "effects": [{ "type": "damage", "amount": "gear" }] }
+    ],
+    "passives": [{ "type": "armorPerRound", "name": "Shield", "description": "+2 armor every round", "amount": 2 }],
+    "abilities": [
+      { "id": "provoke", "name": "Provoke", "cost": 4, "description": "Taunt 1 enemy until the Warrior's next turn", "target": { "type": "enemy" }, "effects": [{ "type": "taunt" }] },
+      { "id": "parry", "name": "Parry", "cost": 4, "description": "+6 armor this round", "target": { "type": "self" }, "effects": [{ "type": "armor", "amount": 6 }] },
+      { "id": "second-wind", "name": "Second Wind", "cost": 6, "description": "Restore 12 HP to self", "target": { "type": "self" }, "effects": [{ "type": "heal", "amount": 12 }] },
+      { "id": "shield-wall", "name": "Shield Wall", "cost": 10, "description": "All allies gain +4 armor this round", "target": { "type": "allAllies" }, "effects": [{ "type": "armor", "amount": 4 }] },
+      { "id": "bulwark", "name": "Bulwark", "unlock": "signature", "description": "Taunt every enemy for 1 round; +6 armor", "target": { "type": "allEnemies" }, "effects": [{ "type": "taunt" }, { "type": "armor", "amount": 6, "on": "self" }] },
+      { "id": "last-stand", "name": "Last Stand", "unlock": "legendary", "description": "Cannot drop below 1 HP for the rest of the battle", "target": { "type": "self" }, "effects": [{ "type": "lastStand" }] }
+    ]
+  },
+  "cleric": {
+    "name": "Cleric",
+    "role": "Support, healing",
+    "poolName": "Faith Pool",
+    "hp": 28,
+    "rating": { "ast": 1 },
+    "ratingLabel": "AST",
+    "modifiers": [{ "type": "perTurnover", "label": "Turnovers", "amount": -2 }],
+    "gear": [
+      { "id": "mace", "name": "Mace", "description": "G damage to 1 enemy", "target": { "type": "enemy" }, "effects": [{ "type": "damage", "amount": "gear" }] }
+    ],
+    "passives": [],
+    "abilities": [
+      { "id": "cure-wounds", "name": "Cure Wounds", "cost": 3, "description": "Restore 8 HP to 1 ally", "target": { "type": "ally" }, "effects": [{ "type": "heal", "amount": 8 }] },
+      { "id": "empower", "name": "Empower", "cost": 4, "description": "1 ally's next attack deals +50% damage", "target": { "type": "ally" }, "effects": [{ "type": "nextAttackMultiplier", "multiplier": 1.5 }] },
+      { "id": "curse", "name": "Curse", "cost": 5, "description": "1 enemy deals −3 damage for 2 rounds", "target": { "type": "enemy" }, "effects": [{ "type": "weaken", "amount": 3, "rounds": 2 }] },
+      { "id": "cure-all", "name": "Cure All", "cost": 8, "description": "Restore 5 HP to every ally", "target": { "type": "allAllies" }, "effects": [{ "type": "heal", "amount": 5 }] },
+      { "id": "resurrect", "name": "Resurrect", "cost": 12, "description": "Revive a fallen ally at half HP", "target": { "type": "fallenAlly" }, "effects": [{ "type": "revive", "fraction": 0.5 }] },
+      { "id": "sanctuary", "name": "Sanctuary", "unlock": "signature", "description": "Restore 15 HP to every ally", "target": { "type": "allAllies" }, "effects": [{ "type": "heal", "amount": 15 }] },
+      { "id": "divine-intervention", "name": "Divine Intervention", "unlock": "legendary", "description": "Revive all fallen allies at full HP", "target": { "type": "allFallen" }, "effects": [{ "type": "revive", "fraction": 1 }] }
+    ]
+  }
+}

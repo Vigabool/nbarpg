@@ -1,0 +1,9 @@
+node_modules
+dist
+*.tsbuildinfo
+# Generated from data/raw by `npm run data:build`
+public/data/
+# Synthetic fixture data is for local testing only
+data/synthetic/
+__pycache__/
+.venv/

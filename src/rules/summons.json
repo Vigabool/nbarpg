@@ -1,0 +1,4 @@
+{
+  "wolf": { "name": "Wolf", "hp": 12, "damage": 4, "tauntsPerRound": 0 },
+  "bear": { "name": "Bear", "hp": 25, "damage": 5, "tauntsPerRound": 1 }
+}
