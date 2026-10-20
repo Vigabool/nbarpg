@@ -5,6 +5,7 @@ import { localSaveStore } from './app/storage';
 import type { SaveGame } from './app/game';
 import { ConfirmButton, weekLabel } from './ui/common';
 import { TitleScreen } from './ui/TitleScreen';
+import { Tutorial, tutorialSeen } from './ui/Tutorial';
 import { RosterBuilder } from './ui/RosterBuilder';
 import { AssignHeroes } from './ui/AssignHeroes';
 import { SelectGames } from './ui/SelectGames';
@@ -18,6 +19,7 @@ type Load = { status: 'loading' } | { status: 'missing' } | { status: 'ready'; d
 export default function App() {
   const [load, setLoad] = useState<Load>({ status: 'loading' });
   const [game, setGame] = useState<SaveGame | null>(() => localSaveStore.load());
+  const [showTutorial, setShowTutorial] = useState(() => !tutorialSeen());
 
   useEffect(() => {
     fetch(`${import.meta.env.BASE_URL}data/${SEASON}.json`)
@@ -42,12 +44,18 @@ export default function App() {
       <header className="topbar">
         <span className="brand">NBA Fantasy RPG</span>
         {active && <span className="crumbs">{weekLabel(data, active.weekIndex)}</span>}
-        {active && (
-          <ConfirmButton className="btn ghost small" confirmLabel="Tap again to abandon run" onConfirm={() => update(null)}>
+        <div className="row">
+          <button className="btn ghost small" onClick={() => setShowTutorial(true)}>
+            How to play
+          </button>
+          {active && (
+            <ConfirmButton className="btn ghost small" confirmLabel="Tap again to abandon run" onConfirm={() => update(null)}>
             Quit
-          </ConfirmButton>
-        )}
+            </ConfirmButton>
+          )}
+        </div>
       </header>
+      {showTutorial && <Tutorial onClose={() => setShowTutorial(false)} />}
       {data.synthetic && (
         <p className="banner small" role="status">
           Synthetic test data: these players and games are not real. Run the fetch script to load the real season.
