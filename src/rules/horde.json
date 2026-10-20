@@ -14,7 +14,7 @@
     "shaman": { "rating": { "ast": 1 }, "thresholds": "cleric" }
   },
   "minions": {
-    "teamPointsPerGoblin": 25,
+    "teamPointsPerGoblin": 50,
     "waveShare": [0.5, 0.25, 0.25],
     "damageByTeamFgPct": [
       { "below": 0.43, "damage": 2 },

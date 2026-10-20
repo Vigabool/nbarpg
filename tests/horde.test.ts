@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildHorde } from '../src/engine/horde';
+import { rules } from '../src/rules';
 import { boxLine, season } from './helpers';
 
 // Hero team AAA plays BBB. BBB's lines are built so each mirror is unambiguous.
@@ -49,12 +50,13 @@ describe('horde generation', () => {
     expect(horde.warlord.staggers).toBe(1);
   });
 
-  it('adds one goblin per 25 opposing points, half in wave 1', () => {
+  it('adds goblins per opposing points, half in wave 1', () => {
     const pts = bbb.reduce((s, l) => s + l.pts, 0); // 100
     const goblins = all.filter((m) => m.kind === 'goblin');
-    expect(goblins.length).toBe(Math.floor(pts / 25));
+    const expected = Math.floor(pts / rules.horde.minions.teamPointsPerGoblin);
+    expect(goblins.length).toBe(expected);
     expect(horde.waves[0].every((m) => m.kind === 'goblin')).toBe(true);
-    expect(horde.waves[0].length).toBe(2);
+    expect(horde.waves[0].length).toBe(Math.round(expected / 2));
   });
 
   it('puts the Warlord last and the weaker champions in wave 2', () => {

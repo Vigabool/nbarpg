@@ -6,5 +6,6 @@ export default defineConfig({
   base: './',
   test: {
     include: ['src/**/*.test.ts', 'tests/**/*.test.ts'],
+    setupFiles: ['tests/setup.ts'],
   },
 });

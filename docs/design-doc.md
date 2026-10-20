@@ -219,7 +219,7 @@ Costs assume an Average pool of 20 and a battle of about 8 rounds, so a typical 
 
 **Fallbacks.** If the same opposing player qualifies for two mirrors, take the next player down the list. Ties go to minutes played.
 
-**Minions.** Each opposing team adds 1 goblin per 25 team points scored (roughly 4–5 per game), with fixed stats. Opposing team FG% sets minion accuracy tier.
+**Minions.** Each opposing team adds 1 goblin per 50 team points scored (roughly 2 per game), with fixed stats. Opposing team FG% sets minion accuracy tier. *(Changed from 1 per 25 after simulation on 2025–26 data: at 25, battles mostly hit the round cap; at 50 they average about 9 rounds.)*
 
 ### Wave structure (blended horde)
 
@@ -391,7 +391,7 @@ Gaps in the rules above, filled in for the first build. All live in `src/rules/`
 | --- | --- |
 | Goblin targeting | No rows: goblins use the default targeting (taunter → Warrior → lowest HP) |
 | Goblin accuracy | No randomness, so team FG% sets goblin damage instead: under 43% → 2, under 50% → 3, otherwise 4 |
-| Minions per team | Counted once per opposing team-game, even if two heroes picked the same game |
+| Minions per team | 1 per 50 team points (tuned from 25 for quicker battles); counted once per opposing team-game, even if two heroes picked the same game |
 | Goblins per wave | 50% / 25% / 25%, weakest goblins first |
 | Champions per wave | Wave 2 gets the weaker half (rounded up), wave 3 the rest plus the Warlord |
 | Warlord not a mirror | If the best opposing performance isn't one of the five mirrors, it still becomes the Warlord, using the Champion type it rates highest in |
