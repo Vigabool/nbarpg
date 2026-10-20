@@ -57,7 +57,10 @@ export function Bar({ value, max, kind, label }: { value: number; max: number; k
   );
 }
 
-export const money = (m: number) => `$${m}M`;
+/** Salaries are in gold: 1 gold = $1M of game salary. */
+export const money = (m: number) => `${m} gold`;
+
+export const gamesCount = (n: number) => `${n} game${n === 1 ? '' : 's'}`;
 
 export function formatDate(iso: string): string {
   return new Date(`${iso}T12:00:00Z`).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' });

@@ -14,4 +14,4 @@ Sample: nights with 20+ minutes, from each class's comparison pool. Tier cutoffs
 
 ## Salaries (current thresholds)
 
-Eligible players: 373. Best-tier counts: cold 5, average 151, good 139, great 67, elite 11. Versatile (Great+ in 2+ classes): 39. The 8 most expensive players cost $400M against a $140M cap.
+Eligible players: 373. Best-tier counts: cold 5, average 151, good 139, great 67, elite 11. Versatile (Great+ in 2+ classes): 39. The 8 most expensive players cost 400 gold against a 180 gold cap.

@@ -3,7 +3,7 @@ import { currentWeek, type SaveGame } from '../app/game';
 import { gearDamage, seasonTier } from '../engine/rating';
 import { playerGamesInWeek } from '../engine/week';
 import { CLASSES, rules, tierIndex, type HeroClass } from '../rules';
-import { ClassName, TierChip } from './common';
+import { ClassName, TierChip, gamesCount } from './common';
 
 export function AssignHeroes({ data, game, onChange }: { data: SeasonData; game: SaveGame; onChange: (g: SaveGame) => void }) {
   const week = currentWeek(game, data);
@@ -88,7 +88,7 @@ export function AssignHeroes({ data, game, onChange }: { data: SeasonData; game:
                   const other = CLASSES.find((k) => k !== c && game.assignments[k] === pid);
                   return (
                     <option key={pid} value={pid}>
-                      {pl.name} — {t[0].toUpperCase() + t.slice(1)} · {games(pid)}g{other ? ` (now ${rules.classes[other].name})` : ''}
+                      {pl.name} — {t[0].toUpperCase() + t.slice(1)} · {gamesCount(games(pid))}{other ? ` (now ${rules.classes[other].name})` : ''}
                     </option>
                   );
                 })}
@@ -117,7 +117,7 @@ export function AssignHeroes({ data, game, onChange }: { data: SeasonData; game:
           <div className="row">
             {reserves.map((id) => (
               <span key={id} className="chip">
-                {data.players[id].name} · {games(id)}g
+                {data.players[id].name} · {gamesCount(games(id))}
               </span>
             ))}
           </div>

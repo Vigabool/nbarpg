@@ -40,7 +40,7 @@ lines.push(
   '## Salaries (current thresholds)',
   '',
   `Eligible players: ${sal.eligiblePlayers}. Best-tier counts: ${TIERS.map((t) => `${t} ${sal.byTier[t]}`).join(', ')}. ` +
-    `Versatile (Great+ in 2+ classes): ${sal.versatile}. The 8 most expensive players cost $${sal.top8Cost}M against a $${rules.salary.cap}M cap.`,
+    `Versatile (Great+ in 2+ classes): ${sal.versatile}. The 8 most expensive players cost ${sal.top8Cost} gold against a ${rules.salary.cap} gold cap.`,
   '',
 );
 writeFileSync(`docs/calibration-${data.season}.md`, lines.join('\n'));

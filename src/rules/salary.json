@@ -1,5 +1,5 @@
 {
-  "cap": 140,
+  "cap": 180,
   "rosterSize": 8,
   "heroSlots": 5,
   "byTier": { "cold": 4, "average": 10, "good": 18, "great": 28, "elite": 40 },

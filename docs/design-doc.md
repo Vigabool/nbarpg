@@ -51,15 +51,15 @@ A player's salary comes from their best season-average tier across all five clas
 
 | Best season tier | Game salary |
 | --- | --- |
-| Elite | $40M |
-| Great | $28M |
-| Good | $18M |
-| Average | $10M |
-| Cold | $4M |
+| Elite | 40 gold |
+| Great | 28 gold |
+| Good | 18 gold |
+| Average | 10 gold |
+| Cold | 4 gold |
 
-**Versatility premium:** +$5M for each additional class where the player is Great or better. A player who fits two classes well costs more, because they can cover more hero slots.
+**Versatility premium:** +5 gold for each additional class where the player is Great or better. A player who fits two classes well costs more, because they can cover more hero slots.
 
-**Cap: $140M for eight players.** That fits roughly two Elite players, a couple of Good starters, and cheap reserves, or a deep roster with no superstars. Numbers to tune with real data.
+**Cap: 180 gold for eight players.** Salaries are shown in gold (1 gold = $1M of game salary) to fit the fantasy theme. The cap was raised from 140 after playtesting on calibrated 2025–26 data. It fits roughly two Elite players plus solid starters and cheap reserves, or a deep roster with no superstars.
 
 ### Roster moves
 
@@ -411,6 +411,7 @@ Gaps in the rules above, filled in for the first build. All live in `src/rules/`
 | Season tier | Season averages are rated against the single-game thresholds (sets gear and salary) |
 | Roster pool | Players with 10+ games and 15+ minutes per game |
 | Chapters | 4 weeks; up to 3 roster moves between chapters |
+| Salary display | Gold, 1 gold = $1M; cap 180 gold |
 | PP split | Party PP divided evenly (fractions kept); spotlight PP to that hero. Bounties not yet implemented |
 | Wave transitions | The next wave arrives immediately; heroes who haven't acted can hit it that round |
 
