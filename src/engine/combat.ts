@@ -193,6 +193,7 @@ function log(state: BattleState, side: LogEntry['side'], text: string, actorId?:
 }
 
 function startRound(state: BattleState, rules: Rules) {
+  if (state.round > 1) log(state, 'system', `Round ${state.round} begins. Every hero can act again.`);
   for (const h of state.heroes) {
     h.armor = 0;
     if (!h.alive) continue;

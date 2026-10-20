@@ -227,6 +227,17 @@ describe('summons', () => {
 });
 
 describe('battle flow', () => {
+  it('lets every living hero act again after a round ends early', () => {
+    const g = monster({ hp: 999, damage: 1 });
+    let s = battle([[g]]);
+    s = act(s, 'warrior', 'axe', [g.id]);
+    s = act(s, 'ranger', 'longbow', [g.id]);
+    s = act(s, 'cleric', 'mace', [g.id]);
+    s = endRound(s);
+    expect(s.round).toBe(2);
+    expect(s.heroes.every((h) => !h.acted)).toBe(true);
+  });
+
   it('advances waves and wins when the last wave falls', () => {
     const a = monster({ hp: 4 });
     const b = monster({ hp: 4 });

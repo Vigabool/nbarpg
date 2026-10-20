@@ -14,7 +14,7 @@ import {
   type SummonState,
 } from '../engine/combat';
 import { rules, type HeroClass } from '../rules';
-import { Bar, CLASS_ICON, ConfirmButton, MONSTER_ICON, TierChip } from './common';
+import { Bar, CLASS_ICON, MONSTER_ICON, TierChip } from './common';
 
 export function BattleScreen({ game, onChange }: { data: SeasonData; game: SaveGame; onChange: (g: SaveGame) => void }) {
   const state = game.battle!;
@@ -104,15 +104,9 @@ export function BattleScreen({ game, onChange }: { data: SeasonData; game: SaveG
           >
             ↶ Undo
           </button>
-          <ConfirmButton
-            className="btn primary small"
-            disabled={over}
-            needsConfirm={waiting > 0}
-            confirmLabel={`${waiting} not acted: end anyway?`}
-            onConfirm={doEndRound}
-          >
-            End round
-          </ConfirmButton>
+          <button className="btn primary small" disabled={over} onClick={doEndRound}>
+            {waiting > 0 ? `End round (${waiting} waiting)` : 'End round'}
+          </button>
         </div>
       </div>
 
