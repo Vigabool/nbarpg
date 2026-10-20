@@ -12,7 +12,8 @@
     "data:build": "tsx scripts/build-data.ts",
     "data:calibrate": "tsx scripts/calibrate.ts",
     "data:simulate": "tsx scripts/simulate.ts",
-    "data:synthetic": "tsx scripts/make-synthetic-season.ts"
+    "data:synthetic": "tsx scripts/make-synthetic-season.ts",
+    "build:artifact": "node scripts/build-artifact.mjs"
   },
   "dependencies": {
     "react": "^19.3.1",

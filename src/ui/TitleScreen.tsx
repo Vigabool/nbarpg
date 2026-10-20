@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { SeasonData } from '../data/types';
 import { newGame, type SaveGame } from '../app/game';
-import { weekLabel } from './common';
+import { ConfirmButton, weekLabel } from './common';
 
 export function TitleScreen({ data, saved, onStart }: { data: SeasonData; saved: SaveGame | null; onStart: (g: SaveGame) => void }) {
   const [week, setWeek] = useState(data.weeks[0]?.index ?? 1);
@@ -30,15 +30,14 @@ export function TitleScreen({ data, saved, onStart }: { data: SeasonData; saved:
               ))}
             </select>
           </label>
-          <button
+          <ConfirmButton
             className="btn primary"
-            onClick={() => {
-              if (saved && !confirm('Start a new run? Your saved run will be replaced.')) return;
-              onStart(newGame(data.season, week));
-            }}
+            needsConfirm={!!saved}
+            confirmLabel="Tap again: this replaces your saved run"
+            onConfirm={() => onStart(newGame(data.season, week))}
           >
             Build your roster
-          </button>
+          </ConfirmButton>
         </div>
       </div>
     </div>

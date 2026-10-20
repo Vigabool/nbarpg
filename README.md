@@ -32,6 +32,10 @@ npm run dev               # http://localhost:5173
 
 No real data yet? `npm run data:synthetic && npm run data:build -- --raw data/synthetic/2025-26.json` builds an obviously fake season so you can click around. The app shows a banner whenever it's running on synthetic data, and calibration refuses to `--apply` from it.
 
+### Publishing a test build
+
+`npm run build:artifact` builds `dist-artifact/` (fixed file names, page body only) for publishing as a private claude.ai artifact. It runs on whatever `public/data/` holds, so run `npm run data:build` first.
+
 ### Tests
 
 ```bash

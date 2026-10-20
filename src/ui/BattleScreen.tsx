@@ -14,7 +14,7 @@ import {
   type SummonState,
 } from '../engine/combat';
 import { rules, type HeroClass } from '../rules';
-import { Bar, CLASS_ICON, MONSTER_ICON, TierChip } from './common';
+import { Bar, CLASS_ICON, ConfirmButton, MONSTER_ICON, TierChip } from './common';
 
 export function BattleScreen({ game, onChange }: { data: SeasonData; game: SaveGame; onChange: (g: SaveGame) => void }) {
   const state = game.battle!;
@@ -71,8 +71,6 @@ export function BattleScreen({ game, onChange }: { data: SeasonData; game: SaveG
   };
 
   const doEndRound = () => {
-    const waiting = state.heroes.filter((h) => h.alive && !h.acted).length;
-    if (waiting > 0 && !confirm(`${waiting} hero${waiting > 1 ? 'es have' : ' has'} not acted. End the round anyway?`)) return;
     const next = endRound(state);
     setUndo([]);
     setAction(null);
@@ -81,6 +79,7 @@ export function BattleScreen({ game, onChange }: { data: SeasonData; game: SaveG
   };
 
   const over = state.phase !== 'party';
+  const waiting = state.heroes.filter((h) => h.alive && !h.acted).length;
 
   return (
     <div className="stack">
@@ -105,9 +104,15 @@ export function BattleScreen({ game, onChange }: { data: SeasonData; game: SaveG
           >
             ↶ Undo
           </button>
-          <button className="btn primary small" disabled={over} onClick={doEndRound}>
+          <ConfirmButton
+            className="btn primary small"
+            disabled={over}
+            needsConfirm={waiting > 0}
+            confirmLabel={`${waiting} not acted: end anyway?`}
+            onConfirm={doEndRound}
+          >
             End round
-          </button>
+          </ConfirmButton>
         </div>
       </div>
 

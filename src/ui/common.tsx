@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import type { SeasonData } from '../data/types';
 import { rules, type HeroClass, type Tier } from '../rules';
 
@@ -77,4 +77,45 @@ export function statLine(l: { pts: number; reb: number; ast: number; stl: number
   if (l.fg3m) parts.push(`${l.fg3m} 3PM`);
   if (l.tov) parts.push(`${l.tov} TO`);
   return parts.join(' · ');
+}
+
+/**
+ * A button that asks for a second tap before acting. Used instead of
+ * window.confirm(), which some embedded viewers block.
+ */
+export function ConfirmButton({
+  className,
+  disabled,
+  needsConfirm = true,
+  confirmLabel,
+  onConfirm,
+  children,
+}: {
+  className?: string;
+  disabled?: boolean;
+  needsConfirm?: boolean;
+  confirmLabel: ReactNode;
+  onConfirm: () => void;
+  children: ReactNode;
+}) {
+  const [armed, setArmed] = useState(false);
+  useEffect(() => {
+    if (!armed) return;
+    const t = setTimeout(() => setArmed(false), 4000);
+    return () => clearTimeout(t);
+  }, [armed]);
+  return (
+    <button
+      className={`${className ?? 'btn'}${armed ? ' armed' : ''}`}
+      disabled={disabled}
+      onClick={() => {
+        if (!needsConfirm || armed) {
+          setArmed(false);
+          onConfirm();
+        } else setArmed(true);
+      }}
+    >
+      {armed ? confirmLabel : children}
+    </button>
+  );
 }

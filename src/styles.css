@@ -88,6 +88,7 @@ h3 { font-size: 1rem; }
 .btn.ghost { background: transparent; }
 .btn.small { min-height: 32px; padding: 5px 10px; font-size: 0.85rem; }
 .btn.block { width: 100%; }
+.btn.armed { background: var(--danger); color: #fff; border-color: transparent; }
 
 .input {
   background: var(--bg-2);

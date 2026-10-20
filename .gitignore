@@ -7,3 +7,4 @@ public/data/
 data/synthetic/
 __pycache__/
 .venv/
+dist-artifact

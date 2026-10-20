@@ -3,7 +3,7 @@ import { decodeSeason, type CompactSeason } from './data/format';
 import type { SeasonData } from './data/types';
 import { localSaveStore } from './app/storage';
 import type { SaveGame } from './app/game';
-import { weekLabel } from './ui/common';
+import { ConfirmButton, weekLabel } from './ui/common';
 import { TitleScreen } from './ui/TitleScreen';
 import { RosterBuilder } from './ui/RosterBuilder';
 import { AssignHeroes } from './ui/AssignHeroes';
@@ -43,14 +43,9 @@ export default function App() {
         <span className="brand">NBA Fantasy RPG</span>
         {active && <span className="crumbs">{weekLabel(data, active.weekIndex)}</span>}
         {active && (
-          <button
-            className="btn ghost small"
-            onClick={() => {
-              if (confirm('Abandon this run and return to the title screen?')) update(null);
-            }}
-          >
+          <ConfirmButton className="btn ghost small" confirmLabel="Tap again to abandon run" onConfirm={() => update(null)}>
             Quit
-          </button>
+          </ConfirmButton>
         )}
       </header>
       {data.synthetic && (
