@@ -4,6 +4,7 @@ import { finishBattle, type SaveGame } from '../app/game';
 import {
   endRound,
   enemyArmor,
+  justArrived,
   listActions,
   performAction,
   previewEnemyPhase,
@@ -293,7 +294,11 @@ function EnemyCard({
         {enemyArmor(e) > 0 && <span className="chip status-shield">+{enemyArmor(e)} armor</span>}
         {e.staggers > 0 && <span className="chip">Stagger ×{e.staggers}</span>}
       </div>
-      {e.alive && intent && intent.length > 0 && <div className="intent">→ {intent.join(' · ')}</div>}
+      {e.alive && justArrived(state, e) ? (
+        <div className="intent muted">Just arrived · acts next round</div>
+      ) : (
+        e.alive && intent && intent.length > 0 && <div className="intent">→ {intent.join(' · ')}</div>
+      )}
     </div>
   );
 }

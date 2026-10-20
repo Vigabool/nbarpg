@@ -413,7 +413,7 @@ Gaps in the rules above, filled in for the first build. All live in `src/rules/`
 | Chapters | 4 weeks; up to 3 roster moves between chapters |
 | Salary display | Gold, 1 gold = $1M; cap 180 gold |
 | PP split | Party PP divided evenly (fractions kept); spotlight PP to that hero. Bounties not yet implemented |
-| Wave transitions | The next wave arrives immediately; heroes who haven't acted can hit it that round |
+| Wave transitions | The next wave arrives immediately and heroes who haven't acted can hit it, but it holds its attack until the next round (no free hit after the party has spent its turn) |
 
 ### Still open
 

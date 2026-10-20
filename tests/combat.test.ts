@@ -227,6 +227,21 @@ describe('summons', () => {
 });
 
 describe('battle flow', () => {
+  it('a wave that arrives mid-round waits until next round to attack', () => {
+    const a = monster({ hp: 4 });
+    const b = monster({ hp: 50, damage: 9 });
+    let s = battle([[a], [b]]);
+    s = act(s, 'warrior', 'axe', [a.id]);
+    expect(s.enemies[0].id).toBe(b.id);
+    // Heroes who haven't acted can still hit the new wave.
+    s = act(s, 'wizard', 'staff', [b.id]);
+    expect(s.enemies[0].hp).toBe(46);
+    s = endRound(s);
+    expect(s.heroes.every((h) => h.hp === h.maxHp)).toBe(true);
+    s = endRound(s);
+    expect(s.heroes.find((h) => h.id === 'warrior')!.hp).toBe(40 - 7);
+  });
+
   it('lets every living hero act again after a round ends early', () => {
     const g = monster({ hp: 999, damage: 1 });
     let s = battle([[g]]);

@@ -71,6 +71,8 @@ export interface EnemyState {
   weaken: { amount: number; rounds: number } | null;
   tauntedBy: string | null;
   spec: MonsterSpec;
+  /** Round the enemy entered. Enemies that arrive mid-round act from the next round. */
+  arrivedRound: number;
 }
 
 export interface LogEntry {
@@ -117,8 +119,9 @@ export interface ActionOption {
 
 const clone = <T>(v: T): T => structuredClone(v);
 
-function makeEnemy(spec: MonsterSpec): EnemyState {
+function makeEnemy(spec: MonsterSpec, arrivedRound: number): EnemyState {
   return {
+    arrivedRound,
     id: spec.id,
     kind: spec.kind,
     name: spec.name,
@@ -172,7 +175,7 @@ export function createBattle(heroes: HeroSetup[], waves: MonsterSpec[][], rules:
       attackedByLastRound: [],
     })),
     summons: [],
-    enemies: waves[0].map(makeEnemy),
+    enemies: waves[0].map((m) => makeEnemy(m, 0)),
     log: [],
     nextSummonId: 1,
     stats: { wavesCleared: 0, warlordDefeated: false, anyHeroFell: false, signaturesUsed: 0 },
@@ -208,6 +211,11 @@ function startRound(state: BattleState, rules: Rules) {
 
 export function livingEnemies(state: BattleState): EnemyState[] {
   return state.enemies.filter((e) => e.alive);
+}
+
+/** True for enemies that entered this round; they hold their attack until next round. */
+export function justArrived(state: BattleState, e: EnemyState): boolean {
+  return (e.arrivedRound ?? 0) >= state.round;
 }
 
 export function enemyArmor(e: EnemyState): number {
@@ -482,8 +490,12 @@ function afterDamage(state: BattleState) {
       return;
     }
     state.waveIndex++;
-    state.enemies = next.map(makeEnemy);
-    log(state, 'system', `Wave ${state.waveIndex + 1} of ${state.waveCount}: ${describeWave(state.enemies)}`);
+    state.enemies = next.map((m) => makeEnemy(m, state.round));
+    log(
+      state,
+      'system',
+      `Wave ${state.waveIndex + 1} of ${state.waveCount}: ${describeWave(state.enemies)}. They act from round ${state.round + 1}.`,
+    );
   }
 }
 
@@ -658,6 +670,7 @@ export function endRound(prev: BattleState, rules: Rules = defaultRules): Battle
   if (state.phase !== 'party') return state;
 
   for (const enemy of [...livingEnemies(state)]) {
+    if (justArrived(state, enemy)) continue;
     for (let a = 0; a <= enemy.extraActions; a++) enemyAct(state, enemy, a, rules);
   }
 
