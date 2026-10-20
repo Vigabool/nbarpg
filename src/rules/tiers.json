@@ -1,13 +1,56 @@
 {
-  "order": ["cold", "average", "good", "great", "elite"],
-  "pool": { "cold": 12, "average": 20, "good": 28, "great": 36, "elite": 45 },
-  "gearDamage": { "cold": 3, "average": 4, "good": 5, "great": 6, "elite": 7 },
-  "thresholdSource": "design-doc (uncalibrated)",
+  "order": [
+    "cold",
+    "average",
+    "good",
+    "great",
+    "elite"
+  ],
+  "pool": {
+    "cold": 12,
+    "average": 20,
+    "good": 28,
+    "great": 36,
+    "elite": 45
+  },
+  "gearDamage": {
+    "cold": 3,
+    "average": 4,
+    "good": 5,
+    "great": 6,
+    "elite": 7
+  },
+  "thresholdSource": "calibrated from 2025-26 game logs (2026-10-20)",
   "thresholds": {
-    "wizard": { "average": 2, "good": 3, "great": 4, "elite": 6 },
-    "rogue": { "average": 3, "good": 6, "great": 9, "elite": 12 },
-    "ranger": { "average": 10, "good": 18, "great": 26, "elite": 35 },
-    "warrior": { "average": 7, "good": 13, "great": 18, "elite": 24 },
-    "cleric": { "average": 3, "good": 6, "great": 9, "elite": 12 }
+    "wizard": {
+      "average": 1,
+      "good": 2,
+      "great": 3,
+      "elite": 5
+    },
+    "rogue": {
+      "average": 2,
+      "good": 5,
+      "great": 8,
+      "elite": 12
+    },
+    "ranger": {
+      "average": 8,
+      "good": 13,
+      "great": 19,
+      "elite": 27
+    },
+    "warrior": {
+      "average": 6,
+      "good": 11,
+      "great": 15,
+      "elite": 21
+    },
+    "cleric": {
+      "average": 3,
+      "good": 5,
+      "great": 7,
+      "elite": 10
+    }
   }
 }
