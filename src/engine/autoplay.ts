@@ -39,8 +39,9 @@ export function chooseAction(
       if (has('last-stand') && hero.hp < hero.maxHp * 0.5) return act(has('last-stand'));
       if (has('bulwark') && enemies.length >= 4) return act(has('bulwark'));
       if (has('second-wind') && hero.hp <= hero.maxHp - 14) return act(has('second-wind'));
-      const threat = byThreat.find((e) => e.kind !== 'goblin' && !e.tauntedBy);
-      if (has('provoke') && threat && hero.hp > hero.maxHp * 0.4) return act(has('provoke'), [threat.id]);
+      const provoke = has('provoke');
+      const threat = byThreat.find((e) => e.kind !== 'goblin' && !e.tauntedBy && provoke?.validTargets.includes(e.id));
+      if (provoke && threat && hero.hp > hero.maxHp * 0.4) return act(provoke, [threat.id]);
       if (has('shield-wall') && enemies.length >= 5 && hero.pool >= 14) return act(has('shield-wall'));
       return gear();
     }

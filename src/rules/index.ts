@@ -118,6 +118,8 @@ export interface SummonDef {
 export interface MonsterDef {
   name: string;
   behavior: 'default' | ChampionKind;
+  /** Taunts (Provoke, Bulwark, Shield Bash, the Bear) have no effect. */
+  ignoresTaunt?: boolean;
   mirrors?: HeroClass;
   description: string;
   hp?: number;

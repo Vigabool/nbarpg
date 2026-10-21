@@ -232,13 +232,19 @@ function findUnit(state: BattleState, id: string): HeroState | SummonState | Ene
   return state.heroes.find((h) => h.id === id) ?? state.summons.find((s) => s.id === id) ?? state.enemies.find((e) => e.id === id);
 }
 
-function validTargets(state: BattleState, hero: HeroState, def: ActionDef): string[] {
+export function ignoresTaunt(e: EnemyState, rules: Rules = defaultRules): boolean {
+  return !!rules.monsters[e.kind].ignoresTaunt;
+}
+
+function validTargets(state: BattleState, hero: HeroState, def: ActionDef, rules: Rules = defaultRules): string[] {
   const t = def.target;
   switch (t.type) {
     case 'enemy': {
       let es = livingEnemies(state);
       if (t.nonBoss) es = es.filter((e) => !e.isWarlord);
       if (t.attackedSelfLastRound) es = es.filter((e) => hero.attackedByLastRound.includes(e.id));
+      // A pure taunt (Provoke) can't target an enemy that ignores taunts.
+      if (def.effects.every((x) => x.type === 'taunt')) es = es.filter((e) => !ignoresTaunt(e, rules));
       return es.map((e) => e.id);
     }
     case 'enemies':
@@ -275,7 +281,7 @@ export function listActions(state: BattleState, heroId: HeroClass, rules: Rules 
   const over = state.phase !== 'party' ? 'Battle is over' : !hero.alive ? 'Fallen' : hero.prone ? 'Prone this round' : undefined;
   const blockedFor = (def: ActionDef) => over ?? (isAttack(def) && hero.acted ? 'Already attacked this round' : undefined);
   for (const def of cls.gear) {
-    const targets = validTargets(state, hero, def);
+    const targets = validTargets(state, hero, def, rules);
     let reason = blockedFor(def);
     if (!reason && targets.length === 0)
       reason = def.target.type === 'enemy' && def.target.attackedSelfLastRound ? 'No enemy attacked you last round' : 'No targets';
@@ -290,7 +296,7 @@ export function listActions(state: BattleState, heroId: HeroClass, rules: Rules 
     });
   }
   for (const def of cls.abilities) {
-    const targets = validTargets(state, hero, def);
+    const targets = validTargets(state, hero, def, rules);
     let reason = blockedFor(def);
     if (!reason && def.unlock === 'signature' && !hero.signatureReady)
       reason = hero.signatureUnlocked ? 'Already used' : 'Needs a double-double';
@@ -479,13 +485,22 @@ function applyEffect(
       parts.push(`+${effect.amount} armor${ids.length > 1 ? ' to all allies' : ''}`);
       return false;
     }
-    case 'taunt':
+    case 'taunt': {
+      const taunted: string[] = [];
+      const immune: string[] = [];
       for (const id of targets) {
         const e = state.enemies.find((x) => x.id === id);
-        if (e && e.alive) e.tauntedBy = hero.id;
+        if (!e || !e.alive) continue;
+        if (ignoresTaunt(e, rules)) immune.push(e.name);
+        else {
+          e.tauntedBy = hero.id;
+          taunted.push(e.name);
+        }
       }
-      parts.push(`taunts ${targets.length > 1 ? `${targets.length} enemies` : nameOf(state, targets[0], rules)}`);
+      if (taunted.length) parts.push(`taunts ${taunted.length > 1 ? `${taunted.length} enemies` : taunted[0]}`);
+      if (immune.length) parts.push(`${immune.join(', ')} ignore${immune.length > 1 ? '' : 's'} the taunt`);
       return false;
+    }
     case 'weaken':
       for (const id of targets) {
         const e = state.enemies.find((x) => x.id === id);
@@ -577,7 +592,7 @@ export function chooseEnemyTarget(state: BattleState, enemy: EnemyState, rules: 
   const heroes = all.filter((t) => t.kind === 'hero');
   const behavior = rules.monsters[enemy.kind].behavior;
 
-  if (behavior !== 'hunter' && enemy.tauntedBy) {
+  if (!ignoresTaunt(enemy, rules) && enemy.tauntedBy) {
     const taunter = all.find((t) => t.unit.id === enemy.tauntedBy);
     if (taunter) return taunter;
   }
@@ -680,7 +695,7 @@ function summonsAct(state: BattleState) {
     if (!s.alive || state.phase !== 'party') continue;
     for (let i = 0; i < s.tauntsPerRound; i++) {
       const pick = livingEnemies(state)
-        .filter((e) => !e.tauntedBy)
+        .filter((e) => !e.tauntedBy && !ignoresTaunt(e))
         .sort((a, b) => b.damage - a.damage)[0];
       if (pick) {
         pick.tauntedBy = s.id;

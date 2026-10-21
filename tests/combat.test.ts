@@ -216,7 +216,7 @@ describe('the horde', () => {
   it('Hunters ignore taunt and pick the lowest-armor hero', () => {
     const h = monster({ kind: 'hunter', damage: 6, hp: 40 });
     let s = battle([[h]]);
-    s = act(s, 'warrior', 'provoke', [h.id]);
+    s = act(s, 'warrior', 'shield-bash', [h.id]);
     s = endRound(s);
     expect(hero(s, 'warrior').hp).toBe(40);
     // Ties on armor (0) go to the lowest HP: the Wizard (22).
@@ -303,6 +303,34 @@ describe('the horde', () => {
     s = endRound(s);
     expect(hero(s, 'warrior').hp).toBe(1);
     expect(s.phase).toBe('party');
+  });
+});
+
+describe('taunt immunity', () => {
+  it('Provoke cannot target a Hunter', () => {
+    const h = monster({ kind: 'hunter', hp: 40, damage: 6 });
+    const g = monster({ hp: 40 });
+    const s = battle([[h, g]]);
+    const provoke = listActions(s, 'warrior').find((o) => o.def.id === 'provoke')!;
+    expect(provoke.validTargets).toEqual([g.id]);
+  });
+
+  it('Shield Bash still hits a Hunter but the taunt does not take', () => {
+    const h = monster({ kind: 'hunter', hp: 40, damage: 6 });
+    let s = act(battle([[h]]), 'warrior', 'shield-bash', [h.id]);
+    expect(enemy(s, h.id).hp).toBe(40 - 6);
+    expect(enemy(s, h.id).tauntedBy).toBeNull();
+    expect(s.log.at(-1)!.text).toContain('ignores the taunt');
+    s = endRound(s);
+    expect(hero(s, 'wizard').hp).toBe(22 - 6);
+  });
+
+  it('Bulwark taunts everything except the Hunter', () => {
+    const h = monster({ kind: 'hunter', hp: 40, damage: 6 });
+    const g = monster({ hp: 40 });
+    const s = act(battle([[h, g]], party({ warrior: { dreb: 10, pts: 10 } })), 'warrior', 'bulwark');
+    expect(enemy(s, g.id).tauntedBy).toBe('warrior');
+    expect(enemy(s, h.id).tauntedBy).toBeNull();
   });
 });
 

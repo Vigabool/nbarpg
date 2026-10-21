@@ -10,6 +10,7 @@ import {
   previewEnemyPhase,
   actionDamage,
   energyGain,
+  ignoresTaunt,
   type ActionOption,
   type BattleState,
   type EnemyState,
@@ -431,6 +432,7 @@ function TierDot({ tier }: { tier: Tier }) {
 function EnemyTags({ e, state }: { e: EnemyState; state: BattleState }) {
   return (
     <>
+      {ignoresTaunt(e) && <Tag icon="⊘⚑" text="Ignores taunts: Provoke, Bulwark and the Bear don't work on it" />}
       {e.tauntedBy && <Tag icon="⚑" text={`Taunted by ${nameOf(state, e.tauntedBy)}`} tone="taunt" />}
       {e.poison && <Tag icon={`☣${e.poison.perRound}`} text={`Poison: ${e.poison.perRound} damage for ${e.poison.rounds} more rounds`} tone="poison" />}
       {e.weaken && <Tag icon={`↓${e.weaken.amount}`} text={`Cursed: deals ${e.weaken.amount} less damage for ${e.weaken.rounds} rounds`} tone="curse" />}
