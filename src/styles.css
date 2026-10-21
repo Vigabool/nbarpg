@@ -222,6 +222,7 @@ select.input { appearance: auto; }
 .battle-bar .btn, .sheet-head .btn { white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; }
 .icon-only { min-width: 36px; padding-left: 8px; padding-right: 8px; }
 .btn.on { border-color: var(--info); color: var(--info); }
+.chip.wave-soon { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 60%, var(--line)); }
 .badge { display: inline-grid; place-items: center; min-width: 18px; height: 18px; margin-left: 6px; padding: 0 5px; border-radius: 999px; background: #24190a; color: var(--gold-2); font-size: 0.7rem; }
 .menu-wrap { position: relative; }
 .menu {

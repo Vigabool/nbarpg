@@ -34,6 +34,10 @@ export interface HeroState {
   /** Knocked prone: skips the next party phase. */
   skipNextTurn: boolean;
   nextAttackMultiplier: number;
+  /** Sources of the pending next-attack multiplier; the same ability doesn't stack with itself. */
+  attackBuffs?: Record<string, number>;
+  /** Armor abilities applied this round; the same ability doesn't stack with itself. */
+  buffs?: string[];
   untargetableRounds: number;
   lastStand: boolean;
   /** Damage reduction from the Warlock's curse, counted in party phases. */
@@ -76,6 +80,12 @@ export interface EnemyState {
   spec: MonsterSpec;
   /** Round the enemy entered. Enemies that arrive mid-round act from the next round. */
   arrivedRound: number;
+  /** Which wave (0-based) the enemy came with. */
+  wave: number;
+  /** Warlord below half HP: hits harder for the rest of the battle. */
+  enraged?: boolean;
+  /** Shaman's War Drum: bonus damage during the given round's enemy phase. */
+  drum?: { amount: number; round: number } | null;
 }
 
 export interface LogEntry {
@@ -90,8 +100,10 @@ export interface BattleState {
   round: number;
   phase: 'party' | 'won' | 'lost';
   outcomeReason?: string;
+  /** Highest wave (0-based) that has arrived. Waves can overlap. */
   waveIndex: number;
   waveCount: number;
+  clearedWaves?: number[];
   pendingWaves: MonsterSpec[][];
   heroes: HeroState[];
   summons: SummonState[];
@@ -124,9 +136,11 @@ export interface ActionOption {
 
 const clone = <T>(v: T): T => structuredClone(v);
 
-function makeEnemy(spec: MonsterSpec, arrivedRound: number): EnemyState {
+function makeEnemy(spec: MonsterSpec, arrivedRound: number, wave: number): EnemyState {
   return {
     arrivedRound,
+    wave,
+    drum: null,
     id: spec.id,
     kind: spec.kind,
     name: spec.name,
@@ -180,7 +194,8 @@ export function createBattle(heroes: HeroSetup[], waves: MonsterSpec[][], rules:
       attackedByLastRound: [],
     })),
     summons: [],
-    enemies: waves[0].map((m) => makeEnemy(m, 0)),
+    enemies: waves[0].map((m) => makeEnemy(m, 0, 0)),
+    clearedWaves: [],
     log: [],
     nextSummonId: 1,
     stats: { wavesCleared: 0, warlordDefeated: false, anyHeroFell: false, signaturesUsed: 0 },
@@ -200,10 +215,44 @@ function log(state: BattleState, side: LogEntry['side'], text: string, actorId?:
   state.log.push({ round: state.round, side, text, actorId, targetIds });
 }
 
+/** Round a wave (0-based index) arrives on the clock, or null if it only comes when the field is clear. */
+export function waveArrivalRound(wave: number, rules: Rules = defaultRules): number | null {
+  return rules.combat.waveArrivalRounds[wave - 1] ?? null;
+}
+
+/**
+ * The round the next wave arrives: its clock round, or the next round if the
+ * field is already clear. Null once every wave has arrived.
+ */
+export function nextWaveRound(state: BattleState, rules: Rules = defaultRules): number | null {
+  if (state.pendingWaves.length === 0) return null;
+  const clock = waveArrivalRound(state.waveIndex + 1, rules);
+  if (livingEnemies(state).length === 0) return Math.min(clock ?? Infinity, state.round + 1);
+  return clock;
+}
+
+function spawnNextWave(state: BattleState, arrivedRound: number) {
+  const next = state.pendingWaves.shift();
+  if (!next) return;
+  state.waveIndex++;
+  const fresh = next.map((m) => makeEnemy(m, arrivedRound, state.waveIndex));
+  state.enemies.push(...fresh);
+  const label = `Wave ${state.waveIndex + 1} of ${state.waveCount}`;
+  log(state, 'system', `${label} arrives: ${describeWave(fresh)}.`);
+}
+
 function startRound(state: BattleState, rules: Rules) {
   if (state.round > 1) log(state, 'system', `Round ${state.round} begins. Every hero can act again.`);
+  // Waves on the clock arrive at the start of their round, before the party acts, and fight this round.
+  // An empty field also brings the next wave in now.
+  while (state.pendingWaves.length > 0) {
+    const clock = waveArrivalRound(state.waveIndex + 1, rules);
+    if (livingEnemies(state).length > 0 && (clock === null || state.round < clock)) break;
+    spawnNextWave(state, state.round - 1);
+  }
   for (const h of state.heroes) {
     h.armor = 0;
+    h.buffs = [];
     if (!h.alive) continue;
     for (const p of rules.classes[h.heroClass].passives) if (p.type === 'armorPerRound') h.armor += p.amount;
     h.acted = h.skipNextTurn;
@@ -250,7 +299,12 @@ function validTargets(state: BattleState, hero: HeroState, def: ActionDef, rules
     case 'enemies':
     case 'allEnemies':
       return livingEnemies(state).map((e) => e.id);
-    case 'ally':
+    case 'ally': {
+      let allies = state.heroes.filter((h) => h.alive);
+      // Empower doesn't stack with itself: skip allies who already have it.
+      if (def.effects.some((e) => e.type === 'nextAttackMultiplier')) allies = allies.filter((h) => !h.attackBuffs?.[def.id]);
+      return allies.map((h) => h.id);
+    }
     case 'allAllies':
       return state.heroes.filter((h) => h.alive).map((h) => h.id);
     case 'fallenAlly':
@@ -261,6 +315,15 @@ function validTargets(state: BattleState, hero: HeroState, def: ActionDef, rules
     case 'none':
       return [];
   }
+}
+
+/** Self and party buffs (Parry, Shield Wall, Ready Crit) don't stack with themselves. */
+function alreadyActive(def: ActionDef, hero: HeroState): boolean {
+  const t = def.target.type;
+  if (t !== 'self' && t !== 'allAllies') return false;
+  if (def.effects.some((e) => e.type === 'armor') && (hero.buffs ?? []).includes(def.id)) return true;
+  if (def.effects.some((e) => e.type === 'nextAttackMultiplier') && hero.attackBuffs?.[def.id]) return true;
+  return false;
 }
 
 /** Energy an action gives back (basic weapon attacks), or 0. */
@@ -302,6 +365,7 @@ export function listActions(state: BattleState, heroId: HeroClass, rules: Rules 
       reason = hero.signatureUnlocked ? 'Already used' : 'Needs a double-double';
     if (!reason && def.unlock === 'legendary' && !hero.legendaryReady)
       reason = hero.legendaryUnlocked ? 'Already used' : 'Needs a triple-double';
+    if (!reason && alreadyActive(def, hero)) reason = 'Already active this round';
     if (!reason && def.cost !== undefined && def.cost > hero.pool) reason = `Needs ${def.cost} energy`;
     if (!reason && def.target.type !== 'none' && targets.length === 0) reason = 'No valid targets';
     opts.push({ def, source: 'ability', attack: isAttack(def), available: !reason, reason, validTargets: targets });
@@ -311,14 +375,51 @@ export function listActions(state: BattleState, heroId: HeroClass, rules: Rules 
 
 // ---------- Hero actions ----------
 
-function damageEnemy(state: BattleState, enemy: EnemyState, amount: number, pierce: boolean): number {
+function damageEnemy(state: BattleState, enemy: EnemyState, amount: number, pierce: boolean, rules: Rules = defaultRules): number {
   const dealt = Math.max(0, Math.floor(amount) - (pierce ? 0 : enemyArmor(enemy)));
   enemy.hp = Math.max(0, enemy.hp - dealt);
   if (enemy.hp === 0 && enemy.alive) {
     enemy.alive = false;
     if (enemy.isWarlord) state.stats.warlordDefeated = true;
   }
+  const rage = rules.combat.warlordEnrage;
+  if (enemy.isWarlord && enemy.alive && !enemy.enraged && enemy.hp <= enemy.maxHp * rage.atHpFraction) {
+    enemy.enraged = true;
+    log(state, 'system', `${enemy.name} is enraged: +${rage.damageBonus} damage for the rest of the battle!`, enemy.id);
+  }
   return dealt;
+}
+
+/** What an enemy hits for this round, after enrage, War Drum and curses. */
+export function enemyDamage(state: BattleState, e: EnemyState, rules: Rules = defaultRules): number {
+  const rage = e.enraged ? rules.combat.warlordEnrage.damageBonus : 0;
+  const drum = e.drum && e.drum.round === state.round ? e.drum.amount : 0;
+  const weaken = e.weaken && e.weaken.rounds > 0 ? e.weaken.amount : 0;
+  return Math.max(0, e.damage + rage + drum - weaken);
+}
+
+export interface SpecialInfo {
+  name: string;
+  short: string;
+  description: string;
+}
+
+/** The champion's every-few-rounds special move, if it has one. */
+export function specialOf(e: EnemyState, rules: Rules = defaultRules): SpecialInfo | null {
+  const behavior = rules.monsters[e.kind].behavior;
+  const specials = rules.combat.specials as Record<string, SpecialInfo | undefined>;
+  return behavior === 'default' ? null : (specials[behavior] ?? null);
+}
+
+/**
+ * True when the enemy's special lands in the given round. Each champion runs
+ * on its own clock: its Nth round on the field, then every N rounds, so the
+ * warning can always show a round ahead.
+ */
+export function specialDue(e: EnemyState, round: number, rules: Rules = defaultRules): boolean {
+  const n = rules.combat.specialEveryNRounds;
+  const firstActs = (e.arrivedRound ?? 0) + 1;
+  return round >= firstActs && (round - firstActs) % n === n - 1;
 }
 
 /**
@@ -374,10 +475,13 @@ export function performAction(prev: BattleState, action: HeroAction, rules: Rule
   const parts: string[] = [];
   let attacked = false;
   for (const effect of def.effects) {
-    attacked = applyEffect(state, hero, effect, targets, parts, rules) || attacked;
+    attacked = applyEffect(state, hero, effect, targets, parts, rules, def.id) || attacked;
   }
   // Ready Crit / Empower / Shadowstep are consumed by the next attack, not the one that grants them.
-  if (attacked && !def.effects.some((e) => e.type === 'nextAttackMultiplier')) hero.nextAttackMultiplier = 1;
+  if (attacked && !def.effects.some((e) => e.type === 'nextAttackMultiplier')) {
+    hero.nextAttackMultiplier = 1;
+    hero.attackBuffs = {};
+  }
 
   const heroName = rules.classes[hero.heroClass].name;
   log(state, 'hero', `${heroName} uses ${def.name}${parts.length ? `: ${parts.join('; ')}` : ''}.`, hero.id, targets);
@@ -399,6 +503,7 @@ function applyEffect(
   targets: string[],
   parts: string[],
   rules: Rules,
+  defId: string,
 ): boolean {
   switch (effect.type) {
     case 'damage': {
@@ -439,7 +544,10 @@ function applyEffect(
     case 'nextAttackMultiplier':
       for (const id of targets) {
         const h = state.heroes.find((x) => x.id === id);
-        if (h) h.nextAttackMultiplier *= effect.multiplier;
+        if (!h) continue;
+        // The same ability refreshes rather than stacks; different ones (Ready Crit + Empower) combine.
+        h.attackBuffs = { ...(h.attackBuffs ?? {}), [defId]: effect.multiplier };
+        h.nextAttackMultiplier = Object.values(h.attackBuffs).reduce((m, x) => m * x, 1);
       }
       parts.push(`next attack ×${effect.multiplier}`);
       return false;
@@ -480,7 +588,9 @@ function applyEffect(
       const ids = effect.on === 'self' ? [hero.id] : targets;
       for (const id of ids) {
         const h = state.heroes.find((x) => x.id === id);
-        if (h && h.alive) h.armor += effect.amount;
+        if (!h || !h.alive || (h.buffs ?? []).includes(defId)) continue;
+        h.armor += effect.amount;
+        h.buffs = [...(h.buffs ?? []), defId];
       }
       parts.push(`+${effect.amount} armor${ids.length > 1 ? ' to all allies' : ''}`);
       return false;
@@ -544,26 +654,25 @@ function applyEffect(
   }
 }
 
-/** Clears a finished wave, brings in the next one, and checks for victory. */
+/** Credits cleared waves, brings in the next wave if the field is empty, and checks for victory. */
 function afterDamage(state: BattleState) {
   if (state.phase !== 'party') return;
-  while (livingEnemies(state).length === 0) {
-    state.stats.wavesCleared++;
-    log(state, 'system', `Wave ${state.waveIndex + 1} cleared!`);
-    const next = state.pendingWaves.shift();
-    if (!next) {
+  const cleared = (state.clearedWaves ??= []);
+  for (;;) {
+    for (let w = 0; w <= state.waveIndex; w++) {
+      if (cleared.includes(w) || state.enemies.some((e) => e.wave === w && e.alive)) continue;
+      cleared.push(w);
+      state.stats.wavesCleared++;
+      log(state, 'system', `Wave ${w + 1} cleared!`);
+    }
+    if (livingEnemies(state).length > 0) return;
+    if (state.pendingWaves.length === 0) {
       state.phase = 'won';
       state.outcomeReason = 'The horde is defeated.';
       log(state, 'system', 'Victory! The horde is defeated.');
-      return;
     }
-    state.waveIndex++;
-    state.enemies = next.map((m) => makeEnemy(m, state.round));
-    log(
-      state,
-      'system',
-      `Wave ${state.waveIndex + 1} of ${state.waveCount}: ${describeWave(state.enemies)}. They act from round ${state.round + 1}.`,
-    );
+    // Otherwise the field is clear and the next wave arrives at the start of next round.
+    return;
   }
 }
 
@@ -620,17 +729,8 @@ export function chooseEnemyTarget(state: BattleState, enemy: EnemyState, rules: 
   return lowestHp(pool);
 }
 
-function hitTarget(state: BattleState, enemy: EnemyState, target: Target, rules: Rules): string {
-  const weaken = enemy.weaken && enemy.weaken.rounds > 0 ? enemy.weaken.amount : 0;
-  const raw = Math.max(0, enemy.damage - weaken);
-  if (target.kind === 'summon') {
-    const s = target.unit;
-    s.hp = Math.max(0, s.hp - raw);
-    if (s.hp === 0) s.alive = false;
-    return `${raw} to ${s.name}${s.alive ? '' : ' (defeated)'}`;
-  }
-  const h = target.unit;
-  const dealt = Math.max(0, raw - h.armor);
+function hitHero(state: BattleState, enemy: EnemyState, h: HeroState, raw: number, rules: Rules, ignoreArmor = false): string {
+  const dealt = Math.max(0, raw - (ignoreArmor ? 0 : h.armor));
   h.hp -= dealt;
   if (h.lastStand && h.hp < 1) h.hp = 1;
   if (!h.attackedByThisRound.includes(enemy.id)) h.attackedByThisRound.push(enemy.id);
@@ -638,7 +738,7 @@ function hitTarget(state: BattleState, enemy: EnemyState, target: Target, rules:
   if (rules.monsters[enemy.kind].behavior === 'assassin') {
     const drained = Math.min(h.pool, rules.combat.assassinDrain);
     h.pool -= drained;
-    if (drained) text += `, drains ${drained} points`;
+    if (drained) text += `, drains ${drained} energy`;
   }
   if (h.hp <= 0) {
     h.hp = 0;
@@ -649,6 +749,72 @@ function hitTarget(state: BattleState, enemy: EnemyState, target: Target, rules:
   return text;
 }
 
+function hitTarget(state: BattleState, enemy: EnemyState, target: Target, rules: Rules, raw = enemyDamage(state, enemy, rules)): string {
+  if (target.kind === 'summon') {
+    const s = target.unit;
+    s.hp = Math.max(0, s.hp - raw);
+    if (s.hp === 0) s.alive = false;
+    return `${raw} to ${s.name}${s.alive ? '' : ' (defeated)'}`;
+  }
+  return hitHero(state, enemy, target.unit, raw, rules);
+}
+
+function targetableHeroes(state: BattleState): HeroState[] {
+  return state.heroes
+    .filter((h) => h.alive && h.untargetableRounds <= 0)
+    .sort((a, b) => HERO_ORDER.indexOf(a.heroClass) - HERO_ORDER.indexOf(b.heroClass));
+}
+
+/** Champion specials on the every-Nth-round beat. Returns true if the special replaced the action. */
+function doSpecial(state: BattleState, enemy: EnemyState, rules: Rules): boolean {
+  const sp = rules.combat.specials;
+  const dmg = enemyDamage(state, enemy, rules);
+  switch (rules.monsters[enemy.kind].behavior) {
+    case 'warlock': {
+      const c = rules.combat.warlockCurse;
+      const hits: string[] = [];
+      for (const h of targetableHeroes(state)) {
+        h.curse = { amount: c.damageReduction, rounds: c.rounds };
+        hits.push(hitHero(state, enemy, h, sp.warlock.damage, rules, true));
+      }
+      log(state, 'enemy', `${enemy.name} casts ${sp.warlock.name}: −${c.damageReduction} damage for ${c.rounds} turns; ${hits.join('; ')}.`, enemy.id);
+      return true;
+    }
+    case 'ogre': {
+      const target = chooseEnemyTarget(state, enemy, rules);
+      const hits = targetableHeroes(state).map((h) => hitHero(state, enemy, h, Math.max(0, dmg - sp.ogre.splashPenalty), rules));
+      let text = `${enemy.name} uses ${sp.ogre.name}: ${hits.join('; ')}`;
+      if (target?.kind === 'hero' && target.unit.alive) {
+        target.unit.skipNextTurn = true;
+        text += `; ${rules.classes[target.unit.heroClass].name} knocked prone`;
+      }
+      log(state, 'enemy', `${text}.`, enemy.id);
+      return true;
+    }
+    case 'hunter': {
+      const picks = [...targetableHeroes(state)].sort((a, b) => a.armor - b.armor || a.hp - b.hp).slice(0, sp.hunter.targets);
+      if (!picks.length) return false;
+      const hits = picks.map((h) => hitHero(state, enemy, h, dmg, rules));
+      log(state, 'enemy', `${enemy.name} fires a ${sp.hunter.name}: ${hits.join('; ')}.`, enemy.id, picks.map((h) => h.id));
+      return true;
+    }
+    case 'assassin': {
+      const target = chooseEnemyTarget(state, enemy, rules);
+      if (!target) return false;
+      const low = target.kind === 'hero' && target.unit.hp < target.unit.maxHp * sp.assassin.belowHpFraction;
+      const raw = low ? dmg * sp.assassin.multiplier : dmg;
+      log(state, 'enemy', `${enemy.name} attempts an ${sp.assassin.name}${low ? '' : ' (no effect above half HP)'}: ${hitTarget(state, enemy, target, rules, raw)}.`, enemy.id, [target.unit.id]);
+      return true;
+    }
+    case 'shaman': {
+      for (const e of livingEnemies(state)) e.drum = { amount: sp.shaman.bonus, round: state.round + 1 };
+      log(state, 'enemy', `${enemy.name} beats the ${sp.shaman.name}: the horde deals +${sp.shaman.bonus} damage next round.`, enemy.id);
+      return true;
+    }
+  }
+  return false;
+}
+
 function enemyAct(state: BattleState, enemy: EnemyState, actionNumber: number, rules: Rules) {
   if (!enemy.alive) return;
   if (enemy.staggers > 0) {
@@ -657,14 +823,7 @@ function enemyAct(state: BattleState, enemy: EnemyState, actionNumber: number, r
     return;
   }
   const behavior = rules.monsters[enemy.kind].behavior;
-  const special = actionNumber === 0 && state.round % rules.combat.specialEveryNRounds === 0;
-
-  if (behavior === 'warlock' && special) {
-    const c = rules.combat.warlockCurse;
-    for (const h of state.heroes) if (h.alive) h.curse = { amount: c.damageReduction, rounds: c.rounds };
-    log(state, 'enemy', `${enemy.name} curses the party: −${c.damageReduction} damage for ${c.rounds} rounds.`, enemy.id, state.heroes.filter((h) => h.alive).map((h) => h.id));
-    return;
-  }
+  if (actionNumber === 0 && specialDue(enemy, state.round, rules) && doSpecial(state, enemy, rules)) return;
   if (behavior === 'shaman') {
     const injured = livingEnemies(state)
       .filter((e) => e.hp < e.maxHp)
@@ -682,12 +841,7 @@ function enemyAct(state: BattleState, enemy: EnemyState, actionNumber: number, r
     log(state, 'enemy', `${enemy.name} finds no target.`, enemy.id);
     return;
   }
-  let text = `${enemy.name} attacks: ${hitTarget(state, enemy, target, rules)}`;
-  if (behavior === 'ogre' && special && target.kind === 'hero' && target.unit.alive) {
-    target.unit.skipNextTurn = true;
-    text += `, knocked prone`;
-  }
-  log(state, 'enemy', `${text}.`, enemy.id, [target.unit.id]);
+  log(state, 'enemy', `${enemy.name} attacks: ${hitTarget(state, enemy, target, rules)}.`, enemy.id, [target.unit.id]);
 }
 
 function summonsAct(state: BattleState) {
@@ -730,7 +884,7 @@ export function endRound(prev: BattleState, rules: Rules = defaultRules): Battle
   for (const e of livingEnemies(state)) {
     if (!e.poison) continue;
     const dealt = damageEnemy(state, e, e.poison.perRound, true);
-    log(state, 'enemy', `Poison deals ${dealt} to ${e.name}${e.alive ? '' : ' (defeated)'}.`, e.id, [e.id]);
+    log(state, 'enemy', `Poison deals ${dealt} to ${e.name}${e.alive ? '' : ' (defeated)'}.`, undefined, [e.id]);
     e.poison.rounds--;
     if (e.poison.rounds <= 0) e.poison = null;
   }
@@ -754,6 +908,7 @@ export function endRound(prev: BattleState, rules: Rules = defaultRules): Battle
     e.tauntedBy = null;
     if (e.weaken && --e.weaken.rounds <= 0) e.weaken = null;
     if (e.shield && --e.shield.rounds <= 0) e.shield = null;
+    if (e.drum && e.drum.round <= state.round) e.drum = null;
   }
   for (const h of state.heroes) {
     if (h.untargetableRounds > 0) h.untargetableRounds--;

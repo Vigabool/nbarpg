@@ -10,6 +10,10 @@ import {
   previewEnemyPhase,
   actionDamage,
   energyGain,
+  enemyDamage,
+  specialDue,
+  nextWaveRound,
+  specialOf,
   ignoresTaunt,
   type ActionOption,
   type BattleState,
@@ -105,6 +109,8 @@ export function BattleScreen({ data, game, onChange, onHelp, onQuit }: Props) {
   const goblinGroups = groupGoblins(living.filter((e) => e.kind === 'goblin'));
   const isEnemyTarget = (id: string) => enemyTargeting && action!.validTargets.includes(id);
   const next = state.pendingWaves[0];
+  const nextAt = nextWaveRound(state);
+  const inRounds = nextAt === null ? null : nextAt - state.round;
 
   return (
     <div className="battle">
@@ -113,10 +119,10 @@ export function BattleScreen({ data, game, onChange, onHelp, onQuit }: Props) {
           <strong>
             W{state.waveIndex + 1}/{state.waveCount} · R{state.round}/{rules.combat.roundCap}
           </strong>
-          {next && (
-            <span className="chip" title={`Wave ${state.waveIndex + 2}: ${next.length} monsters`}>
-              Next: {next.length}
-              {next.some((m) => m.isWarlord) ? ' incl. Warlord' : ''}
+          {next && inRounds !== null && (
+            <span className={`chip${inRounds <= 1 ? ' wave-soon' : ''}`} title={`Wave ${state.waveIndex + 2}: ${next.length} monsters`}>
+              W{state.waveIndex + 2} {inRounds <= 1 ? 'next round' : `in ${inRounds}`} · {next.length}
+              {next.some((m) => m.isWarlord) ? ' + Warlord' : ''}
             </span>
           )}
         </div>
@@ -430,8 +436,21 @@ function TierDot({ tier }: { tier: Tier }) {
 }
 
 function EnemyTags({ e, state }: { e: EnemyState; state: BattleState }) {
+  const special = specialOf(e);
+  const rage = rules.combat.warlordEnrage;
   return (
     <>
+      {special && specialDue(e, state.round + 1) && (
+        <Tag icon={`⚠ ${special.short} next`} text={`${special.name} next round: ${special.description}`} tone="warn" />
+      )}
+      {e.enraged && <Tag icon={`🔥+${rage.damageBonus}`} text={`Enraged: +${rage.damageBonus} damage`} tone="warn" />}
+      {e.drum && e.drum.round >= state.round && (
+        <Tag
+          icon={`🥁+${e.drum.amount}`}
+          text={`War Drum: +${e.drum.amount} damage ${e.drum.round === state.round ? 'this round' : 'next round'}`}
+          tone="warn"
+        />
+      )}
       {ignoresTaunt(e) && <Tag icon="⊘⚑" text="Ignores taunts: Provoke, Bulwark and the Bear don't work on it" />}
       {e.tauntedBy && <Tag icon="⚑" text={`Taunted by ${nameOf(state, e.tauntedBy)}`} tone="taunt" />}
       {e.poison && <Tag icon={`☣${e.poison.perRound}`} text={`Poison: ${e.poison.perRound} damage for ${e.poison.rounds} more rounds`} tone="poison" />}
@@ -464,7 +483,7 @@ function EnemyCard({
   onClick: () => void;
 }) {
   const [kindName, playerName] = e.name.split(' · ');
-  const dmg = Math.max(0, e.damage - (e.weaken?.amount ?? 0));
+  const dmg = enemyDamage(state, e);
   return (
     <div
       className={`unit-c${e.isWarlord ? ' warlord' : ' champion'}${targetable ? ' target' : ''}${targeted ? ' targeted' : ''}`}
@@ -517,7 +536,7 @@ function GoblinStack({
   const intentCounts = new Map<string, number>();
   for (const g of goblins) for (const i of intents[g.id] ?? []) intentCounts.set(i, (intentCounts.get(i) ?? 0) + 1);
   const arrived = justArrived(state, first);
-  const dmg = Math.max(0, first.damage - (first.weaken?.amount ?? 0));
+  const dmg = enemyDamage(state, first);
   return (
     <div
       className={`unit-c minion${targetable ? ' target' : ''}${goblins.some((g) => targeted.includes(g.id)) ? ' targeted' : ''}`}
@@ -554,6 +573,9 @@ function GoblinStack({
         {goblins.some((g) => g.tauntedBy) && <Tag icon="⚑" text={`${goblins.filter((g) => g.tauntedBy).length} taunted`} tone="taunt" />}
         {goblins.some((g) => g.poison) && <Tag icon="☣" text={`${goblins.filter((g) => g.poison).length} poisoned`} tone="poison" />}
         {goblins.some((g) => enemyArmor(g) > 0) && <Tag icon={`⛨${enemyArmor(first)}`} text="Shielded by the Shaman" tone="shield" />}
+        {first.drum && first.drum.round >= state.round && (
+          <Tag icon={`🥁+${first.drum.amount}`} text={`War Drum: +${first.drum.amount} damage ${first.drum.round === state.round ? 'this round' : 'next round'}`} tone="warn" />
+        )}
         {arrived ? (
           <span className="intent muted">Arrived · acts next round</span>
         ) : (

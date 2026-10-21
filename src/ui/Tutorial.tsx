@@ -82,8 +82,8 @@ export function Tutorial({ onClose }: { onClose: () => void }) {
                 The best opposing performance of the week becomes the <em>Warlord</em>, the final boss.
               </li>
               <li>
-                <strong>Fight.</strong> Three waves, {rules.combat.roundCap} rounds. Each round your heroes act in any order, then summons,
-                then the horde. Every hero gets <em>one attack</em> a round plus any number of <em>utility</em> powers (taunts, heals,
+                <strong>Fight.</strong> Three waves, {rules.combat.roundCap} rounds. Waves arrive on a clock (rounds {rules.combat.waveArrivalRounds.join(' and ')}) or as
+                soon as you clear the field, so they can overlap. Each round your heroes act in any order, then summons, then the horde. Every hero gets <em>one attack</em> a round plus any number of <em>utility</em> powers (taunts, heals,
                 armor, buffs, summons) they have energy for. Attacks come in three kinds: a <em>basic</em> weapon attack that gains 2
                 energy, an <em>advanced</em> weapon attack that costs 1–2, and damage spells that cost more. There are no dice: each enemy
                 shows what it will do.
@@ -140,7 +140,8 @@ export function Tutorial({ onClose }: { onClose: () => void }) {
             <div className="stack" style={{ gap: 10 }}>
               <p className="small muted">
                 Goblins fill out every wave. Each hero's game brings one mirrored Champion, scaled by how that opposing player actually
-                played.
+                played. Every {rules.combat.specialEveryNRounds === 2 ? 'other' : `${rules.combat.specialEveryNRounds}th`} round on the field
+                each Champion uses its special, flagged ⚠ on its card the round before.
               </p>
               <div className="enemy-blurb">
                 <span>{MONSTER_ICON.goblin}</span>
@@ -166,7 +167,7 @@ export function Tutorial({ onClose }: { onClose: () => void }) {
               })}
               <p className="small">
                 <strong>Warlord:</strong> the week's best opposing line. Double HP, +{rules.horde.warlord.damageBonus} damage and two actions a
-                round. Opposing turnovers stagger Champions (one lost action per {rules.horde.turnoversPerStagger}).
+                round. Below half HP it becomes enraged: +{rules.combat.warlordEnrage.damageBonus} damage. Opposing turnovers stagger Champions (one lost action per {rules.horde.turnoversPerStagger}).
               </p>
             </div>
           )}

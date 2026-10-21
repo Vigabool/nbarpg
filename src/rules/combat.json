@@ -1,8 +1,61 @@
 {
   "roundCap": 12,
-  "specialEveryNRounds": 3,
-  "warlockCurse": { "damageReduction": 2, "rounds": 2 },
+  "waveArrivalRounds": [
+    2,
+    4
+  ],
+  "specialEveryNRounds": 2,
+  "specials": {
+    "ogre": {
+      "name": "Ground Slam",
+      "short": "Slam",
+      "description": "Hits every hero for its damage \u22122 and knocks its target prone",
+      "splashPenalty": 2
+    },
+    "hunter": {
+      "name": "Volley",
+      "short": "Volley",
+      "description": "Hits the two lowest-armor heroes",
+      "targets": 2
+    },
+    "assassin": {
+      "name": "Execute",
+      "short": "Execute",
+      "description": "Double damage to a hero below half HP",
+      "belowHpFraction": 0.5,
+      "multiplier": 2
+    },
+    "warlock": {
+      "name": "Hex",
+      "short": "Hex",
+      "description": "Curses the party (\u22122 damage for 2 turns) and deals 3 to every hero, ignoring armor",
+      "damage": 3
+    },
+    "shaman": {
+      "name": "War Drum",
+      "short": "Drum",
+      "description": "Every monster deals +2 damage next round",
+      "bonus": 2
+    }
+  },
+  "warlockCurse": {
+    "damageReduction": 2,
+    "rounds": 2
+  },
+  "warlordEnrage": {
+    "atHpFraction": 0.5,
+    "damageBonus": 5
+  },
   "assassinDrain": 2,
-  "shaman": { "healByTier": { "cold": 4, "average": 5, "good": 6, "great": 7, "elite": 8 }, "shieldArmor": 2 },
+  "shaman": {
+    "healByTier": {
+      "cold": 4,
+      "average": 5,
+      "good": 6,
+      "great": 7,
+      "elite": 8
+    },
+    "shieldArmor": 2
+  },
   "summonsAppearInLowestHpTargeting": true
 }

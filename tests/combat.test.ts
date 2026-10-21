@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { endRound, listActions, performAction, previewEnemyPhase, actionDamage, type BattleState } from '../src/engine/combat';
+import { endRound, livingEnemies, listActions, nextWaveRound, performAction, previewEnemyPhase, actionDamage, enemyDamage, type BattleState } from '../src/engine/combat';
 import { rules } from '../src/rules';
 import { battle, heroSetup, monster, party } from './helpers';
 
@@ -140,13 +140,32 @@ describe('attacks and utilities', () => {
     expect(enemy(s, g.id).hp).toBe(95);
   });
 
-  it('still allows utilities after the attack, until the pool runs out', () => {
+  it('still allows utilities after the attack, until energy runs out', () => {
     const g = monster({ hp: 99 });
     let s = battle([[g]]);
     s = act(s, 'warrior', 'axe', [g.id]);
-    for (let i = 0; i < 5; i++) s = act(s, 'warrior', 'parry');
-    expect(hero(s, 'warrior').pool).toBe(2);
-    expect(listActions(s, 'warrior').find((o) => o.def.id === 'parry')!.reason).toBe('Needs 4 energy');
+    s = act(s, 'warrior', 'provoke', [g.id]);
+    for (let i = 0; i < 4; i++) s = act(s, 'cleric', 'cure-wounds', ['warrior']);
+    expect(hero(s, 'cleric').pool).toBe(20 - 12);
+    for (let i = 0; i < 3; i++) s = act(s, 'warrior', 'second-wind');
+    expect(hero(s, 'warrior').pool).toBe(22 - 4 - 18);
+    expect(listActions(s, 'warrior').find((o) => o.def.id === 'second-wind')!.reason).toBe('Needs 6 energy');
+  });
+
+  it('the same buff does not stack with itself', () => {
+    let s = battle([[monster({ hp: 99 })]]);
+    s = act(s, 'warrior', 'parry');
+    expect(hero(s, 'warrior').armor).toBe(2 + 6);
+    expect(listActions(s, 'warrior').find((o) => o.def.id === 'parry')!.reason).toBe('Already active this round');
+    s = act(s, 'cleric', 'empower', ['rogue']);
+    expect(listActions(s, 'cleric').find((o) => o.def.id === 'empower')!.validTargets).not.toContain('rogue');
+    // Different buffs still combine.
+    s = act(s, 'rogue', 'ready-crit');
+    expect(hero(s, 'rogue').nextAttackMultiplier).toBe(3);
+    expect(listActions(s, 'rogue').find((o) => o.def.id === 'ready-crit')!.reason).toBe('Already active this round');
+    // Parry is available again next round.
+    s = endRound(s);
+    expect(listActions(s, 'warrior').find((o) => o.def.id === 'parry')!.available).toBe(true);
   });
 
   it('classifies damage and kills as attacks, everything else as utility', () => {
@@ -292,8 +311,8 @@ describe('the horde', () => {
     expect(hero(s, 'warrior').hp).toBe(40 - 2);
     s = endRound(s);
     expect(hero(s, 'warrior').hp).toBe(40 - 4);
-    s = endRound(s); // round 3: no curse, prone round
-    expect(hero(s, 'warrior').hp).toBe(40 - 4 - 5);
+    s = endRound(s); // round 3: curse over; Ground Slam hits everyone for 7 − 2, less the Warrior's 2 armor
+    expect(hero(s, 'warrior').hp).toBe(40 - 4 - 3);
   });
 
   it('Last Stand keeps the Warrior at 1 HP', () => {
@@ -349,19 +368,22 @@ describe('summons', () => {
 });
 
 describe('battle flow', () => {
-  it('a wave that arrives mid-round waits until next round to attack', () => {
+  it('clearing the field early brings the next wave at the start of next round', () => {
     const a = monster({ hp: 4 });
     const b = monster({ hp: 50, damage: 9 });
     let s = battle([[a], [b]]);
     s = act(s, 'warrior', 'axe', [a.id]);
-    expect(s.enemies[0].id).toBe(b.id);
-    // Heroes who haven't acted can still hit the new wave.
-    s = act(s, 'wizard', 'staff', [b.id]);
-    expect(s.enemies[0].hp).toBe(46);
+    expect(livingEnemies(s)).toEqual([]);
+    expect(s.phase).toBe('party');
+    expect(nextWaveRound(s)).toBe(2);
+    // Heroes who haven't acted can still use utilities in the lull.
+    s = act(s, 'warrior', 'parry');
     s = endRound(s);
     expect(s.heroes.every((h) => h.hp === h.maxHp)).toBe(true);
+    expect(livingEnemies(s).map((e) => e.id)).toEqual([b.id]);
+    // It fights the round it arrives.
     s = endRound(s);
-    expect(s.heroes.find((h) => h.id === 'warrior')!.hp).toBe(40 - 7);
+    expect(hero(s, 'warrior').hp).toBe(40 - 7);
   });
 
   it('lets every living hero act again after a round ends early', () => {
@@ -380,8 +402,9 @@ describe('battle flow', () => {
     const b = monster({ hp: 4 });
     let s = battle([[a], [b]]);
     s = act(s, 'warrior', 'axe', [a.id]);
+    s = endRound(s);
     expect(s.waveIndex).toBe(1);
-    expect(s.enemies[0].id).toBe(b.id);
+    expect(livingEnemies(s).map((e) => e.id)).toEqual([b.id]);
     s = act(s, 'wizard', 'staff', [b.id]);
     expect(s.phase).toBe('won');
     expect(s.stats.wavesCleared).toBe(2);
@@ -422,5 +445,92 @@ describe('action damage', () => {
     expect(dmg('warrior', 'parry')).toBeNull();
     s = act(s, 'rogue', 'ready-crit');
     expect(dmg('rogue', 'dagger')).toBe('8');
+  });
+});
+
+describe('the wave clock', () => {
+  it('brings waves in at rounds 3 and 5 even if the field is not clear', () => {
+    const tank = monster({ hp: 999, damage: 0 });
+    let s = battle([[tank], [monster({ hp: 50, damage: 0 })], [monster({ hp: 50, damage: 0 })]]);
+    s = endRound(s);
+    expect(livingEnemies(s).length).toBe(1);
+    s = endRound(s); // into round 3
+    expect(s.round).toBe(3);
+    expect(s.waveIndex).toBe(1);
+    expect(livingEnemies(s).length).toBe(2);
+    s = endRound(endRound(s)); // round 5
+    expect(s.waveIndex).toBe(2);
+    expect(livingEnemies(s).length).toBe(3);
+  });
+
+  it('waves arriving on the clock attack that same round', () => {
+    const g = monster({ hp: 999, damage: 0 });
+    let s = battle([[g], [monster({ hp: 50, damage: 5 })]]);
+    s = endRound(endRound(s));
+    s = endRound(s);
+    expect(hero(s, 'warrior').hp).toBe(40 - 3);
+  });
+
+  it('credits each wave as it is cleared, even when waves overlap', () => {
+    const a = monster({ hp: 999, damage: 0 });
+    const b = monster({ hp: 4, damage: 0 });
+    let s = battle([[a], [b]]);
+    s = endRound(endRound(s));
+    s = act(s, 'warrior', 'axe', [b.id]);
+    expect(s.stats.wavesCleared).toBe(1);
+    expect(s.clearedWaves).toEqual([1]);
+    expect(s.phase).toBe('party');
+  });
+});
+
+describe('champion specials (every 3rd round)', () => {
+  const toRound3 = (s: BattleState) => endRound(endRound(s));
+
+  it('Hunter Volley hits the two lowest-armor heroes', () => {
+    const h = monster({ kind: 'hunter', hp: 99, damage: 5 });
+    const s = endRound(toRound3(battle([[h]])));
+    const hit = s.heroes.filter((x) => x.hp < x.maxHp).map((x) => x.id);
+    expect(hit.length).toBe(2);
+    expect(hit).not.toContain('warrior');
+  });
+
+  it('Assassin Execute doubles damage on a hero below half HP', () => {
+    const a = monster({ kind: 'assassin', hp: 99, damage: 4 });
+    let s = toRound3(battle([[a]]));
+    s = { ...s, heroes: s.heroes.map((x) => (x.id === 'wizard' ? { ...x, hp: 10 } : x)) };
+    s = endRound(s);
+    expect(hero(s, 'wizard').hp).toBe(2);
+  });
+
+  it('Warlock Hex curses and damages every hero through armor', () => {
+    const w = monster({ kind: 'warlock', hp: 99, damage: 4 });
+    let s = toRound3(battle([[w]]));
+    const before = Object.fromEntries(s.heroes.map((x) => [x.id, x.hp]));
+    s = endRound(s);
+    for (const x of s.heroes) {
+      expect(x.curse?.amount).toBe(2);
+      expect(before[x.id] - x.hp).toBe(3);
+    }
+  });
+
+  it('Shaman War Drum adds +2 damage to the horde next round', () => {
+    const g = monster({ hp: 999, damage: 5 });
+    const sh = monster({ kind: 'shaman', hp: 99, damage: 0, tier: 'good' });
+    let s = toRound3(battle([[g, sh]]));
+    const hp3 = hero(s, 'warrior').hp;
+    s = endRound(s); // drum beaten in round 3
+    expect(hero(s, 'warrior').hp).toBe(hp3 - 3);
+    const hp4 = hero(s, 'warrior').hp;
+    s = endRound(s); // round 4: 5 + 2 − 2 armor
+    expect(hero(s, 'warrior').hp).toBe(hp4 - 5);
+  });
+
+  it('the Warlord enrages at half HP', () => {
+    const w = monster({ kind: 'ogre', hp: 20, damage: 6, isWarlord: true, extraActions: 1 });
+    let s = battle([[w]], party({ wizard: { fg3m: 6 } }));
+    s = act(s, 'wizard', 'lightning-bolt', [w.id]);
+    expect(enemy(s, w.id).enraged).toBe(true);
+    expect(enemyDamage(s, enemy(s, w.id))).toBe(9);
+    expect(s.log.some((l) => l.text.includes('enraged'))).toBe(true);
   });
 });

@@ -231,7 +231,11 @@ Gear damage and armor use the player's season-average Rating, mapped to the same
 2. **Wave 2 — Champions arrive:** the two or three weakest Champions plus remaining minions.
 3. **Wave 3 — The Warlord:** the strongest remaining Champions plus the Warlord.
 
+**Waves arrive on a clock.** Wave 2 arrives at the start of round 2 and wave 3 at round 4, or at the start of the next round if the party clears the field first. Waves can overlap, which forces triage. A wave fights the round it arrives; the party always gets exactly one turn on it before it strikes.
+
 **The Warlord** is the single best opposing performance across your five chosen games (highest points + rebounds + assists). It is a boosted version of that player's Champion with double HP and one extra action per round. This is the cost of hindsight: pick a hero's best game against a team whose star also went off, and you might be building your own final boss.
+
+**The Warlord enrages** below half HP: +5 damage for the rest of the battle.
 
 **Energy carries across waves.** There is no refill between waves beyond what basic attacks earn, so spending in wave 1 is a real decision.
 
@@ -239,15 +243,17 @@ Gear damage and armor use the player's season-average Rating, mapped to the same
 
 Monsters follow fixed behaviors; the opposing player's tier scales their HP and damage. Each Champion counters a different hero, so the horde's makeup changes which of your heroes is under pressure.
 
-| Monster | Behavior | Pressures | HP by tier (Cold → Elite) | Damage by tier |
-| --- | --- | --- | --- | --- |
-| Goblin (minion) | Attacks the front row; taunt applies | Everyone, lightly | 8 (fixed) | 3 (fixed) |
-| Ogre | Smash: hits the taunter hard; every 3rd round knocks a hero prone (skips next turn) | Warrior | 30 → 60 | 5 → 9 |
-| Warlock | Targets the back row; every 3rd round casts a curse on all heroes | Wizard, Cleric | 18 → 36 | 4 → 8 |
-| Hunter | Ranged: ignores taunt; targets the lowest-armor hero | Rogue, Wizard | 20 → 40 | 4 → 8 |
-| Assassin | Targets the lowest-HP hero; each hit drains 2 points from that hero's pool | Whoever is weakest | 16 → 32 | 5 → 9 |
-| Shaman | Heals the most injured monster each round; shields allies | Your damage dealers | 18 → 36 | 2 → 4 |
-| Warlord | Its Champion's behavior, double HP, one extra action per round | The whole party | 2 × Champion | Champion + 2 |
+| Monster | Behavior | Special (every 2nd round on the field) | Pressures | HP by tier (Cold → Elite) | Damage by tier |
+| --- | --- | --- | --- | --- | --- |
+| Goblin (minion) | Taunter → Warrior → lowest HP | — | AoE fodder; light chip damage | 8 (fixed) | 2–4 by team FG% |
+| Ogre | Hits the taunter, else the Warrior | **Ground Slam:** every hero takes damage −2; its target is knocked prone | Whole party, through taunts | 30 → 60 | 14 → 25 |
+| Warlock | Lowest-HP of Wizard and Cleric | **Hex:** party curse (−2 damage, 2 turns) + 3 to every hero, ignoring armor | Whole party | 18 → 36 | 11 → 22 |
+| Hunter | Ignores taunts; lowest-armor hero | **Volley:** hits the two lowest-armor heroes | Back line | 20 → 40 | 11 → 22 |
+| Assassin | Lowest-HP hero; each hit drains 2 energy | **Execute:** double damage to a hero below half HP | Injured heroes | 16 → 32 | 14 → 25 |
+| Shaman | Heals the most injured monster and shields the horde | **War Drum:** every monster +2 damage next round | Your damage dealers | 18 → 36 | 6 → 11 |
+| Warlord | Its Champion's behavior and special, double HP, two actions | — | The whole party | 2 × Champion | Champion + 2; +5 when enraged |
+
+Specials are telegraphed: the Champion's card shows a ⚠ warning the round before. Champion damage was raised 2.75× from the first draft after simulation showed the horde rarely threatened the party.
 
 **Opponent turnovers.** Every 3 turnovers by a Champion's mirrored player gives that Champion one stagger (it skips one action during the battle). This mirrors the hero turnover penalty.
 
@@ -401,9 +407,9 @@ Gaps in the rules above, filled in for the first build. All live in `src/rules/`
 | Warlord not a mirror | If the best opposing performance isn't one of the five mirrors, it still becomes the Warlord, using the Champion type it rates highest in |
 | Champion tiers | Warlock: PTS (Ranger thresholds). Hunter: PTS, ±1 tier for FG% ≥ 55% / < 40% (10+ FGA). Ogre: Warrior Rating. Assassin: 3 × STL (Rogue thresholds). Shaman: AST (Cleric thresholds) |
 | Champion HP / damage | Linear steps from Cold to Elite across the doc's ranges (`monsters.json`) |
-| "Every 3rd round" | Battle rounds 3, 6, 9, 12 |
-| Warlock | Taunt still applies; otherwise targets the lower-HP of Wizard and Cleric. Every 3rd round curses all heroes: −2 damage for their next 2 turns |
-| Ogre | Every 3rd round its hit also knocks the target prone (skips its next turn) |
+| Special timing | Each Champion's own clock: its 2nd round on the field, then every 2 rounds, so the ⚠ warning always shows a round ahead. A Warlord uses its special on its first action of those rounds |
+| Warlock | Taunt still applies; otherwise targets the lower-HP of Wizard and Cleric. Special: Hex |
+| Ogre | Special: Ground Slam; the knocked-down hero loses its next turn |
 | Hunter | Only monster that ignores taunt; lowest armor, ties to lowest HP |
 | Shaman | Heals the most injured monster (4–8 by tier) and gives the horde +2 armor through the next round; attacks only when nothing is injured |
 | Stagger | Spent on the Champion's first actions after it arrives |
@@ -411,13 +417,14 @@ Gaps in the rules above, filled in for the first build. All live in `src/rules/`
 | Longsword | Can only target an enemy that attacked the Ranger last round |
 | Double Strike | Two Longbow attacks; if the first kills, the second hits the weakest enemy |
 | Crits / Empower | Multiply the whole next damaging action (all its targets), stack multiplicatively, then are consumed |
+| Buff stacking | The same buff (Parry, Shield Wall, Ready Crit, Empower) can't stack with itself in a round; different buffs combine |
 | Pool penalties | Cleric pays −2 for every turnover, on top of the universal −2 per turnover above 2. Triple-double gives +12 total (not +18). Pool floor 0 |
 | Season tier | Season averages are rated against the single-game thresholds (sets gear and salary) |
 | Roster pool | Players with 10+ games and 15+ minutes per game |
 | Chapters | 4 weeks; up to 3 roster moves between chapters |
 | Salary display | Gold, 1 gold = $1M; cap 180 gold |
 | PP split | Party PP divided evenly (fractions kept); spotlight PP to that hero. Bounties not yet implemented |
-| Wave transitions | The next wave arrives immediately and heroes who haven't acted can hit it, but it holds its attack until the next round (no free hit after the party has spent its turn) |
+| Wave transitions | Waves arrive on a clock (rounds 2 and 4) or at the start of the next round once the field is clear. A wave fights the round it arrives, after one party turn; it never gets a free hit after the party has acted |
 
 ### Still open
 
@@ -426,6 +433,5 @@ Gaps in the rules above, filled in for the first build. All live in `src/rules/`
 - [ ] Tune PP earn rates and upgrade costs in playtests
 - [ ] Horde scaling: tie horde strength to PP invested
 - [ ] Mid-week injury exception: needed, and what form?
-- [ ] Overall pacing and horde difficulty: retune after the energy and attack/utility changes (bot win rate is ~100%)
+- [ ] Playtest horde difficulty: tuned to ~76% bot wins, ~7 rounds, ~1.7 heroes fallen per battle (the bot is a weak player; target ~85–90% for a thoughtful human)
 - [ ] Explore class-specific energy gain in combat, e.g. Warrior +1 when hit, Cleric +1 per heal cast, Rogue +2 on a kill
-- [ ] Stop repeated buffs stacking (e.g. a second Parry in a round refreshes rather than adds)
