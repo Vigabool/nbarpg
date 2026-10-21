@@ -8,7 +8,7 @@ import {
   listActions,
   performAction,
   previewEnemyPhase,
-  summarizeAction,
+  actionDamage,
   type ActionOption,
   type BattleState,
   type EnemyState,
@@ -309,11 +309,15 @@ export function BattleScreen({ data, game, onChange, onHelp, onQuit }: Props) {
                 >
                   <span className="action-top">
                     <span className="action-name">{o.def.name}</span>
+                    {actionDamage(o.def, hero) && (
+                      <span className="action-dmg num" title="Damage">
+                        ⚔{actionDamage(o.def, hero)}
+                      </span>
+                    )}
                     <span className="cost">
                       {o.source === 'gear' ? 'Gear' : o.def.unlock ? (o.def.unlock === 'signature' ? 'DD' : 'TD') : o.def.cost}
                     </span>
                   </span>
-                  <ActionSummary def={o.def} hero={hero} />
                   {details && <span className="tiny muted">{o.def.description.replace(/\bG\b/g, String(hero.gear))}</span>}
                   {details && !o.available && o.reason && <span className="tiny faint">{o.reason}</span>}
                 </button>
@@ -326,12 +330,6 @@ export function BattleScreen({ data, game, onChange, onHelp, onQuit }: Props) {
       {logOpen && <LogDrawer log={state.log} onClose={() => setLogOpen(false)} />}
     </div>
   );
-}
-
-function ActionSummary({ def, hero }: { def: ActionOption['def']; hero: HeroState }) {
-  const { text, damage } = summarizeAction(def, hero);
-  if (!text) return null;
-  return <span className={`action-sum${damage ? ' dmg' : ''}`}>{text}</span>;
 }
 
 function firstReady(s: BattleState): HeroClass | null {

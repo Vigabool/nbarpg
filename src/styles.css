@@ -329,11 +329,10 @@ select.input { appearance: auto; }
 .actions { display: grid; gap: 6px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr)); }
 .action { text-align: left; display: flex; flex-direction: column; gap: 2px; padding: 6px 10px; min-height: 38px; }
 .action-top { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
-.action-name { font-weight: 650; font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.action-name { min-width: 0; font-weight: 650; font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .action .cost { font-weight: 700; font-size: 0.75rem; color: var(--info); }
 .action.sig { border-color: var(--gold); }
-.action-sum { font-size: 0.72rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.action-sum.dmg { color: #ffb3a3; font-weight: 600; }
+.action-dmg { margin-left: auto; font-size: 0.8rem; font-weight: 700; color: #ff8f7d; white-space: nowrap; }
 .drawer { align-items: end; }
 .drawer .modal { max-height: 70vh; }
 

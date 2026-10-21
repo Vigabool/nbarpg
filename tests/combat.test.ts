@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { endRound, listActions, performAction, previewEnemyPhase, summarizeAction, type BattleState } from '../src/engine/combat';
+import { endRound, listActions, performAction, previewEnemyPhase, actionDamage, type BattleState } from '../src/engine/combat';
 import { rules } from '../src/rules';
 import { battle, heroSetup, monster, party } from './helpers';
 
@@ -286,21 +286,20 @@ describe('battle flow', () => {
   });
 });
 
-describe('action summaries', () => {
+describe('action damage', () => {
   it('shows effective damage, including gear and buffs', () => {
     let s = battle([[monster({ hp: 99 })]]);
-    const sum = (heroId: string, id: string) => {
+    const dmg = (heroId: string, id: string) => {
       const h = s.heroes.find((x) => x.id === heroId)!;
       const def = [...rules.classes[h.heroClass].gear, ...rules.classes[h.heroClass].abilities].find((a) => a.id === id)!;
-      return summarizeAction(def, h).text;
+      return actionDamage(def, h);
     };
-    expect(sum('warrior', 'axe')).toBe('4 dmg');
-    expect(sum('wizard', 'fireball')).toBe('8 dmg ×3');
-    expect(sum('wizard', 'magic-missile')).toBe('6 dmg, pierces');
-    expect(sum('rogue', 'backstab')).toBe('10 dmg, 20 vs taunted');
-    expect(sum('ranger', 'double-strike')).toBe('2×4 dmg');
-    expect(sum('warrior', 'parry')).toBe('+6 armor');
+    expect(dmg('warrior', 'axe')).toBe('4');
+    expect(dmg('wizard', 'fireball')).toBe('8×3');
+    expect(dmg('wizard', 'chain-lightning')).toBe('10');
+    expect(dmg('ranger', 'double-strike')).toBe('2×4');
+    expect(dmg('warrior', 'parry')).toBeNull();
     s = act(s, 'rogue', 'ready-crit');
-    expect(sum('rogue', 'dagger')).toBe('8 dmg');
+    expect(dmg('rogue', 'dagger')).toBe('8');
   });
 });
