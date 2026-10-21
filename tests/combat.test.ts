@@ -16,7 +16,7 @@ describe('hero actions', () => {
     expect(enemy(s, g.id).hp).toBe(16);
     expect(hero(s, 'wizard').pool).toBe(13);
     expect(hero(s, 'wizard').acted).toBe(true);
-    expect(() => act(s, 'wizard', 'staff', [g.id])).toThrow(/Already acted/);
+    expect(() => act(s, 'wizard', 'staff', [g.id])).toThrow(/Already attacked/);
   });
 
   it('refuses abilities the pool cannot pay for', () => {
@@ -106,6 +106,58 @@ describe('hero actions', () => {
     s = act(s, 'cleric', 'resurrect', ['wizard']);
     expect(hero(s, 'wizard').alive).toBe(true);
     expect(hero(s, 'wizard').hp).toBe(11);
+  });
+});
+
+describe('attacks and utilities', () => {
+  it('allows one attack but any number of utilities per round', () => {
+    const a = monster({ hp: 99 });
+    const b = monster({ hp: 99 });
+    let s = battle([[a, b]]);
+    s = act(s, 'warrior', 'provoke', [a.id]);
+    s = act(s, 'warrior', 'provoke', [b.id]);
+    expect(hero(s, 'warrior').acted).toBe(false);
+    s = act(s, 'warrior', 'axe', [a.id]);
+    expect(hero(s, 'warrior').acted).toBe(true);
+    expect(hero(s, 'warrior').pool).toBe(20 - 8);
+    expect(enemy(s, a.id).tauntedBy).toBe('warrior');
+    expect(enemy(s, b.id).tauntedBy).toBe('warrior');
+    expect(() => act(s, 'warrior', 'axe', [b.id])).toThrow(/Already attacked/);
+  });
+
+  it('lets a Cleric heal twice and still attack', () => {
+    const g = monster({ hp: 99 });
+    let s = battle([[g]]);
+    s = { ...s, heroes: s.heroes.map((x) => (x.id === 'wizard' ? { ...x, hp: 5 } : x)) };
+    s = act(s, 'cleric', 'cure-wounds', ['wizard']);
+    s = act(s, 'cleric', 'cure-wounds', ['wizard']);
+    s = act(s, 'cleric', 'mace', [g.id]);
+    expect(hero(s, 'wizard').hp).toBe(21);
+    expect(hero(s, 'cleric').pool).toBe(14);
+    expect(enemy(s, g.id).hp).toBe(95);
+  });
+
+  it('still allows utilities after the attack, until the pool runs out', () => {
+    const g = monster({ hp: 99 });
+    let s = battle([[g]]);
+    s = act(s, 'warrior', 'axe', [g.id]);
+    for (let i = 0; i < 5; i++) s = act(s, 'warrior', 'parry');
+    expect(hero(s, 'warrior').pool).toBe(0);
+    expect(listActions(s, 'warrior').find((o) => o.def.id === 'parry')!.reason).toBe('Needs 4 points');
+  });
+
+  it('classifies damage and kills as attacks, everything else as utility', () => {
+    const s = battle([[monster()]]);
+    const kinds = Object.fromEntries(listActions(s, 'rogue').map((o) => [o.def.id, o.attack]));
+    expect(kinds).toMatchObject({ dagger: true, backstab: true, 'venom-strike': true, assassinate: true, 'ready-crit': false, shadowstep: false });
+  });
+
+  it('Ready Crit and an attack combine in the same round', () => {
+    const g = monster({ hp: 50 });
+    let s = battle([[g]]);
+    s = act(s, 'rogue', 'ready-crit');
+    s = act(s, 'rogue', 'dagger', [g.id]);
+    expect(enemy(s, g.id).hp).toBe(50 - 8);
   });
 });
 

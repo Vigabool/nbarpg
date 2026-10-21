@@ -27,7 +27,10 @@ export interface HeroState {
   gear: number;
   armor: number;
   alive: boolean;
+  /** Used this round's attack. Utilities stay available while the pool lasts. */
   acted: boolean;
+  /** Knocked prone last round: no attack or utilities this round. */
+  prone?: boolean;
   /** Knocked prone: skips the next party phase. */
   skipNextTurn: boolean;
   nextAttackMultiplier: number;
@@ -113,6 +116,8 @@ export interface ActionOption {
   def: ActionDef;
   source: 'gear' | 'ability';
   available: boolean;
+  /** Attacks are limited to one per round; utilities only by the pool. */
+  attack: boolean;
   reason?: string;
   validTargets: string[];
 }
@@ -202,6 +207,7 @@ function startRound(state: BattleState, rules: Rules) {
     if (!h.alive) continue;
     for (const p of rules.classes[h.heroClass].passives) if (p.type === 'armorPerRound') h.armor += p.amount;
     h.acted = h.skipNextTurn;
+    h.prone = h.skipNextTurn;
     if (h.skipNextTurn) log(state, 'system', `${rules.classes[h.heroClass].name} is prone and skips this turn.`, h.id);
     h.skipNextTurn = false;
   }
@@ -251,17 +257,25 @@ function validTargets(state: BattleState, hero: HeroState, def: ActionDef): stri
   }
 }
 
+/** An attack deals damage or defeats an enemy; everything else is a utility. */
+export function isAttack(def: ActionDef): boolean {
+  return def.effects.some((e) => e.type === 'damage' || e.type === 'gearAttack' || e.type === 'instakill');
+}
+
 export function listActions(state: BattleState, heroId: HeroClass, rules: Rules = defaultRules): ActionOption[] {
   const hero = state.heroes.find((h) => h.id === heroId);
   if (!hero) return [];
   const cls = rules.classes[hero.heroClass];
   const opts: ActionOption[] = [];
-  const blocked = state.phase !== 'party' ? 'Battle is over' : !hero.alive ? 'Fallen' : hero.acted ? 'Already acted' : undefined;
+  const over = state.phase !== 'party' ? 'Battle is over' : !hero.alive ? 'Fallen' : hero.prone ? 'Prone this round' : undefined;
+  const blockedFor = (def: ActionDef) => over ?? (isAttack(def) && hero.acted ? 'Already attacked this round' : undefined);
   for (const def of cls.gear) {
     const targets = validTargets(state, hero, def);
+    const blocked = blockedFor(def);
     opts.push({
       def,
       source: 'gear',
+      attack: isAttack(def),
       available: !blocked && targets.length > 0,
       reason: blocked ?? (targets.length === 0 ? (def.target.type === 'enemy' && def.target.attackedSelfLastRound ? 'No enemy attacked you last round' : 'No targets') : undefined),
       validTargets: targets,
@@ -269,14 +283,14 @@ export function listActions(state: BattleState, heroId: HeroClass, rules: Rules 
   }
   for (const def of cls.abilities) {
     const targets = validTargets(state, hero, def);
-    let reason = blocked;
+    let reason = blockedFor(def);
     if (!reason && def.unlock === 'signature' && !hero.signatureReady)
       reason = hero.signatureUnlocked ? 'Already used' : 'Needs a double-double';
     if (!reason && def.unlock === 'legendary' && !hero.legendaryReady)
       reason = hero.legendaryUnlocked ? 'Already used' : 'Needs a triple-double';
     if (!reason && def.cost !== undefined && def.cost > hero.pool) reason = `Needs ${def.cost} points`;
     if (!reason && def.target.type !== 'none' && targets.length === 0) reason = 'No valid targets';
-    opts.push({ def, source: 'ability', available: !reason, reason, validTargets: targets });
+    opts.push({ def, source: 'ability', attack: isAttack(def), available: !reason, reason, validTargets: targets });
   }
   return opts;
 }
@@ -341,7 +355,7 @@ export function performAction(prev: BattleState, action: HeroAction, rules: Rule
     state.stats.signaturesUsed++;
   }
   if (def.unlock === 'legendary') hero.legendaryReady = false;
-  hero.acted = true;
+  if (isAttack(def)) hero.acted = true;
 
   const parts: string[] = [];
   let attacked = false;
@@ -727,5 +741,5 @@ export function previewEnemyPhase(state: BattleState, rules: Rules = defaultRule
 }
 
 export function heroesReadyToAct(state: BattleState): HeroState[] {
-  return state.heroes.filter((h) => h.alive && !h.acted);
+  return state.heroes.filter((h) => h.alive && !h.acted && !h.prone);
 }

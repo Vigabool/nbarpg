@@ -304,7 +304,7 @@ select.input { appearance: auto; }
 }
 .hero-row.selected { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold); }
 .hero-row.target { border-color: var(--info); box-shadow: 0 0 0 2px var(--info); }
-.hero-row.done:not(.selected) { opacity: 0.6; }
+.hero-row.done:not(.selected) { opacity: 0.7; }
 .hero-row.fallen { opacity: 0.4; }
 .hero-row.fallen.target { opacity: 1; }
 .hero-row.summon { cursor: default; background: var(--bg-2); grid-template-areas: "name name" "hp hp" "tags tags"; }
@@ -332,6 +332,8 @@ select.input { appearance: auto; }
 .action-name { min-width: 0; font-weight: 650; font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .action .cost { font-weight: 700; font-size: 0.75rem; color: var(--info); }
 .action.sig { border-color: var(--gold); }
+.action-group { display: flex; align-items: baseline; gap: 8px; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; color: var(--muted); }
+.action-group .faint { text-transform: none; letter-spacing: 0; font-weight: 500; }
 .action-dmg { margin-left: auto; font-size: 0.8rem; font-weight: 700; color: #ff8f7d; white-space: nowrap; }
 .drawer { align-items: end; }
 .drawer .modal { max-height: 70vh; }

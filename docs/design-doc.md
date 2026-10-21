@@ -347,7 +347,7 @@ Single player comes first, but these choices keep the door open:
 
 | Rule | Decision |
 | --- | --- |
-| Actions | Each hero takes one action per round (gear attack or ability); the user chooses the order |
+| Actions | Each round, each hero gets one attack (gear attack or any ability that deals damage or defeats an enemy) plus any number of utility abilities the pool can pay for. The user chooses the order. A prone hero can do neither |
 | Round structure | Party phase → summons act → enemy phase (poison and burn tick at its start) |
 | Armor | Lasts until end of round, then resets; Shield's +2 reapplies each round |
 | Randomness | None. Combat is fully deterministic; the real games supply the variance |

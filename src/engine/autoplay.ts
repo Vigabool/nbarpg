@@ -5,8 +5,13 @@ import { endRound, listActions, livingEnemies, performAction, type ActionOption,
  * A simple rule-based player used by the batch simulator and tests. It is not
  * optimal; it gives a baseline for balance (a thoughtful human should beat it).
  */
-export function chooseAction(state: BattleState, hero: HeroState, rules: Rules = defaultRules): HeroAction | null {
-  const opts = listActions(state, hero.id, rules).filter((o) => o.available);
+export function chooseAction(
+  state: BattleState,
+  hero: HeroState,
+  rules: Rules = defaultRules,
+  exclude: Set<string> = new Set(),
+): HeroAction | null {
+  const opts = listActions(state, hero.id, rules).filter((o) => o.available && !exclude.has(o.def.id));
   if (opts.length === 0) return null;
   const has = (id: string) => opts.find((o) => o.def.id === id);
   const enemies = livingEnemies(state);
@@ -86,19 +91,24 @@ export function autoplay(initial: BattleState, rules: Rules = defaultRules): Bat
   let guard = 0;
   while (state.phase === 'party' && guard++ < 1000) {
     const order = ['warrior', 'cleric', 'ranger', 'rogue', 'wizard'];
-    const ready = state.heroes.filter((h) => h.alive && !h.acted).sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
-    const hero = ready[0];
-    if (!hero) {
+    const ready = state.heroes.filter((h) => h.alive && !h.acted && !h.prone).sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
+    const first = ready[0];
+    if (!first) {
       state = endRound(state, rules);
       continue;
     }
-    const action = chooseAction(state, hero, rules);
-    if (!action) {
-      // Nothing useful to do: mark as acted by ending the round once everyone else is done.
-      state = { ...state, heroes: state.heroes.map((h) => (h.id === hero.id ? { ...h, acted: true } : h)) };
-      continue;
+    // Utilities first (each at most once a round, to keep the bot simple), then one attack.
+    const used = new Set<string>();
+    for (let i = 0; i < 8 && state.phase === 'party'; i++) {
+      const hero = state.heroes.find((h) => h.id === first.id)!;
+      if (hero.acted || !hero.alive) break;
+      const action = chooseAction(state, hero, rules, used);
+      if (!action) break;
+      state = performAction(state, action, rules);
+      used.add(action.actionId);
     }
-    state = performAction(state, action, rules);
+    // Nothing left worth doing: treat the hero as done for this round.
+    state = { ...state, heroes: state.heroes.map((h) => (h.id === first.id ? { ...h, acted: true } : h)) };
   }
   return state;
 }

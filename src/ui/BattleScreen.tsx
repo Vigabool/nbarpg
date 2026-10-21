@@ -64,7 +64,8 @@ export function BattleScreen({ data, game, onChange, onHelp, onQuit }: Props) {
       setAction(null);
       setMulti([]);
       setError(null);
-      setSelected(firstReady(next));
+      // After an attack, move on to the next hero; after a utility, stay to allow more.
+      if (opt.attack) setSelected(firstReady(next));
     } catch (e) {
       setError((e as Error).message);
     }
@@ -96,7 +97,7 @@ export function BattleScreen({ data, game, onChange, onHelp, onQuit }: Props) {
   };
 
   const over = state.phase !== 'party';
-  const waiting = state.heroes.filter((h) => h.alive && !h.acted).length;
+  const waiting = state.heroes.filter((h) => h.alive && !h.acted && !h.prone).length;
   const living = state.enemies.filter((e) => e.alive);
   const champions = living.filter((e) => e.kind !== 'goblin');
   const goblinGroups = groupGoblins(living.filter((e) => e.kind === 'goblin'));
@@ -298,31 +299,26 @@ export function BattleScreen({ data, game, onChange, onHelp, onQuit }: Props) {
           </div>
           {error && <div className="warn small">{error}</div>}
           {!targeting && (
-            <div className={`actions${details ? ' detailed' : ''}`}>
-              {options.map((o) => (
-                <button
-                  key={o.def.id}
-                  className={`btn action${o.def.unlock ? ' sig' : ''}`}
-                  disabled={!o.available}
-                  onClick={() => chooseAction(o)}
-                  title={`${o.def.description.replace(/\bG\b/g, String(hero.gear))}${o.reason ? ` (${o.reason})` : ''}`}
-                >
-                  <span className="action-top">
-                    <span className="action-name">{o.def.name}</span>
-                    {actionDamage(o.def, hero) && (
-                      <span className="action-dmg num" title="Damage">
-                        ⚔{actionDamage(o.def, hero)}
-                      </span>
-                    )}
-                    <span className="cost">
-                      {o.source === 'gear' ? 'Gear' : o.def.unlock ? (o.def.unlock === 'signature' ? 'DD' : 'TD') : o.def.cost}
-                    </span>
-                  </span>
-                  {details && <span className="tiny muted">{o.def.description.replace(/\bG\b/g, String(hero.gear))}</span>}
-                  {details && !o.available && o.reason && <span className="tiny faint">{o.reason}</span>}
-                </button>
-              ))}
-            </div>
+            <>
+              <div className="action-group">
+                <span>Attack</span>
+                <span className="faint">{hero.acted ? 'used this round' : '1 per round'}</span>
+              </div>
+              <div className={`actions${details ? ' detailed' : ''}`}>
+                {options.filter((o) => o.attack).map((o) => (
+                  <ActionTile key={o.def.id} o={o} hero={hero} details={details} onPick={chooseAction} />
+                ))}
+              </div>
+              <div className="action-group">
+                <span>Utility</span>
+                <span className="faint">any number, while points last</span>
+              </div>
+              <div className={`actions${details ? ' detailed' : ''}`}>
+                {options.filter((o) => !o.attack).map((o) => (
+                  <ActionTile key={o.def.id} o={o} hero={hero} details={details} onPick={chooseAction} />
+                ))}
+              </div>
+            </>
           )}
         </section>
       )}
@@ -333,7 +329,42 @@ export function BattleScreen({ data, game, onChange, onHelp, onQuit }: Props) {
 }
 
 function firstReady(s: BattleState): HeroClass | null {
-  return s.heroes.find((h) => h.alive && !h.acted)?.id ?? null;
+  return s.heroes.find((h) => h.alive && !h.acted && !h.prone)?.id ?? null;
+}
+
+function ActionTile({
+  o,
+  hero,
+  details,
+  onPick,
+}: {
+  o: ActionOption;
+  hero: HeroState;
+  details: boolean;
+  onPick: (o: ActionOption) => void;
+}) {
+  const dmg = actionDamage(o.def, hero);
+  const description = o.def.description.replace(/\bG\b/g, String(hero.gear));
+  return (
+    <button
+      className={`btn action${o.def.unlock ? ' sig' : ''}`}
+      disabled={!o.available}
+      onClick={() => onPick(o)}
+      title={`${description}${o.reason ? ` (${o.reason})` : ''}`}
+    >
+      <span className="action-top">
+        <span className="action-name">{o.def.name}</span>
+        {dmg && (
+          <span className="action-dmg num" title="Damage">
+            ⚔{dmg}
+          </span>
+        )}
+        <span className="cost">{o.source === 'gear' ? 'Gear' : o.def.unlock ? (o.def.unlock === 'signature' ? 'DD' : 'TD') : o.def.cost}</span>
+      </span>
+      {details && <span className="tiny muted">{description}</span>}
+      {details && !o.available && o.reason && <span className="tiny faint">{o.reason}</span>}
+    </button>
+  );
 }
 
 function nameOf(state: BattleState, id: string): string {
@@ -365,7 +396,7 @@ function Meter({ value, max, kind }: { value: number; max: number; kind: 'hp' | 
 }
 
 /** A compact status marker. Tap to show what it means. */
-function Tag({ icon, text, tone = '' }: { icon: ReactNode; text: string; tone?: string }) {
+function Tag({ icon, text, tone = '', passThrough = false }: { icon: ReactNode; text: string; tone?: string; passThrough?: boolean }) {
   const [open, setOpen] = useState(false);
   return (
     <button
@@ -374,7 +405,8 @@ function Tag({ icon, text, tone = '' }: { icon: ReactNode; text: string; tone?: 
       title={text}
       aria-label={text}
       onClick={(e) => {
-        e.stopPropagation();
+        // On hero rows the tap also selects the hero; on enemy cards it must not pick a target.
+        if (!passThrough) e.stopPropagation();
         setOpen((o) => !o);
       }}
     >
@@ -528,7 +560,7 @@ function GoblinStack({
 
 function HeroRow({ h, selected, targetable, onClick }: { h: HeroState; selected: boolean; targetable: boolean; onClick: () => void }) {
   const cls = rules.classes[h.heroClass];
-  const state = !h.alive ? 'fallen' : h.acted ? 'done' : 'ready';
+  const state = !h.alive ? 'fallen' : h.prone ? 'done prone' : h.acted ? 'done' : 'ready';
   return (
     <div
       className={`hero-row ${state}${selected ? ' selected' : ''}${targetable ? ' target' : ''}`}
@@ -551,15 +583,16 @@ function HeroRow({ h, selected, targetable, onClick }: { h: HeroState; selected:
         <Meter kind="pool" value={h.pool} max={Math.max(h.startingPool, 1)} />
       </div>
       <div className="h-tags">
-        <Tag icon={`⚔${h.gear}`} text={`Gear attacks deal ${h.gear}`} />
-        {h.armor > 0 && <Tag icon={`⛨${h.armor}`} text={`+${h.armor} armor this round`} tone="shield" />}
-        {h.nextAttackMultiplier > 1 && <Tag icon={`✦×${h.nextAttackMultiplier}`} text={`Next attack deals ×${h.nextAttackMultiplier}`} tone="good" />}
-        {h.curse && <Tag icon={`↓${h.curse.amount}`} text={`Cursed: −${h.curse.amount} damage for ${h.curse.rounds} turns`} tone="curse" />}
-        {h.skipNextTurn && <Tag icon="⤵" text="Prone: skips next turn" tone="warn" />}
-        {h.untargetableRounds > 0 && <Tag icon="👻" text="Untargetable this round" tone="good" />}
-        {h.lastStand && <Tag icon="⚑" text="Last Stand: can't drop below 1 HP" tone="taunt" />}
-        {h.signatureReady && <Tag icon="★" text="Signature ability ready (double-double)" tone="taunt" />}
-        {h.legendaryReady && <Tag icon="✪" text="Legendary ability ready (triple-double)" tone="taunt" />}
+        <Tag passThrough icon={`⚔${h.gear}`} text={`Gear attacks deal ${h.gear}`} />
+        {h.armor > 0 && <Tag passThrough icon={`⛨${h.armor}`} text={`+${h.armor} armor this round`} tone="shield" />}
+        {h.nextAttackMultiplier > 1 && <Tag passThrough icon={`✦×${h.nextAttackMultiplier}`} text={`Next attack deals ×${h.nextAttackMultiplier}`} tone="good" />}
+        {h.curse && <Tag passThrough icon={`↓${h.curse.amount}`} text={`Cursed: −${h.curse.amount} damage for ${h.curse.rounds} turns`} tone="curse" />}
+        {h.prone && <Tag passThrough icon="⤵" text="Prone: can't act this round" tone="warn" />}
+        {h.skipNextTurn && <Tag passThrough icon="⤵" text="Knocked prone: skips next round" tone="warn" />}
+        {h.untargetableRounds > 0 && <Tag passThrough icon="👻" text="Untargetable this round" tone="good" />}
+        {h.lastStand && <Tag passThrough icon="⚑" text="Last Stand: can't drop below 1 HP" tone="taunt" />}
+        {h.signatureReady && <Tag passThrough icon="★" text="Signature ability ready (double-double)" tone="taunt" />}
+        {h.legendaryReady && <Tag passThrough icon="✪" text="Legendary ability ready (triple-double)" tone="taunt" />}
       </div>
     </div>
   );

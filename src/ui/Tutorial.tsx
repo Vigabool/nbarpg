@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { isAttack } from '../engine/combat';
 import { CLASSES, rules, type ChampionKind, type HeroClass } from '../rules';
 import { CLASS_ICON, MONSTER_ICON, money } from './common';
 
@@ -81,8 +82,9 @@ export function Tutorial({ onClose }: { onClose: () => void }) {
               </li>
               <li>
                 <strong>Fight.</strong> Three waves, {rules.combat.roundCap} rounds. Each round your heroes act in any order, then summons,
-                then the horde. Gear attacks are free; abilities cost pool, and pools don't refill between waves. There are no dice: each
-                enemy shows what it will do.
+                then the horde. Every hero gets <em>one attack</em> a round (a free gear attack or a damaging ability) plus any number of{' '}
+                <em>utility</em> powers (taunts, heals, armor, buffs, summons) their pool can pay for. Pools don't refill between waves.
+                There are no dice: each enemy shows what it will do.
               </li>
               <li>
                 <strong>Highlights.</strong> A double-double unlocks the hero's Signature ability; a triple-double also unlocks their
@@ -116,6 +118,7 @@ export function Tutorial({ onClose }: { onClose: () => void }) {
                     <div className="row">
                       {cls.abilities.map((a) => (
                         <span key={a.id} className={`chip${a.unlock ? ' status-taunt' : ''}`} title={a.description}>
+                          {isAttack(a) ? '⚔ ' : ''}
                           {a.name} {a.unlock ? (a.unlock === 'signature' ? '· DD' : '· TD') : `· ${a.cost}`}
                         </span>
                       ))}
@@ -123,7 +126,7 @@ export function Tutorial({ onClose }: { onClose: () => void }) {
                   </section>
                 );
               })}
-              <p className="tiny muted">Numbers after ability names are pool costs. DD and TD abilities need a double- or triple-double.</p>
+              <p className="tiny muted">⚔ marks attacks (one per round); the rest are utilities. Numbers are pool costs. DD and TD abilities need a double- or triple-double.</p>
             </div>
           )}
 
