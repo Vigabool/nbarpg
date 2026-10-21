@@ -109,7 +109,7 @@ Each class owns one primary stat (fills the pool) and one modifier stat (adjusts
 
 Thresholds are rough starting estimates to calibrate in playtesting.
 
-| Tier | Pool | Wizard (3PM) | Rogue | Ranger (PTS) | Warrior | Cleric (AST) |
+| Tier | Starting energy | Wizard (3PM) | Rogue | Ranger (PTS) | Warrior | Cleric (AST) |
 | --- | --- | --- | --- | --- | --- | --- |
 | Cold | 12 | 0–1 | 0–2 | 0–9 | 0–6 | 0–2 |
 | Average | 20 | 2 | 3–5 | 10–17 | 7–12 | 3–5 |
@@ -141,17 +141,21 @@ Gear damage and armor use the player's season-average Rating, mapped to the same
 
 ## Party classes
 
-Costs assume an Average pool of 20 and a battle of about 8 rounds, so a typical hero casts 3–5 abilities and fills the other rounds with gear attacks. G = gear damage (3–7 from season tier). Points are pure currency; effects are fixed.
+**Energy.** Every hero's resource is called energy. The box score sets starting energy (each class draws on different stats, per the tables above), abilities spend it, and basic weapon attacks earn it back. Costs assume an Average start of 20 energy and a battle of about 8 rounds. G = gear damage (3–7 from season tier).
 
-| Class | HP | Gear (always available) |
-| --- | --- | --- |
-| Warrior | 40 | Axe: G damage to 1 enemy · Shield: +2 armor every round |
-| Ranger | 30 | Longbow: G damage to any enemy · Longsword: G + 2 damage to an enemy that attacked the Ranger last round |
-| Cleric | 28 | Mace: G damage to 1 enemy |
-| Rogue | 25 | Dagger: G damage to 1 enemy |
-| Wizard | 22 | Staff: G damage to 1 enemy |
+**Each round, every hero gets one attack plus any number of utilities.** Attacks are anything that deals damage or defeats an enemy; utilities are everything else and are limited only by energy.
 
-### Wizard — Spell Pool
+**Two weapon attacks per hero.** The basic attack is free and gains 2 energy. The advanced attack costs 1–2 energy (well under spells) and adds a class effect. Choosing between them each round is the core energy decision.
+
+| Class | HP | Basic attack (+2 energy) | Advanced attack | Passive |
+| --- | --- | --- | --- | --- |
+| Warrior | 40 | Axe: G damage | Shield Bash (2): G + 2 damage and taunts the target | Shield: +2 armor every round |
+| Ranger | 30 | Longbow: G damage to any enemy | Longsword (1): G + 3 to an enemy that attacked the Ranger last round | — |
+| Cleric | 28 | Mace: G damage | Holy Strike (2): G damage and heals the most injured ally 3 | — |
+| Rogue | 25 | Dagger: G damage | Poisoned Blade (2): G damage plus 2 poison for 2 rounds | — |
+| Wizard | 22 | Staff: G damage | Arcane Bolt (1): G + 2 damage, ignores armor | — |
+
+### Wizard abilities
 
 | Ability | Cost | Effect |
 | --- | --- | --- |
@@ -161,7 +165,7 @@ Costs assume an Average pool of 20 and a battle of about 8 rounds, so a typical 
 | Signature (DD): Chain Lightning | Free, once | 10 damage to every enemy in the wave |
 | Legendary (TD): Meteor | Free, once | 20 damage to every enemy in the wave |
 
-### Rogue — Trick Pool
+### Rogue abilities
 
 | Ability | Cost | Effect |
 | --- | --- | --- |
@@ -171,7 +175,7 @@ Costs assume an Average pool of 20 and a battle of about 8 rounds, so a typical 
 | Signature (DD): Shadowstep | Free, once | Untargetable for 1 round; next attack is a guaranteed crit |
 | Legendary (TD): Assassinate | Free, once | Instantly defeat any non-boss enemy |
 
-### Ranger — Tactics Pool
+### Ranger abilities
 
 | Ability | Cost | Effect |
 | --- | --- | --- |
@@ -182,7 +186,7 @@ Costs assume an Average pool of 20 and a battle of about 8 rounds, so a typical 
 | Signature (DD): Volley | Free, once | 6 damage to every enemy in the wave |
 | Legendary (TD): Call of the Pack | Free, once | Summon a Bear and two Wolves |
 
-### Warrior — Tank Pool
+### Warrior abilities
 
 | Ability | Cost | Effect |
 | --- | --- | --- |
@@ -193,7 +197,7 @@ Costs assume an Average pool of 20 and a battle of about 8 rounds, so a typical 
 | Signature (DD): Bulwark | Free, once | Taunt every enemy for 1 round; +6 armor |
 | Legendary (TD): Last Stand | Free, once | Cannot drop below 1 HP for the rest of the battle |
 
-### Cleric — Faith Pool
+### Cleric abilities
 
 | Ability | Cost | Effect |
 | --- | --- | --- |
@@ -229,7 +233,7 @@ Costs assume an Average pool of 20 and a battle of about 8 rounds, so a typical 
 
 **The Warlord** is the single best opposing performance across your five chosen games (highest points + rebounds + assists). It is a boosted version of that player's Champion with double HP and one extra action per round. This is the cost of hindsight: pick a hero's best game against a team whose star also went off, and you might be building your own final boss.
 
-**Pools carry across waves.** There is no refill between waves, so spending in wave 1 is a real decision.
+**Energy carries across waves.** There is no refill between waves beyond what basic attacks earn, so spending in wave 1 is a real decision.
 
 ## Monster behaviors
 
@@ -422,3 +426,6 @@ Gaps in the rules above, filled in for the first build. All live in `src/rules/`
 - [ ] Tune PP earn rates and upgrade costs in playtests
 - [ ] Horde scaling: tie horde strength to PP invested
 - [ ] Mid-week injury exception: needed, and what form?
+- [ ] Overall pacing and horde difficulty: retune after the energy and attack/utility changes (bot win rate is ~100%)
+- [ ] Explore class-specific energy gain in combat, e.g. Warrior +1 when hit, Cleric +1 per heal cast, Rogue +2 on a kill
+- [ ] Stop repeated buffs stacking (e.g. a second Parry in a round refreshes rather than adds)

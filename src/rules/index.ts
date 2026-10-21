@@ -65,7 +65,8 @@ export type Effect =
   | { type: 'poison'; perRound: number; rounds: number }
   | { type: 'nextAttackMultiplier'; multiplier: number }
   | { type: 'untargetable'; rounds: number }
-  | { type: 'heal'; amount: number }
+  | { type: 'heal'; amount: number; on?: 'mostInjuredAlly' }
+  | { type: 'gainEnergy'; amount: number }
   | { type: 'revive'; fraction: number }
   | { type: 'armor'; amount: number; on?: 'self' }
   | { type: 'taunt' }
@@ -78,7 +79,7 @@ export interface ActionDef {
   id: string;
   name: string;
   description: string;
-  /** Pool cost. Absent for gear and for Signature/Legendary abilities. */
+  /** Energy cost. Absent for basic attacks and Signature/Legendary abilities. */
   cost?: number;
   /** Signature needs a double-double, Legendary a triple-double. */
   unlock?: 'signature' | 'legendary';

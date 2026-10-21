@@ -2,7 +2,7 @@
   "wizard": {
     "name": "Wizard",
     "role": "Offense, burst",
-    "poolName": "Spell Pool",
+    "poolName": "Energy",
     "hp": 22,
     "rating": { "fg3m": 1 },
     "ratingLabel": "3PM",
@@ -10,7 +10,8 @@
       { "type": "percentage", "label": "3P%", "made": "fg3m", "attempts": "fg3a", "minAttempts": 5, "bonusAtOrAbove": 0.4, "bonus": 4, "penaltyBelow": 0.3, "penalty": -4 }
     ],
     "gear": [
-      { "id": "staff", "name": "Staff", "description": "G damage to 1 enemy", "target": { "type": "enemy" }, "effects": [{ "type": "damage", "amount": "gear" }] }
+      { "id": "staff", "name": "Staff", "description": "G damage to 1 enemy · +2 energy", "target": { "type": "enemy" }, "effects": [{ "type": "damage", "amount": "gear" }, { "type": "gainEnergy", "amount": 2 }] },
+      { "id": "arcane-bolt", "name": "Arcane Bolt", "cost": 1, "description": "G + 2 damage to 1 enemy, ignores armor", "target": { "type": "enemy" }, "effects": [{ "type": "damage", "amount": "gear", "bonus": 2, "pierce": true }] }
     ],
     "passives": [],
     "abilities": [
@@ -24,13 +25,14 @@
   "rogue": {
     "name": "Rogue",
     "role": "Offense, crits",
-    "poolName": "Trick Pool",
+    "poolName": "Energy",
     "hp": 25,
     "rating": { "stl": 3, "ftm": 1 },
     "ratingLabel": "3×STL + FTM",
     "modifiers": [],
     "gear": [
-      { "id": "dagger", "name": "Dagger", "description": "G damage to 1 enemy", "target": { "type": "enemy" }, "effects": [{ "type": "damage", "amount": "gear" }] }
+      { "id": "dagger", "name": "Dagger", "description": "G damage to 1 enemy · +2 energy", "target": { "type": "enemy" }, "effects": [{ "type": "damage", "amount": "gear" }, { "type": "gainEnergy", "amount": 2 }] },
+      { "id": "poisoned-blade", "name": "Poisoned Blade", "cost": 2, "description": "G damage plus 2 poison per round for 2 rounds", "target": { "type": "enemy" }, "effects": [{ "type": "damage", "amount": "gear" }, { "type": "poison", "perRound": 2, "rounds": 2 }] }
     ],
     "passives": [],
     "abilities": [
@@ -44,7 +46,7 @@
   "ranger": {
     "name": "Ranger",
     "role": "Hybrid, summons",
-    "poolName": "Tactics Pool",
+    "poolName": "Energy",
     "hp": 30,
     "rating": { "pts": 1 },
     "ratingLabel": "PTS",
@@ -52,12 +54,12 @@
       { "type": "percentage", "label": "FG%", "made": "fgm", "attempts": "fga", "minAttempts": 10, "bonusAtOrAbove": 0.55, "bonus": 4, "penaltyBelow": 0.4, "penalty": -4 }
     ],
     "gear": [
-      { "id": "longbow", "name": "Longbow", "description": "G damage to any enemy", "target": { "type": "enemy" }, "effects": [{ "type": "damage", "amount": "gear" }] },
-      { "id": "longsword", "name": "Longsword", "description": "G + 2 damage to an enemy that attacked the Ranger last round", "target": { "type": "enemy", "attackedSelfLastRound": true }, "effects": [{ "type": "damage", "amount": "gear", "bonus": 2 }] }
+      { "id": "longbow", "name": "Longbow", "description": "G damage to any enemy · +2 energy", "target": { "type": "enemy" }, "effects": [{ "type": "damage", "amount": "gear" }, { "type": "gainEnergy", "amount": 2 }] },
+      { "id": "longsword", "name": "Longsword", "cost": 1, "description": "G + 3 damage to an enemy that attacked the Ranger last round", "target": { "type": "enemy", "attackedSelfLastRound": true }, "effects": [{ "type": "damage", "amount": "gear", "bonus": 3 }] }
     ],
     "passives": [],
     "abilities": [
-      { "id": "double-strike", "name": "Double Strike", "cost": 5, "description": "Two Longbow attacks", "target": { "type": "enemy" }, "effects": [{ "type": "gearAttack", "times": 2 }] },
+      { "id": "double-strike", "name": "Double Strike", "cost": 5, "description": "Two Longbow attacks (no energy gained)", "target": { "type": "enemy" }, "effects": [{ "type": "gearAttack", "times": 2 }] },
       { "id": "aimed-shot", "name": "Aimed Shot", "cost": 6, "description": "12 damage, ignores armor", "target": { "type": "enemy" }, "effects": [{ "type": "damage", "amount": 12, "pierce": true }] },
       { "id": "summon-wolf", "name": "Summon Wolf", "cost": 8, "description": "Wolf: 12 HP, 4 damage per round", "target": { "type": "none" }, "effects": [{ "type": "summon", "unit": "wolf", "count": 1 }] },
       { "id": "summon-bear", "name": "Summon Bear", "cost": 14, "description": "Bear: 25 HP, 5 damage per round, taunts 1 enemy each round", "target": { "type": "none" }, "effects": [{ "type": "summon", "unit": "bear", "count": 1 }] },
@@ -68,13 +70,14 @@
   "warrior": {
     "name": "Warrior",
     "role": "Defense, tank",
-    "poolName": "Tank Pool",
+    "poolName": "Energy",
     "hp": 40,
     "rating": { "dreb": 1, "oreb": 2, "blk": 3 },
     "ratingLabel": "DREB + 2×OREB + 3×BLK",
     "modifiers": [],
     "gear": [
-      { "id": "axe", "name": "Axe", "description": "G damage to 1 enemy", "target": { "type": "enemy" }, "effects": [{ "type": "damage", "amount": "gear" }] }
+      { "id": "axe", "name": "Axe", "description": "G damage to 1 enemy · +2 energy", "target": { "type": "enemy" }, "effects": [{ "type": "damage", "amount": "gear" }, { "type": "gainEnergy", "amount": 2 }] },
+      { "id": "shield-bash", "name": "Shield Bash", "cost": 2, "description": "G + 2 damage and taunts the target", "target": { "type": "enemy" }, "effects": [{ "type": "damage", "amount": "gear", "bonus": 2 }, { "type": "taunt" }] }
     ],
     "passives": [{ "type": "armorPerRound", "name": "Shield", "description": "+2 armor every round", "amount": 2 }],
     "abilities": [
@@ -89,13 +92,14 @@
   "cleric": {
     "name": "Cleric",
     "role": "Support, healing",
-    "poolName": "Faith Pool",
+    "poolName": "Energy",
     "hp": 28,
     "rating": { "ast": 1 },
     "ratingLabel": "AST",
     "modifiers": [{ "type": "perTurnover", "label": "Turnovers", "amount": -2 }],
     "gear": [
-      { "id": "mace", "name": "Mace", "description": "G damage to 1 enemy", "target": { "type": "enemy" }, "effects": [{ "type": "damage", "amount": "gear" }] }
+      { "id": "mace", "name": "Mace", "description": "G damage to 1 enemy · +2 energy", "target": { "type": "enemy" }, "effects": [{ "type": "damage", "amount": "gear" }, { "type": "gainEnergy", "amount": 2 }] },
+      { "id": "holy-strike", "name": "Holy Strike", "cost": 2, "description": "G damage and heals the most injured ally 3", "target": { "type": "enemy" }, "effects": [{ "type": "damage", "amount": "gear" }, { "type": "heal", "amount": 3, "on": "mostInjuredAlly" }] }
     ],
     "passives": [],
     "abilities": [

@@ -257,6 +257,11 @@ function validTargets(state: BattleState, hero: HeroState, def: ActionDef): stri
   }
 }
 
+/** Energy an action gives back (basic weapon attacks), or 0. */
+export function energyGain(def: ActionDef): number {
+  return def.effects.reduce((s, e) => s + (e.type === 'gainEnergy' ? e.amount : 0), 0);
+}
+
 /** An attack deals damage or defeats an enemy; everything else is a utility. */
 export function isAttack(def: ActionDef): boolean {
   return def.effects.some((e) => e.type === 'damage' || e.type === 'gearAttack' || e.type === 'instakill');
@@ -271,13 +276,16 @@ export function listActions(state: BattleState, heroId: HeroClass, rules: Rules 
   const blockedFor = (def: ActionDef) => over ?? (isAttack(def) && hero.acted ? 'Already attacked this round' : undefined);
   for (const def of cls.gear) {
     const targets = validTargets(state, hero, def);
-    const blocked = blockedFor(def);
+    let reason = blockedFor(def);
+    if (!reason && targets.length === 0)
+      reason = def.target.type === 'enemy' && def.target.attackedSelfLastRound ? 'No enemy attacked you last round' : 'No targets';
+    if (!reason && def.cost !== undefined && def.cost > hero.pool) reason = `Needs ${def.cost} energy`;
     opts.push({
       def,
       source: 'gear',
       attack: isAttack(def),
-      available: !blocked && targets.length > 0,
-      reason: blocked ?? (targets.length === 0 ? (def.target.type === 'enemy' && def.target.attackedSelfLastRound ? 'No enemy attacked you last round' : 'No targets') : undefined),
+      available: !reason,
+      reason,
       validTargets: targets,
     });
   }
@@ -288,7 +296,7 @@ export function listActions(state: BattleState, heroId: HeroClass, rules: Rules 
       reason = hero.signatureUnlocked ? 'Already used' : 'Needs a double-double';
     if (!reason && def.unlock === 'legendary' && !hero.legendaryReady)
       reason = hero.legendaryUnlocked ? 'Already used' : 'Needs a triple-double';
-    if (!reason && def.cost !== undefined && def.cost > hero.pool) reason = `Needs ${def.cost} points`;
+    if (!reason && def.cost !== undefined && def.cost > hero.pool) reason = `Needs ${def.cost} energy`;
     if (!reason && def.target.type !== 'none' && targets.length === 0) reason = 'No valid targets';
     opts.push({ def, source: 'ability', attack: isAttack(def), available: !reason, reason, validTargets: targets });
   }
@@ -434,6 +442,17 @@ function applyEffect(
       parts.push('untargetable');
       return false;
     case 'heal':
+      if (effect.on === 'mostInjuredAlly') {
+        const h = state.heroes
+          .filter((x) => x.alive && x.hp < x.maxHp)
+          .sort((a, b) => b.maxHp - b.hp - (a.maxHp - a.hp))[0];
+        if (h) {
+          const healed = Math.min(effect.amount, h.maxHp - h.hp);
+          h.hp += healed;
+          parts.push(`${nameOf(state, h.id, rules)} +${healed} HP`);
+        }
+        return false;
+      }
       for (const id of targets) {
         const h = state.heroes.find((x) => x.id === id);
         if (!h || !h.alive) continue;
@@ -498,6 +517,10 @@ function applyEffect(
         e.alive = false;
         parts.push(`${e.name} defeated`);
       }
+      return false;
+    case 'gainEnergy':
+      hero.pool += effect.amount;
+      parts.push(`+${effect.amount} energy`);
       return false;
     case 'lastStand':
       hero.lastStand = true;

@@ -37,12 +37,12 @@ export function SelectGames({ data, game, onChange }: { data: SeasonData; game: 
         <div className="stack" style={{ gap: 4 }}>
           <h1>Choose this week's games</h1>
           <p className="muted small">
-            Each hero's pool comes from one game this week. Every game also sends that night's opposing player into the horde as a mirrored
+            Each hero's starting energy comes from one game this week. Every game also sends that night's opposing player into the horde as a mirrored
             Champion, and the best opposing performance becomes the Warlord.
           </p>
         </div>
         <button className="btn small" onClick={pickBest}>
-          Best pool for each
+          Most energy for each
         </button>
       </div>
 
@@ -74,7 +74,7 @@ export function SelectGames({ data, game, onChange }: { data: SeasonData; game: 
                         {formatDate(g.date)} · {g.home === line.team ? 'vs' : '@'} {opp}
                       </strong>
                       <span className="num" style={{ fontWeight: 700, color: 'var(--info)' }}>
-                        {pool.pool} pts
+                        {pool.pool} energy
                       </span>
                     </div>
                     <div className="tiny muted num">{statLine(line)}</div>

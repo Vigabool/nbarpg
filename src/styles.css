@@ -331,6 +331,7 @@ select.input { appearance: auto; }
 .action-top { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
 .action-name { min-width: 0; font-weight: 650; font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .action .cost { font-weight: 700; font-size: 0.75rem; color: var(--info); }
+.action .cost.gain { color: var(--good); }
 .action.sig { border-color: var(--gold); }
 .action-group { display: flex; align-items: baseline; gap: 8px; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; color: var(--muted); }
 .action-group .faint { text-transform: none; letter-spacing: 0; font-weight: 500; }

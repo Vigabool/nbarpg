@@ -78,7 +78,7 @@ export function AssignHeroes({ data, game, onChange }: { data: SeasonData; game:
                 <span className="tiny muted">{game.pp[c].toFixed(1)} PP</span>
               </div>
               <div className="tiny muted">
-                {rules.classes[c].role} · {rules.classes[c].hp} HP · Pool from {rules.classes[c].ratingLabel}
+                {rules.classes[c].role} · {rules.classes[c].hp} HP · Energy from {rules.classes[c].ratingLabel}
               </div>
               <select className="input" value={id ?? ''} onChange={(e) => assign(c, e.target.value ? Number(e.target.value) : undefined)}>
                 <option value="">Choose a player…</option>

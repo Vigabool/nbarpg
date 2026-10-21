@@ -96,7 +96,9 @@ describe('hero actions', () => {
     const sword = listActions(s, 'ranger').find((o) => o.def.id === 'longsword')!;
     expect(sword.available).toBe(true);
     s = act(s, 'ranger', 'longsword', [h.id]);
-    expect(enemy(s, h.id).hp).toBe(40 - 6);
+    expect(enemy(s, h.id).hp).toBe(40 - 7);
+    // The Assassin's hit drained 2; the Longsword cost 1.
+    expect(hero(s, 'ranger').pool).toBe(20 - 2 - 1);
   });
 
   it('Resurrect revives at half HP', () => {
@@ -119,7 +121,8 @@ describe('attacks and utilities', () => {
     expect(hero(s, 'warrior').acted).toBe(false);
     s = act(s, 'warrior', 'axe', [a.id]);
     expect(hero(s, 'warrior').acted).toBe(true);
-    expect(hero(s, 'warrior').pool).toBe(20 - 8);
+    // Two Provokes (−8), and the Axe gains 2.
+    expect(hero(s, 'warrior').pool).toBe(20 - 8 + 2);
     expect(enemy(s, a.id).tauntedBy).toBe('warrior');
     expect(enemy(s, b.id).tauntedBy).toBe('warrior');
     expect(() => act(s, 'warrior', 'axe', [b.id])).toThrow(/Already attacked/);
@@ -133,7 +136,7 @@ describe('attacks and utilities', () => {
     s = act(s, 'cleric', 'cure-wounds', ['wizard']);
     s = act(s, 'cleric', 'mace', [g.id]);
     expect(hero(s, 'wizard').hp).toBe(21);
-    expect(hero(s, 'cleric').pool).toBe(14);
+    expect(hero(s, 'cleric').pool).toBe(20 - 6 + 2);
     expect(enemy(s, g.id).hp).toBe(95);
   });
 
@@ -142,8 +145,8 @@ describe('attacks and utilities', () => {
     let s = battle([[g]]);
     s = act(s, 'warrior', 'axe', [g.id]);
     for (let i = 0; i < 5; i++) s = act(s, 'warrior', 'parry');
-    expect(hero(s, 'warrior').pool).toBe(0);
-    expect(listActions(s, 'warrior').find((o) => o.def.id === 'parry')!.reason).toBe('Needs 4 points');
+    expect(hero(s, 'warrior').pool).toBe(2);
+    expect(listActions(s, 'warrior').find((o) => o.def.id === 'parry')!.reason).toBe('Needs 4 energy');
   });
 
   it('classifies damage and kills as attacks, everything else as utility', () => {
@@ -158,6 +161,44 @@ describe('attacks and utilities', () => {
     s = act(s, 'rogue', 'ready-crit');
     s = act(s, 'rogue', 'dagger', [g.id]);
     expect(enemy(s, g.id).hp).toBe(50 - 8);
+  });
+});
+
+describe('weapon attacks and energy', () => {
+  it('basic attacks gain 2 energy', () => {
+    const g = monster({ hp: 99 });
+    const s = act(battle([[g]]), 'wizard', 'staff', [g.id]);
+    expect(hero(s, 'wizard').pool).toBe(22);
+    expect(enemy(s, g.id).hp).toBe(95);
+  });
+
+  it('advanced attacks cost energy and add an effect', () => {
+    const g = monster({ hp: 99 });
+    let s = battle([[g]]);
+    s = act(s, 'wizard', 'arcane-bolt', [g.id]);
+    expect(hero(s, 'wizard').pool).toBe(19);
+    expect(enemy(s, g.id).hp).toBe(99 - 6);
+    s = act(s, 'warrior', 'shield-bash', [g.id]);
+    expect(enemy(s, g.id).tauntedBy).toBe('warrior');
+    expect(enemy(s, g.id).hp).toBe(99 - 6 - 6);
+    s = act(s, 'rogue', 'poisoned-blade', [g.id]);
+    expect(enemy(s, g.id).poison).toEqual({ perRound: 2, rounds: 2 });
+  });
+
+  it('Holy Strike heals the most injured ally', () => {
+    const g = monster({ hp: 99 });
+    let s = battle([[g]]);
+    s = { ...s, heroes: s.heroes.map((x) => (x.id === 'rogue' ? { ...x, hp: 10 } : x.id === 'wizard' ? { ...x, hp: 20 } : x)) };
+    s = act(s, 'cleric', 'holy-strike', [g.id]);
+    expect(hero(s, 'rogue').hp).toBe(13);
+    expect(hero(s, 'wizard').hp).toBe(20);
+    expect(hero(s, 'cleric').pool).toBe(18);
+  });
+
+  it('advanced attacks need the energy', () => {
+    let s = battle([[monster({ hp: 99 })]]);
+    s = { ...s, heroes: s.heroes.map((x) => (x.id === 'warrior' ? { ...x, pool: 1 } : x)) };
+    expect(listActions(s, 'warrior').find((o) => o.def.id === 'shield-bash')!.reason).toBe('Needs 2 energy');
   });
 });
 

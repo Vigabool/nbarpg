@@ -9,6 +9,7 @@ import {
   performAction,
   previewEnemyPhase,
   actionDamage,
+  energyGain,
   type ActionOption,
   type BattleState,
   type EnemyState,
@@ -254,7 +255,7 @@ export function BattleScreen({ data, game, onChange, onHelp, onQuit }: Props) {
             ) : (
               <strong className="small" style={{ minWidth: 0 }}>
                 {CLASS_ICON[hero.heroClass]} {rules.classes[hero.heroClass].name}{' '}
-                <span className="muted">· {hero.pool} pts</span>
+                <span className="muted">· {hero.pool} energy</span>
               </strong>
             )}
             <div className="row" style={{ gap: 4, flexWrap: 'nowrap' }}>
@@ -311,7 +312,7 @@ export function BattleScreen({ data, game, onChange, onHelp, onQuit }: Props) {
               </div>
               <div className="action-group">
                 <span>Utility</span>
-                <span className="faint">any number, while points last</span>
+                <span className="faint">any number, while energy lasts</span>
               </div>
               <div className={`actions${details ? ' detailed' : ''}`}>
                 {options.filter((o) => !o.attack).map((o) => (
@@ -344,6 +345,7 @@ function ActionTile({
   onPick: (o: ActionOption) => void;
 }) {
   const dmg = actionDamage(o.def, hero);
+  const gain = energyGain(o.def);
   const description = o.def.description.replace(/\bG\b/g, String(hero.gear));
   return (
     <button
@@ -359,7 +361,13 @@ function ActionTile({
             ⚔{dmg}
           </span>
         )}
-        <span className="cost">{o.source === 'gear' ? 'Gear' : o.def.unlock ? (o.def.unlock === 'signature' ? 'DD' : 'TD') : o.def.cost}</span>
+        {gain ? (
+          <span className="cost gain" title={`Gains ${gain} energy`}>
+            +{gain}
+          </span>
+        ) : (
+          <span className="cost">{o.def.unlock ? (o.def.unlock === 'signature' ? 'DD' : 'TD') : o.def.cost}</span>
+        )}
       </span>
       {details && <span className="tiny muted">{description}</span>}
       {details && !o.available && o.reason && <span className="tiny faint">{o.reason}</span>}

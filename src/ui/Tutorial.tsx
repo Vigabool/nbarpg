@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { isAttack } from '../engine/combat';
+import { energyGain, isAttack } from '../engine/combat';
 import { CLASSES, rules, type ChampionKind, type HeroClass } from '../rules';
 import { CLASS_ICON, MONSTER_ICON, money } from './common';
 
@@ -74,7 +74,8 @@ export function Tutorial({ onClose }: { onClose: () => void }) {
               </li>
               <li>
                 <strong>Each week, pick a game.</strong> For each hero, choose one of their player's real games that week. That box score
-                fills the hero's <em>pool</em>, the points they spend on abilities. A big night means a big pool.
+                sets the hero's starting <em>energy</em>, which they spend on abilities. Each class draws energy from different stats. A big
+                night means a big start.
               </li>
               <li>
                 <strong>Watch who you bring.</strong> Every game you pick also sends the opposing player who mirrors your hero into the horde.
@@ -82,9 +83,10 @@ export function Tutorial({ onClose }: { onClose: () => void }) {
               </li>
               <li>
                 <strong>Fight.</strong> Three waves, {rules.combat.roundCap} rounds. Each round your heroes act in any order, then summons,
-                then the horde. Every hero gets <em>one attack</em> a round (a free gear attack or a damaging ability) plus any number of{' '}
-                <em>utility</em> powers (taunts, heals, armor, buffs, summons) their pool can pay for. Pools don't refill between waves.
-                There are no dice: each enemy shows what it will do.
+                then the horde. Every hero gets <em>one attack</em> a round plus any number of <em>utility</em> powers (taunts, heals,
+                armor, buffs, summons) they have energy for. Attacks come in three kinds: a <em>basic</em> weapon attack that gains 2
+                energy, an <em>advanced</em> weapon attack that costs 1–2, and damage spells that cost more. There are no dice: each enemy
+                shows what it will do.
               </li>
               <li>
                 <strong>Highlights.</strong> A double-double unlocks the hero's Signature ability; a triple-double also unlocks their
@@ -101,7 +103,7 @@ export function Tutorial({ onClose }: { onClose: () => void }) {
             <div className="stack" style={{ gap: 10 }}>
               {CLASSES.map((c) => {
                 const cls = rules.classes[c];
-                const mods = cls.modifiers.map((m) => (m.type === 'percentage' ? `${m.label} bonus/penalty` : 'every turnover costs pool'));
+                const mods = cls.modifiers.map((m) => (m.type === 'percentage' ? `${m.label} bonus/penalty` : 'every turnover costs energy'));
                 return (
                   <section key={c} className="class-blurb">
                     <div className="spread">
@@ -112,21 +114,25 @@ export function Tutorial({ onClose }: { onClose: () => void }) {
                     </div>
                     <p className="small">{PLAYSTYLE[c].play}</p>
                     <p className="tiny muted">
-                      Pool from <strong>{cls.ratingLabel}</strong>
+                      Energy from <strong>{cls.ratingLabel}</strong>
                       {mods.length ? ` (${mods.join(', ')})` : ''}. Draft: {PLAYSTYLE[c].draft}.
                     </p>
                     <div className="row">
-                      {cls.abilities.map((a) => (
-                        <span key={a.id} className={`chip${a.unlock ? ' status-taunt' : ''}`} title={a.description}>
-                          {isAttack(a) ? '⚔ ' : ''}
-                          {a.name} {a.unlock ? (a.unlock === 'signature' ? '· DD' : '· TD') : `· ${a.cost}`}
-                        </span>
-                      ))}
+                      {[...cls.gear, ...cls.abilities].map((a) => {
+                        const gain = energyGain(a);
+                        return (
+                          <span key={a.id} className={`chip${a.unlock ? ' status-taunt' : ''}`} title={a.description}>
+                            {isAttack(a) ? '⚔ ' : ''}
+                            {a.name}{' '}
+                            {a.unlock ? (a.unlock === 'signature' ? '· DD' : '· TD') : gain ? `· +${gain}` : `· ${a.cost}`}
+                          </span>
+                        );
+                      })}
                     </div>
                   </section>
                 );
               })}
-              <p className="tiny muted">⚔ marks attacks (one per round); the rest are utilities. Numbers are pool costs. DD and TD abilities need a double- or triple-double.</p>
+              <p className="tiny muted">⚔ marks attacks (one per round); the rest are utilities. Numbers are energy costs; +2 means the attack gains energy. DD and TD abilities need a double- or triple-double.</p>
             </div>
           )}
 

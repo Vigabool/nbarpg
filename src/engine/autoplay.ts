@@ -21,10 +21,14 @@ export function chooseAction(
   const fallen = state.heroes.filter((h) => !h.alive);
   const act = (o: ActionOption | undefined, targetIds: string[] = []): HeroAction | null =>
     o ? { heroId: hero.id, actionId: o.def.id, targetIds } : null;
+  // Weapon attacks: spend on the advanced one while energy is comfortable, else build energy.
   const gear = () => {
-    const sword = has('longsword');
-    if (sword) return act(sword, [[...sword.validTargets].sort((a, b) => hpOf(a) - hpOf(b))[0]]);
-    const g = opts.find((o) => o.source === 'gear' && o.validTargets.length);
+    const advanced = opts.find((o) => o.source === 'gear' && o.def.cost !== undefined);
+    if (advanced && hero.pool >= 10) {
+      const target = [...advanced.validTargets].sort((a, b) => hpOf(a) - hpOf(b))[0];
+      return act(advanced, [target]);
+    }
+    const g = opts.find((o) => o.source === 'gear' && o.def.cost === undefined && o.validTargets.length);
     return g ? act(g, [byHpAsc[0].id]) : null;
   };
   const hpOf = (id: string) => enemies.find((e) => e.id === id)?.hp ?? Infinity;
