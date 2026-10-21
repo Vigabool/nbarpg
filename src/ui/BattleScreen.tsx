@@ -23,7 +23,7 @@ import {
   type SummonState,
 } from '../engine/combat';
 import { rules, type HeroClass, type Tier } from '../rules';
-import { CLASS_ICON, ConfirmButton, MONSTER_ICON, TIER_LABEL, weekLabel } from './common';
+import { CLASS_ICON, ConfirmButton, MONSTER_ICON, TIER_LABEL, TierChip, statLine, weekLabel } from './common';
 
 interface Props {
   data: SeasonData;
@@ -46,15 +46,17 @@ export function BattleScreen({ data, game, onChange, onHelp, onQuit }: Props) {
 
   const setBattle = (b: BattleState) => onChange({ ...game, battle: b });
   const intents = useMemo(() => {
-    const map: Record<string, string[]> = {};
+    const map: Record<string, Intent> = {};
     for (const l of previewEnemyPhase(state)) {
       const e = state.enemies.find((x) => x.id === l.actorId);
       if (!e) continue;
-      const text = l.text.startsWith(e.name) ? l.text.slice(e.name.length + 1) : l.text;
-      (map[e.id] ??= []).push(text.replace(/^attacks: /, '').replace(/\.$/, ''));
+      const i = (map[e.id] ??= { short: [], full: [] });
+      i.short.push(l.short ?? l.text);
+      i.full.push(l.text);
     }
     return map;
   }, [state]);
+  const [detail, setDetail] = useState<string[] | null>(null);
 
   const hero = selected ? state.heroes.find((h) => h.id === selected) : undefined;
   const options = hero ? listActions(state, hero.id) : [];
@@ -206,7 +208,7 @@ export function BattleScreen({ data, game, onChange, onHelp, onQuit }: Props) {
             intent={intents[e.id]}
             targetable={isEnemyTarget(e.id)}
             targeted={multi.includes(e.id)}
-            onClick={() => clickTarget(e.id)}
+            onClick={() => (isEnemyTarget(e.id) ? clickTarget(e.id) : setDetail([e.id]))}
           />
         ))}
         {goblinGroups.map((g) => (
@@ -218,6 +220,7 @@ export function BattleScreen({ data, game, onChange, onHelp, onQuit }: Props) {
             isTarget={isEnemyTarget}
             targeted={multi}
             onPick={clickTarget}
+            onDetail={() => setDetail(g.map((x) => x.id))}
           />
         ))}
       </div>
@@ -332,6 +335,14 @@ export function BattleScreen({ data, game, onChange, onHelp, onQuit }: Props) {
       )}
 
       {logOpen && <LogDrawer log={state.log} onClose={() => setLogOpen(false)} />}
+      {detail && (
+        <EnemyDetail
+          enemies={detail.map((id) => state.enemies.find((e) => e.id === id)!).filter((e) => e && e.alive)}
+          state={state}
+          intents={intents}
+          onClose={() => setDetail(null)}
+        />
+      )}
     </div>
   );
 }
@@ -382,12 +393,6 @@ function ActionTile({
   );
 }
 
-function nameOf(state: BattleState, id: string): string {
-  const h = state.heroes.find((x) => x.id === id);
-  if (h) return rules.classes[h.heroClass].name;
-  return state.summons.find((s) => s.id === id)?.name ?? id;
-}
-
 /** Goblins with the same team and damage share one card. */
 function groupGoblins(goblins: EnemyState[]): EnemyState[][] {
   const groups = new Map<string, EnemyState[]>();
@@ -435,37 +440,43 @@ function TierDot({ tier }: { tier: Tier }) {
   return <span className={`tier-dot tier-${tier}`} title={`${TIER_LABEL[tier]} night`} aria-label={`${TIER_LABEL[tier]} night`} />;
 }
 
-function EnemyTags({ e, state }: { e: EnemyState; state: BattleState }) {
+interface Intent {
+  short: string[];
+  full: string[];
+}
+
+/** Compact, non-interactive status icons for enemy cards. Details live in the detail sheet. */
+function EnemyIcons({ e, state }: { e: EnemyState; state: BattleState }) {
   const special = specialOf(e);
   const rage = rules.combat.warlordEnrage;
+  const icons: { icon: string; tone: string; label: string }[] = [];
+  if (special && specialDue(e, state.round + 1)) icons.push({ icon: `⚠ ${special.short}`, tone: 'warn', label: `${special.name} next round` });
+  if (e.enraged) icons.push({ icon: `🔥+${rage.damageBonus}`, tone: 'warn', label: 'Enraged' });
+  if (e.drum && e.drum.round >= state.round) icons.push({ icon: `🥁+${e.drum.amount}`, tone: 'warn', label: 'War Drum' });
+  if (ignoresTaunt(e)) icons.push({ icon: '⊘⚑', tone: '', label: 'Ignores taunts' });
+  if (e.tauntedBy) icons.push({ icon: '⚑', tone: 'taunt', label: 'Taunted' });
+  if (e.poison) icons.push({ icon: `☣${e.poison.perRound}`, tone: 'poison', label: 'Poisoned' });
+  if (e.weaken) icons.push({ icon: `↓${e.weaken.amount}`, tone: 'curse', label: 'Cursed' });
+  if (enemyArmor(e) > 0) icons.push({ icon: `⛨${enemyArmor(e)}`, tone: 'shield', label: 'Shielded' });
+  if (e.staggers > 0) icons.push({ icon: `💫${e.staggers}`, tone: '', label: 'Staggered' });
   return (
     <>
-      {special && specialDue(e, state.round + 1) && (
-        <Tag icon={`⚠ ${special.short} next`} text={`${special.name} next round: ${special.description}`} tone="warn" />
-      )}
-      {e.enraged && <Tag icon={`🔥+${rage.damageBonus}`} text={`Enraged: +${rage.damageBonus} damage`} tone="warn" />}
-      {e.drum && e.drum.round >= state.round && (
-        <Tag
-          icon={`🥁+${e.drum.amount}`}
-          text={`War Drum: +${e.drum.amount} damage ${e.drum.round === state.round ? 'this round' : 'next round'}`}
-          tone="warn"
-        />
-      )}
-      {ignoresTaunt(e) && <Tag icon="⊘⚑" text="Ignores taunts: Provoke, Bulwark and the Bear don't work on it" />}
-      {e.tauntedBy && <Tag icon="⚑" text={`Taunted by ${nameOf(state, e.tauntedBy)}`} tone="taunt" />}
-      {e.poison && <Tag icon={`☣${e.poison.perRound}`} text={`Poison: ${e.poison.perRound} damage for ${e.poison.rounds} more rounds`} tone="poison" />}
-      {e.weaken && <Tag icon={`↓${e.weaken.amount}`} text={`Cursed: deals ${e.weaken.amount} less damage for ${e.weaken.rounds} rounds`} tone="curse" />}
-      {enemyArmor(e) > 0 && <Tag icon={`⛨${enemyArmor(e)}`} text={`Shielded: +${enemyArmor(e)} armor`} tone="shield" />}
-      {e.staggers > 0 && <Tag icon={`💫${e.staggers}`} text={`Staggered: loses its next ${e.staggers > 1 ? `${e.staggers} actions` : 'action'}`} />}
+      {icons.map((i) => (
+        <span key={i.label} className={`tag static ${i.tone}`} aria-label={i.label}>
+          {i.icon}
+        </span>
+      ))}
     </>
   );
 }
 
-function Intent({ e, state, intent }: { e: EnemyState; state: BattleState; intent?: string[] }) {
-  if (justArrived(state, e)) return <span className="intent muted">Arrived · acts next round</span>;
-  if (!intent?.length) return null;
-  return <span className="intent">→ {intent.join(' · ')}</span>;
+function IntentLine({ e, state, intent }: { e: EnemyState; state: BattleState; intent?: Intent }) {
+  if (justArrived(state, e)) return <div className="u-intent muted">Arrived · acts next round</div>;
+  if (!intent?.short.length) return null;
+  return <div className="u-intent">{intent.short.join(' · ')}</div>;
 }
+
+const kindLabel = (e: EnemyState) => (e.isWarlord ? 'Warlord' : rules.monsters[e.kind].name);
 
 function EnemyCard({
   e,
@@ -477,34 +488,33 @@ function EnemyCard({
 }: {
   e: EnemyState;
   state: BattleState;
-  intent?: string[];
+  intent?: Intent;
   targetable: boolean;
   targeted: boolean;
   onClick: () => void;
 }) {
-  const [kindName, playerName] = e.name.split(' · ');
   const dmg = enemyDamage(state, e);
   return (
     <div
       className={`unit-c${e.isWarlord ? ' warlord' : ' champion'}${targetable ? ' target' : ''}${targeted ? ' targeted' : ''}`}
-      onClick={targetable ? onClick : undefined}
-      role={targetable ? 'button' : undefined}
+      onClick={onClick}
+      role="button"
+      aria-label={targetable ? `Target ${e.name}` : `${e.name}: details`}
     >
       <div className="u-top">
         <span className="u-name">
-          {MONSTER_ICON[e.kind]} {kindName}
+          {MONSTER_ICON[e.kind]} {kindLabel(e)}
           {e.tier && <TierDot tier={e.tier} />}
         </span>
-        <span className="u-dmg num" title={`${dmg} damage per hit${e.isWarlord ? ', two actions a round' : ''}`}>
+        <span className="u-dmg num">
           ⚔{dmg}
           {e.isWarlord ? '×2' : ''}
         </span>
       </div>
-      {playerName && <div className="u-sub">{playerName}</div>}
       <Meter kind="hp" value={e.hp} max={e.maxHp} />
+      <IntentLine e={e} state={state} intent={intent} />
       <div className="u-foot">
-        <EnemyTags e={e} state={state} />
-        <Intent e={e} state={state} intent={intent} />
+        <EnemyIcons e={e} state={state} />
       </div>
     </div>
   );
@@ -517,13 +527,15 @@ function GoblinStack({
   isTarget,
   targeted,
   onPick,
+  onDetail,
 }: {
   goblins: EnemyState[];
   state: BattleState;
-  intents: Record<string, string[]>;
+  intents: Record<string, Intent>;
   isTarget: (id: string) => boolean;
   targeted: string[];
   onPick: (id: string) => void;
+  onDetail: () => void;
 }) {
   const first = goblins[0];
   const valid = goblins.filter((g) => isTarget(g.id));
@@ -533,15 +545,14 @@ function GoblinStack({
     const pick = [...valid].filter((g) => !targeted.includes(g.id)).sort((a, b) => a.hp - b.hp)[0] ?? valid[0];
     if (pick) onPick(pick.id);
   };
-  const intentCounts = new Map<string, number>();
-  for (const g of goblins) for (const i of intents[g.id] ?? []) intentCounts.set(i, (intentCounts.get(i) ?? 0) + 1);
-  const arrived = justArrived(state, first);
+  const counts = new Map<string, number>();
+  for (const g of goblins) for (const i of intents[g.id]?.short ?? []) counts.set(i, (counts.get(i) ?? 0) + 1);
   const dmg = enemyDamage(state, first);
   return (
     <div
       className={`unit-c minion${targetable ? ' target' : ''}${goblins.some((g) => targeted.includes(g.id)) ? ' targeted' : ''}`}
-      onClick={targetable ? pickWeakest : undefined}
-      role={targetable ? 'button' : undefined}
+      onClick={targetable ? pickWeakest : onDetail}
+      role="button"
     >
       <div className="u-top">
         <span className="u-name">
@@ -557,7 +568,6 @@ function GoblinStack({
             type="button"
             className={`pip${targeted.includes(g.id) ? ' on' : ''}${g.tauntedBy ? ' taunted' : ''}${g.poison ? ' poisoned' : ''}`}
             aria-label={`Goblin ${g.hp}/${g.maxHp} HP`}
-            title={`${g.hp}/${g.maxHp} HP`}
             disabled={!isTarget(g.id)}
             onClick={(ev) => {
               ev.stopPropagation();
@@ -569,22 +579,107 @@ function GoblinStack({
           </button>
         ))}
       </div>
-      <div className="u-foot">
-        {goblins.some((g) => g.tauntedBy) && <Tag icon="⚑" text={`${goblins.filter((g) => g.tauntedBy).length} taunted`} tone="taunt" />}
-        {goblins.some((g) => g.poison) && <Tag icon="☣" text={`${goblins.filter((g) => g.poison).length} poisoned`} tone="poison" />}
-        {goblins.some((g) => enemyArmor(g) > 0) && <Tag icon={`⛨${enemyArmor(first)}`} text="Shielded by the Shaman" tone="shield" />}
-        {first.drum && first.drum.round >= state.round && (
-          <Tag icon={`🥁+${first.drum.amount}`} text={`War Drum: +${first.drum.amount} damage ${first.drum.round === state.round ? 'this round' : 'next round'}`} tone="warn" />
-        )}
-        {arrived ? (
-          <span className="intent muted">Arrived · acts next round</span>
-        ) : (
-          intentCounts.size > 0 && (
-            <span className="intent">
-              → {[...intentCounts].map(([t, n]) => (n > 1 ? `${t} ×${n}` : t)).join(' · ')}
+      {justArrived(state, first) ? (
+        <div className="u-intent muted">Arrived · acts next round</div>
+      ) : (
+        counts.size > 0 && (
+          <div className="u-intent">{[...counts].map(([t, n]) => (n > 1 ? `${t} ×${n}` : t)).join(' · ')}</div>
+        )
+      )}
+    </div>
+  );
+}
+
+/** Full details for an enemy (or a goblin stack), opened by tapping its card. */
+function EnemyDetail({
+  enemies,
+  state,
+  intents,
+  onClose,
+}: {
+  enemies: EnemyState[];
+  state: BattleState;
+  intents: Record<string, Intent>;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    const onKey = (ev: KeyboardEvent) => ev.key === 'Escape' && onClose();
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+  if (enemies.length === 0) return null;
+  const e = enemies[0];
+  const def = rules.monsters[e.kind];
+  const special = specialOf(e);
+  const [, player] = e.name.split(' · ');
+  const rage = rules.combat.warlordEnrage;
+  const n = rules.combat.specialEveryNRounds;
+  let nextSpecial: number | null = null;
+  if (special) for (let r = state.round; r < state.round + n + 1; r++) if (specialDue(e, r)) { nextSpecial = r; break; }
+  const statuses: string[] = [];
+  if (e.enraged) statuses.push(`Enraged: +${rage.damageBonus} damage for the rest of the battle`);
+  if (e.drum && e.drum.round >= state.round) statuses.push(`War Drum: +${e.drum.amount} damage ${e.drum.round === state.round ? 'this round' : 'next round'}`);
+  if (e.tauntedBy) {
+    const h = state.heroes.find((x) => x.id === e.tauntedBy);
+    statuses.push(`Taunted by ${h ? rules.classes[h.heroClass].name : state.summons.find((x) => x.id === e.tauntedBy)?.name ?? 'an ally'}`);
+  }
+  if (e.poison) statuses.push(`Poisoned: ${e.poison.perRound} damage for ${e.poison.rounds} more rounds`);
+  if (e.weaken) statuses.push(`Cursed: deals ${e.weaken.amount} less damage for ${e.weaken.rounds} rounds`);
+  if (enemyArmor(e) > 0) statuses.push(`Shielded: +${enemyArmor(e)} armor`);
+  if (e.staggers > 0) statuses.push(`Staggered: loses its next ${e.staggers > 1 ? `${e.staggers} actions` : 'action'}`);
+  const plan = enemies.flatMap((x) => intents[x.id]?.full ?? []);
+  return (
+    <div className="modal-backdrop drawer" onClick={onClose}>
+      <div className="modal" role="dialog" aria-modal="true" aria-label={e.name} onClick={(ev) => ev.stopPropagation()}>
+        <div className="spread">
+          <h2>
+            {MONSTER_ICON[e.kind]} {e.isWarlord ? `Warlord ${def.name}` : def.name}
+            {enemies.length > 1 && ` ×${enemies.length}`}
+          </h2>
+          <button className="btn ghost small" onClick={onClose} aria-label="Close">
+            ✕
+          </button>
+        </div>
+        <div className="modal-body stack" style={{ gap: 10 }}>
+          <div className="row small">
+            {player && <span>{player}</span>}
+            {e.tier && <TierChip tier={e.tier} />}
+            <span className="chip">⚔ {enemyDamage(state, e)}{e.isWarlord ? ' ×2 actions' : ''}</span>
+            <span className="chip">
+              {enemies.length > 1 ? enemies.map((x) => x.hp).join(' / ') : `${e.hp}/${e.maxHp}`} HP
             </span>
-          )
-        )}
+          </div>
+          {e.spec.source && <div className="tiny muted">{statLine(e.spec.source.line)}</div>}
+          <p className="small" style={{ margin: 0 }}>{def.description.split('. Special:')[0]}.</p>
+          {e.isWarlord && (
+            <p className="small" style={{ margin: 0 }}>
+              Warlord: double HP, +{rules.horde.warlord.damageBonus} damage, two actions a round; enrages below half HP (+{rage.damageBonus}).
+            </p>
+          )}
+          {special && (
+            <div className="small">
+              <strong>⚠ {special.name}</strong>
+              <span className="muted">
+                {' '}
+                ({nextSpecial === state.round ? 'this round' : nextSpecial === state.round + 1 ? 'next round' : `round ${nextSpecial}`})
+              </span>
+              <div className="muted">{special.description}.</div>
+            </div>
+          )}
+          {statuses.length > 0 && (
+            <ul className="small detail-list">
+              {statuses.map((t) => (
+                <li key={t}>{t}</li>
+              ))}
+            </ul>
+          )}
+          <div className="small">
+            <strong>This round</strong>
+            <div className="muted">
+              {justArrived(state, e) ? 'Just arrived: acts next round.' : plan.length ? plan.join(' ') : 'Nothing planned.'}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -94,6 +94,8 @@ export interface LogEntry {
   text: string;
   actorId?: string;
   targetIds?: string[];
+  /** A compact version for the enemy card, e.g. "→ Warrior 20" or "⚠ Slam: all heroes". */
+  short?: string;
 }
 
 export interface BattleState {
@@ -211,9 +213,12 @@ function describeWave(enemies: EnemyState[]): string {
   return [goblins ? `${goblins} goblin${goblins > 1 ? 's' : ''}` : '', ...named].filter(Boolean).join(', ');
 }
 
-function log(state: BattleState, side: LogEntry['side'], text: string, actorId?: string, targetIds?: string[]) {
-  state.log.push({ round: state.round, side, text, actorId, targetIds });
+function log(state: BattleState, side: LogEntry['side'], text: string, actorId?: string, targetIds?: string[], short?: string) {
+  state.log.push({ round: state.round, side, text, actorId, targetIds, short });
 }
+
+/** "Ogre · Anthony Davis" → "Ogre". */
+const shortName = (name: string) => name.split(' · ')[0];
 
 /** Round a wave (0-based index) arrives on the clock, or null if it only comes when the field is clear. */
 export function waveArrivalRound(wave: number, rules: Rules = defaultRules): number | null {
@@ -729,7 +734,13 @@ export function chooseEnemyTarget(state: BattleState, enemy: EnemyState, rules: 
   return lowestHp(pool);
 }
 
-function hitHero(state: BattleState, enemy: EnemyState, h: HeroState, raw: number, rules: Rules, ignoreArmor = false): string {
+interface Hit {
+  text: string;
+  /** Short target label with damage, e.g. "Warrior 20". */
+  short: string;
+}
+
+function hitHero(state: BattleState, enemy: EnemyState, h: HeroState, raw: number, rules: Rules, ignoreArmor = false): Hit {
   const dealt = Math.max(0, raw - (ignoreArmor ? 0 : h.armor));
   h.hp -= dealt;
   if (h.lastStand && h.hp < 1) h.hp = 1;
@@ -746,15 +757,15 @@ function hitHero(state: BattleState, enemy: EnemyState, h: HeroState, raw: numbe
     state.stats.anyHeroFell = true;
     text += ` — ${rules.classes[h.heroClass].name} falls`;
   }
-  return text;
+  return { text, short: `${rules.classes[h.heroClass].name} ${dealt}${h.alive ? '' : ' 💀'}` };
 }
 
-function hitTarget(state: BattleState, enemy: EnemyState, target: Target, rules: Rules, raw = enemyDamage(state, enemy, rules)): string {
+function hitTarget(state: BattleState, enemy: EnemyState, target: Target, rules: Rules, raw = enemyDamage(state, enemy, rules)): Hit {
   if (target.kind === 'summon') {
     const s = target.unit;
     s.hp = Math.max(0, s.hp - raw);
     if (s.hp === 0) s.alive = false;
-    return `${raw} to ${s.name}${s.alive ? '' : ' (defeated)'}`;
+    return { text: `${raw} to ${s.name}${s.alive ? '' : ' (defeated)'}`, short: `${s.name} ${raw}` };
   }
   return hitHero(state, enemy, target.unit, raw, rules);
 }
@@ -775,27 +786,34 @@ function doSpecial(state: BattleState, enemy: EnemyState, rules: Rules): boolean
       const hits: string[] = [];
       for (const h of targetableHeroes(state)) {
         h.curse = { amount: c.damageReduction, rounds: c.rounds };
-        hits.push(hitHero(state, enemy, h, sp.warlock.damage, rules, true));
+        hits.push(hitHero(state, enemy, h, sp.warlock.damage, rules, true).text);
       }
-      log(state, 'enemy', `${enemy.name} casts ${sp.warlock.name}: −${c.damageReduction} damage for ${c.rounds} turns; ${hits.join('; ')}.`, enemy.id);
+      log(state, 'enemy', `${enemy.name} casts ${sp.warlock.name}: −${c.damageReduction} damage for ${c.rounds} turns; ${hits.join('; ')}.`, enemy.id, undefined, `⚠ ${sp.warlock.short}: all heroes`);
       return true;
     }
     case 'ogre': {
       const target = chooseEnemyTarget(state, enemy, rules);
-      const hits = targetableHeroes(state).map((h) => hitHero(state, enemy, h, Math.max(0, dmg - sp.ogre.splashPenalty), rules));
+      const hits = targetableHeroes(state).map((h) => hitHero(state, enemy, h, Math.max(0, dmg - sp.ogre.splashPenalty), rules).text);
       let text = `${enemy.name} uses ${sp.ogre.name}: ${hits.join('; ')}`;
       if (target?.kind === 'hero' && target.unit.alive) {
         target.unit.skipNextTurn = true;
         text += `; ${rules.classes[target.unit.heroClass].name} knocked prone`;
       }
-      log(state, 'enemy', `${text}.`, enemy.id);
+      log(state, 'enemy', `${text}.`, enemy.id, undefined, `⚠ ${sp.ogre.short}: all heroes`);
       return true;
     }
     case 'hunter': {
       const picks = [...targetableHeroes(state)].sort((a, b) => a.armor - b.armor || a.hp - b.hp).slice(0, sp.hunter.targets);
       if (!picks.length) return false;
       const hits = picks.map((h) => hitHero(state, enemy, h, dmg, rules));
-      log(state, 'enemy', `${enemy.name} fires a ${sp.hunter.name}: ${hits.join('; ')}.`, enemy.id, picks.map((h) => h.id));
+      log(
+        state,
+        'enemy',
+        `${enemy.name} fires a ${sp.hunter.name}: ${hits.map((x) => x.text).join('; ')}.`,
+        enemy.id,
+        picks.map((h) => h.id),
+        `⚠ ${sp.hunter.short} → ${hits.map((x) => x.short).join(', ')}`,
+      );
       return true;
     }
     case 'assassin': {
@@ -803,12 +821,20 @@ function doSpecial(state: BattleState, enemy: EnemyState, rules: Rules): boolean
       if (!target) return false;
       const low = target.kind === 'hero' && target.unit.hp < target.unit.maxHp * sp.assassin.belowHpFraction;
       const raw = low ? dmg * sp.assassin.multiplier : dmg;
-      log(state, 'enemy', `${enemy.name} attempts an ${sp.assassin.name}${low ? '' : ' (no effect above half HP)'}: ${hitTarget(state, enemy, target, rules, raw)}.`, enemy.id, [target.unit.id]);
+      const hit = hitTarget(state, enemy, target, rules, raw);
+      log(
+        state,
+        'enemy',
+        `${enemy.name} attempts an ${sp.assassin.name}${low ? '' : ' (no effect above half HP)'}: ${hit.text}.`,
+        enemy.id,
+        [target.unit.id],
+        low ? `⚠ ${sp.assassin.short} → ${hit.short}` : `→ ${hit.short}`,
+      );
       return true;
     }
     case 'shaman': {
       for (const e of livingEnemies(state)) e.drum = { amount: sp.shaman.bonus, round: state.round + 1 };
-      log(state, 'enemy', `${enemy.name} beats the ${sp.shaman.name}: the horde deals +${sp.shaman.bonus} damage next round.`, enemy.id);
+      log(state, 'enemy', `${enemy.name} beats the ${sp.shaman.name}: the horde deals +${sp.shaman.bonus} damage next round.`, enemy.id, undefined, `⚠ ${sp.shaman.short}: +${sp.shaman.bonus} next round`);
       return true;
     }
   }
@@ -819,7 +845,7 @@ function enemyAct(state: BattleState, enemy: EnemyState, actionNumber: number, r
   if (!enemy.alive) return;
   if (enemy.staggers > 0) {
     enemy.staggers--;
-    log(state, 'enemy', `${enemy.name} is staggered and loses its action.`, enemy.id);
+    log(state, 'enemy', `${enemy.name} is staggered and loses its action.`, enemy.id, undefined, '💫 Staggered');
     return;
   }
   const behavior = rules.monsters[enemy.kind].behavior;
@@ -832,16 +858,24 @@ function enemyAct(state: BattleState, enemy: EnemyState, actionNumber: number, r
       const heal = Math.min(rules.combat.shaman.healByTier[enemy.tier ?? 'cold'], injured.maxHp - injured.hp);
       injured.hp += heal;
       for (const e of livingEnemies(state)) e.shield = { armor: rules.combat.shaman.shieldArmor, rounds: 2 };
-      log(state, 'enemy', `${enemy.name} heals ${injured.name} for ${heal} and shields the horde (+${rules.combat.shaman.shieldArmor} armor).`, enemy.id, [injured.id]);
+      log(
+        state,
+        'enemy',
+        `${enemy.name} heals ${injured.name} for ${heal} and shields the horde (+${rules.combat.shaman.shieldArmor} armor).`,
+        enemy.id,
+        [injured.id],
+        `✚ ${shortName(injured.name)} +${heal}, ⛨ horde`,
+      );
       return;
     }
   }
   const target = chooseEnemyTarget(state, enemy, rules);
   if (!target) {
-    log(state, 'enemy', `${enemy.name} finds no target.`, enemy.id);
+    log(state, 'enemy', `${enemy.name} finds no target.`, enemy.id, undefined, 'No target');
     return;
   }
-  log(state, 'enemy', `${enemy.name} attacks: ${hitTarget(state, enemy, target, rules)}.`, enemy.id, [target.unit.id]);
+  const hit = hitTarget(state, enemy, target, rules);
+  log(state, 'enemy', `${enemy.name} attacks: ${hit.text}.`, enemy.id, [target.unit.id], `→ ${hit.short}`);
 }
 
 function summonsAct(state: BattleState) {
