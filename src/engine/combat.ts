@@ -293,6 +293,69 @@ function damageEnemy(state: BattleState, enemy: EnemyState, amount: number, pier
   return dealt;
 }
 
+/**
+ * A short effect line for an action tile, e.g. "8 dmg ×3" or "+12 HP".
+ * Damage includes the hero's gear and any pending multiplier or curse.
+ */
+export function summarizeAction(def: ActionDef, hero: HeroState, rules: Rules = defaultRules): { text: string; damage: boolean } {
+  const parts: string[] = [];
+  let damage = false;
+  const targets =
+    def.target.type === 'enemies' ? ` ×${def.target.count}` : def.target.type === 'allEnemies' ? ' to all' : '';
+  for (const e of def.effects) {
+    switch (e.type) {
+      case 'damage': {
+        damage = true;
+        const base = (e.amount === 'gear' ? hero.gear : e.amount) + (e.bonus ?? 0);
+        const hit = heroHitAmount(hero, base);
+        const vsTaunted = e.doubleIfTauntedByOther ? `, ${heroHitAmount(hero, base * 2)} vs taunted` : '';
+        parts.push(`${hit} dmg${targets}${e.pierce ? ', pierces' : ''}${vsTaunted}`);
+        break;
+      }
+      case 'gearAttack':
+        damage = true;
+        parts.push(`${e.times}×${heroHitAmount(hero, hero.gear)} dmg`);
+        break;
+      case 'poison':
+        parts.push(`+${e.perRound}/rd ×${e.rounds}`);
+        break;
+      case 'nextAttackMultiplier':
+        parts.push(`next hit ×${e.multiplier}`);
+        break;
+      case 'untargetable':
+        parts.push('untargetable');
+        break;
+      case 'heal':
+        parts.push(`+${e.amount} HP${def.target.type === 'allAllies' ? ' all' : ''}`);
+        break;
+      case 'revive':
+        parts.push(e.fraction >= 1 ? 'revive all, full HP' : 'revive, ½ HP');
+        break;
+      case 'armor':
+        parts.push(`+${e.amount} armor${def.target.type === 'allAllies' && e.on !== 'self' ? ' all' : ''}`);
+        break;
+      case 'taunt':
+        parts.push(def.target.type === 'allEnemies' ? 'taunt all' : 'taunt 1');
+        break;
+      case 'weaken':
+        parts.push(`−${e.amount} dmg ${e.rounds} rds`);
+        break;
+      case 'summon': {
+        const d = rules.summons[e.unit];
+        parts.push(`${e.count > 1 ? `${e.count} ` : ''}${d.name.toLowerCase()}${e.count > 1 ? 's' : ''} ${d.hp}HP/${d.damage}dmg`);
+        break;
+      }
+      case 'instakill':
+        parts.push('defeat non-boss');
+        break;
+      case 'lastStand':
+        parts.push("can't drop below 1 HP");
+        break;
+    }
+  }
+  return { text: parts.join(', '), damage };
+}
+
 function heroHitAmount(hero: HeroState, base: number): number {
   const curse = hero.curse && hero.curse.rounds > 0 ? hero.curse.amount : 0;
   return Math.max(0, Math.floor(base * hero.nextAttackMultiplier) - curse);

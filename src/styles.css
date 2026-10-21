@@ -332,6 +332,8 @@ select.input { appearance: auto; }
 .action-name { font-weight: 650; font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .action .cost { font-weight: 700; font-size: 0.75rem; color: var(--info); }
 .action.sig { border-color: var(--gold); }
+.action-sum { font-size: 0.72rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.action-sum.dmg { color: #ffb3a3; font-weight: 600; }
 .drawer { align-items: end; }
 .drawer .modal { max-height: 70vh; }
 
