@@ -41,6 +41,7 @@ export default function App() {
 
   return (
     <div className={`app${active?.phase === 'battle' ? ' battle' : ''}`}>
+      {active?.phase !== 'battle' && (
       <header className="topbar">
         <span className="brand">NBA Fantasy RPG</span>
         {active && <span className="crumbs">{weekLabel(data, active.weekIndex)}</span>}
@@ -55,6 +56,7 @@ export default function App() {
           )}
         </div>
       </header>
+      )}
       {showTutorial && <Tutorial onClose={() => setShowTutorial(false)} />}
       {data.synthetic && (
         <p className="banner small" role="status">
@@ -70,7 +72,7 @@ export default function App() {
       ) : active.phase === 'select' ? (
         <SelectGames data={data} game={active} onChange={update} />
       ) : active.phase === 'battle' ? (
-        <BattleScreen data={data} game={active} onChange={update} />
+        <BattleScreen data={data} game={active} onChange={update} onHelp={() => setShowTutorial(true)} onQuit={() => update(null)} />
       ) : (
         <ResultScreen data={data} game={active} onChange={update} />
       )}
