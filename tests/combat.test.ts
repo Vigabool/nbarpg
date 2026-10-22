@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { endRound, livingEnemies, listActions, nextWaveRound, performAction, previewEnemyPhase, actionDamage, enemyDamage, type BattleState } from '../src/engine/combat';
+import { endRound, livingEnemies, listActions, nextWaveRound, performAction, previewEnemyPhase, actionDamage, enemyDamage, packBonus, type BattleState } from '../src/engine/combat';
 import { rules } from '../src/rules';
 import { battle, heroSetup, monster, party } from './helpers';
 
@@ -468,7 +468,8 @@ describe('the wave clock', () => {
     let s = battle([[g], [monster({ hp: 50, damage: 5 })]]);
     s = endRound(endRound(s));
     s = endRound(s);
-    expect(hero(s, 'warrior').hp).toBe(40 - 3);
+    // 5 damage, +1 Pack Tactics (one other goblin), −2 Shield.
+    expect(hero(s, 'warrior').hp).toBe(40 - 4);
   });
 
   it('credits each wave as it is cleared, even when waves overlap', () => {
@@ -532,5 +533,17 @@ describe('champion specials (every 3rd round)', () => {
     expect(enemy(s, w.id).enraged).toBe(true);
     expect(enemyDamage(s, enemy(s, w.id))).toBe(9);
     expect(s.log.some((l) => l.text.includes('enraged'))).toBe(true);
+  });
+});
+
+describe('Pack Tactics', () => {
+  it('gives each goblin +1 damage per other living goblin', () => {
+    const gs = [monster({ damage: 3 }), monster({ damage: 3 }), monster({ damage: 3 })];
+    let s = battle([gs]);
+    expect(enemyDamage(s, enemy(s, gs[0].id))).toBe(5);
+    s = act(s, 'wizard', 'lightning-bolt', [gs[1].id]);
+    expect(enemyDamage(s, enemy(s, gs[0].id))).toBe(4);
+    // Champions don't get it.
+    expect(packBonus(s, { ...enemy(s, gs[0].id), kind: 'ogre' })).toBe(0);
   });
 });

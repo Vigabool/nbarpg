@@ -11,6 +11,7 @@ import {
   actionDamage,
   energyGain,
   enemyDamage,
+  packBonus,
   specialDue,
   nextWaveRound,
   specialOf,
@@ -548,6 +549,7 @@ function GoblinStack({
   const counts = new Map<string, number>();
   for (const g of goblins) for (const i of intents[g.id]?.short ?? []) counts.set(i, (counts.get(i) ?? 0) + 1);
   const dmg = enemyDamage(state, first);
+  const pack = packBonus(state, first);
   return (
     <div
       className={`unit-c minion${targetable ? ' target' : ''}${goblins.some((g) => targeted.includes(g.id)) ? ' targeted' : ''}`}
@@ -579,6 +581,13 @@ function GoblinStack({
           </button>
         ))}
       </div>
+      {pack > 0 && (
+        <div className="u-foot">
+          <span className="tag static" aria-label={`Pack Tactics +${pack}`}>
+            🐺+{pack}
+          </span>
+        </div>
+      )}
       {justArrived(state, first) ? (
         <div className="u-intent muted">Arrived · acts next round</div>
       ) : (
@@ -626,6 +635,8 @@ function EnemyDetail({
   if (e.poison) statuses.push(`Poisoned: ${e.poison.perRound} damage for ${e.poison.rounds} more rounds`);
   if (e.weaken) statuses.push(`Cursed: deals ${e.weaken.amount} less damage for ${e.weaken.rounds} rounds`);
   if (enemyArmor(e) > 0) statuses.push(`Shielded: +${enemyArmor(e)} armor`);
+  if (packBonus(state, e) > 0)
+    statuses.push(`${rules.combat.packTactics.name}: +${packBonus(state, e)} damage from the other goblins on the field`);
   if (e.staggers > 0) statuses.push(`Staggered: loses its next ${e.staggers > 1 ? `${e.staggers} actions` : 'action'}`);
   const plan = enemies.flatMap((x) => intents[x.id]?.full ?? []);
   return (

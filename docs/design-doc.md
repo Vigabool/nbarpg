@@ -245,7 +245,7 @@ Monsters follow fixed behaviors; the opposing player's tier scales their HP and 
 
 | Monster | Behavior | Special (every 2nd round on the field) | Pressures | HP by tier (Cold → Elite) | Damage by tier |
 | --- | --- | --- | --- | --- | --- |
-| Goblin (minion) | Taunter → Warrior → lowest HP | — | AoE fodder; light chip damage | 8 (fixed) | 2–4 by team FG% |
+| Goblin (minion) | Taunter → Warrior → lowest HP. Passive **Pack Tactics:** +1 damage per other goblin on the field | — | AoE fodder; dangerous in numbers | 8 (fixed) | 2–4 by team FG%, + Pack Tactics |
 | Ogre | Hits the taunter, else the Warrior | **Ground Slam:** every hero takes damage −2; its target is knocked prone | Whole party, through taunts | 30 → 60 | 14 → 25 |
 | Warlock | Lowest-HP of Wizard and Cleric | **Hex:** party curse (−2 damage, 2 turns) + 3 to every hero, ignoring armor | Whole party | 18 → 36 | 11 → 22 |
 | Hunter | Ignores taunts; lowest-armor hero | **Volley:** hits the two lowest-armor heroes | Back line | 20 → 40 | 11 → 22 |

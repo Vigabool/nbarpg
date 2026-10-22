@@ -395,9 +395,16 @@ function damageEnemy(state: BattleState, enemy: EnemyState, amount: number, pier
   return dealt;
 }
 
-/** What an enemy hits for this round, after enrage, War Drum and curses. */
+/** Pack Tactics: bonus damage a goblin gets from the other goblins on the field. */
+export function packBonus(state: BattleState, e: EnemyState, rules: Rules = defaultRules): number {
+  if (e.kind !== 'goblin') return 0;
+  const others = state.enemies.filter((x) => x.alive && x.kind === 'goblin' && x.id !== e.id).length;
+  return others * rules.combat.packTactics.bonusPerOtherGoblin;
+}
+
+/** What an enemy hits for this round, after enrage, War Drum, Pack Tactics and curses. */
 export function enemyDamage(state: BattleState, e: EnemyState, rules: Rules = defaultRules): number {
-  const rage = e.enraged ? rules.combat.warlordEnrage.damageBonus : 0;
+  const rage = (e.enraged ? rules.combat.warlordEnrage.damageBonus : 0) + packBonus(state, e, rules);
   const drum = e.drum && e.drum.round === state.round ? e.drum.amount : 0;
   const weaken = e.weaken && e.weaken.rounds > 0 ? e.weaken.amount : 0;
   return Math.max(0, e.damage + rage + drum - weaken);

@@ -1,5 +1,5 @@
 {
-  "goblin": { "name": "Goblin", "behavior": "default", "description": "Attacks whoever taunted it, then the Warrior, then the lowest-HP target", "hp": 8 },
+  "goblin": { "name": "Goblin", "behavior": "default", "description": "Attacks whoever taunted it, then the Warrior, then the lowest-HP target. Passive: Pack Tactics gives +1 damage for each other goblin on the field", "hp": 8 },
   "ogre": { "name": "Ogre", "behavior": "ogre", "mirrors": "warrior", "description": "Smashes whoever taunted it, else the Warrior. Special: Ground Slam hits every hero for its damage −2 and knocks its target prone", "hpByTier": [30, 38, 45, 53, 60], "damageByTier": [14, 16, 19, 22, 25] },
   "warlock": { "name": "Warlock", "behavior": "warlock", "mirrors": "wizard", "description": "Goes after the Wizard or Cleric (lowest HP). Special: Hex curses the party (−2 damage for 2 turns) and deals 3 to every hero, ignoring armor", "hpByTier": [18, 23, 27, 32, 36], "damageByTier": [11, 14, 16, 19, 22] },
   "hunter": { "name": "Hunter", "behavior": "hunter", "ignoresTaunt": true, "mirrors": "ranger", "description": "Ranged: ignores taunts and targets the lowest-armor hero. Special: Volley hits the two lowest-armor heroes", "hpByTier": [20, 25, 30, 35, 40], "damageByTier": [11, 14, 16, 19, 22] },

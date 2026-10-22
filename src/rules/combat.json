@@ -57,5 +57,10 @@
     },
     "shieldArmor": 2
   },
-  "summonsAppearInLowestHpTargeting": true
+  "summonsAppearInLowestHpTargeting": true,
+  "packTactics": {
+    "name": "Pack Tactics",
+    "description": "+1 damage for each other goblin on the field",
+    "bonusPerOtherGoblin": 1
+  }
 }
