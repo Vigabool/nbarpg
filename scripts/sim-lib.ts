@@ -22,13 +22,16 @@ export interface SimResult {
   avgPool: number;
   monsters: number;
   goblins: number;
+  /** Goblin attacks that landed on a hero or summon, per battle. */
+  goblinAttacks: number;
+  goblinDamage: number;
 }
 
 export function simulate(data: SeasonData, battles: number, seedIn = 1): SimResult {
   let seed = seedIn;
   const rand = () => ((seed = (seed * 1103515245 + 12345) % 2 ** 31) / 2 ** 31);
   const pool = eligiblePlayers(data);
-  const r = { won: 0, lost: 0, rounds: 0, waves: [0, 0, 0, 0], fallen: 0, roundCap: 0, pools: [] as number[], horde: 0, goblins: 0 };
+  const r = { won: 0, lost: 0, rounds: 0, waves: [0, 0, 0, 0], fallen: 0, roundCap: 0, pools: [] as number[], horde: 0, goblins: 0, gobAttacks: 0, gobDamage: 0 };
   for (let b = 0; b < battles; b++) {
     const week = data.weeks[Math.floor(rand() * data.weeks.length)];
     const draw = pool.filter(() => rand() < 0.33);
@@ -58,6 +61,11 @@ export function simulate(data: SeasonData, battles: number, seedIn = 1): SimResu
     r.rounds += end.round;
     r.waves[Math.min(3, end.stats.wavesCleared)]++;
     r.fallen += end.heroes.filter((h) => !h.alive).length;
+    for (const l of end.log) {
+      if (l.side !== 'enemy' || !l.text.startsWith('Goblin') || !l.short?.startsWith('→')) continue;
+      r.gobAttacks++;
+      r.gobDamage += Number(l.short.match(/(\d+)/)?.[1] ?? 0);
+    }
   }
   const n = r.won + r.lost;
   return {
@@ -70,5 +78,7 @@ export function simulate(data: SeasonData, battles: number, seedIn = 1): SimResu
     avgPool: r.pools.reduce((a, b) => a + b, 0) / r.pools.length,
     monsters: r.horde / n,
     goblins: r.goblins / n,
+    goblinAttacks: r.gobAttacks / n,
+    goblinDamage: r.gobDamage / n,
   };
 }

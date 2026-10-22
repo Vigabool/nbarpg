@@ -223,13 +223,13 @@ Gear damage and armor use the player's season-average Rating, mapped to the same
 
 **Fallbacks.** If the same opposing player qualifies for two mirrors, take the next player down the list. Ties go to minutes played.
 
-**Minions.** Each opposing team adds 1 goblin per 50 team points scored (roughly 2 per game), with fixed stats. Opposing team FG% sets minion accuracy tier. *(Changed from 1 per 25 after simulation on 2025–26 data: at 25, battles mostly hit the round cap; at 50 they average about 9 rounds.)*
+**Minions.** Each opposing team adds 1 goblin per 35 team points scored (roughly 3 per game), with fixed stats. Opposing team FG% sets minion accuracy tier. *(Tuned by simulation: 1 per 25 originally, then 50, now 35 with goblins spread 20/40/40 across the waves so they fight alongside the Champions. Pack Tactics makes a big pack dangerous if it's left alive.)*
 
 ### Wave structure (blended horde)
 
-1. **Wave 1 — Skirmish:** minions only. A warm-up that tempts you to spend early.
-2. **Wave 2 — Champions arrive:** the two or three weakest Champions plus remaining minions.
-3. **Wave 3 — The Warlord:** the strongest remaining Champions plus the Warlord.
+1. **Wave 1 — Skirmish:** a small goblin pack (20% of the goblins). A warm-up that tempts you to spend early.
+2. **Wave 2 — Champions arrive:** the weaker Champions plus 40% of the goblins.
+3. **Wave 3 — The Warlord:** the strongest remaining Champions, the Warlord and the last 40% of the goblins.
 
 **Waves arrive on a clock.** Wave 2 arrives at the start of round 2 and wave 3 at round 4, or at the start of the next round if the party clears the field first. Waves can overlap, which forces triage. A wave fights the round it arrives; the party always gets exactly one turn on it before it strikes.
 
@@ -246,14 +246,14 @@ Monsters follow fixed behaviors; the opposing player's tier scales their HP and 
 | Monster | Behavior | Special (every 2nd round on the field) | Pressures | HP by tier (Cold → Elite) | Damage by tier |
 | --- | --- | --- | --- | --- | --- |
 | Goblin (minion) | Taunter → Warrior → lowest HP. Passive **Pack Tactics:** +1 damage per other goblin on the field | — | AoE fodder; dangerous in numbers | 8 (fixed) | 2–4 by team FG%, + Pack Tactics |
-| Ogre | Hits the taunter, else the Warrior | **Ground Slam:** every hero takes damage −2; its target is knocked prone | Whole party, through taunts | 30 → 60 | 14 → 25 |
-| Warlock | Lowest-HP of Wizard and Cleric | **Hex:** party curse (−2 damage, 2 turns) + 3 to every hero, ignoring armor | Whole party | 18 → 36 | 11 → 22 |
-| Hunter | Ignores taunts; lowest-armor hero | **Volley:** hits the two lowest-armor heroes | Back line | 20 → 40 | 11 → 22 |
-| Assassin | Lowest-HP hero; each hit drains 2 energy | **Execute:** double damage to a hero below half HP | Injured heroes | 16 → 32 | 14 → 25 |
-| Shaman | Heals the most injured monster and shields the horde | **War Drum:** every monster +2 damage next round | Your damage dealers | 18 → 36 | 6 → 11 |
+| Ogre | Hits the taunter, else the Warrior | **Ground Slam:** every hero takes damage −2; its target is knocked prone | Whole party, through taunts | 30 → 60 | 10 → 18 |
+| Warlock | Lowest-HP of Wizard and Cleric | **Hex:** party curse (−2 damage, 2 turns) + 3 to every hero, ignoring armor | Whole party | 18 → 36 | 8 → 15 |
+| Hunter | Ignores taunts; lowest-armor hero | **Volley:** hits the two lowest-armor heroes | Back line | 20 → 40 | 8 → 15 |
+| Assassin | Lowest-HP hero; each hit drains 2 energy | **Execute:** double damage to a hero below half HP | Injured heroes | 16 → 32 | 10 → 18 |
+| Shaman | Heals the most injured monster and shields the horde | **War Drum:** every monster +2 damage next round | Your damage dealers | 18 → 36 | 4 → 8 |
 | Warlord | Its Champion's behavior and special, double HP, two actions | — | The whole party | 2 × Champion | Champion + 2; +5 when enraged |
 
-Specials are telegraphed: the Champion's card shows a ⚠ warning the round before. Champion damage was raised 2.75× from the first draft after simulation showed the horde rarely threatened the party.
+Specials are telegraphed: the Champion's card shows a ⚠ warning the round before. Champion damage is about 1.9× the first draft. Simulation showed the horde rarely threatened the party; the extra goblins later let Champion damage come back down a little.
 
 **Opponent turnovers.** Every 3 turnovers by a Champion's mirrored player gives that Champion one stagger (it skips one action during the battle). This mirrors the hero turnover penalty.
 
@@ -402,7 +402,7 @@ Gaps in the rules above, filled in for the first build. All live in `src/rules/`
 | Goblin targeting | No rows: goblins use the default targeting (taunter → Warrior → lowest HP) |
 | Goblin accuracy | No randomness, so team FG% sets goblin damage instead: under 43% → 2, under 50% → 3, otherwise 4 |
 | Minions per team | 1 per 50 team points (tuned from 25 for quicker battles); counted once per opposing team-game, even if two heroes picked the same game |
-| Goblins per wave | 50% / 25% / 25%, weakest goblins first |
+| Goblins per wave | 20% / 40% / 40%, weakest goblins first, so the pack fights alongside the Champions |
 | Champions per wave | Wave 2 gets the weaker half (rounded up), wave 3 the rest plus the Warlord |
 | Warlord not a mirror | If the best opposing performance isn't one of the five mirrors, it still becomes the Warlord, using the Champion type it rates highest in |
 | Champion tiers | Warlock: PTS (Ranger thresholds). Hunter: PTS, ±1 tier for FG% ≥ 55% / < 40% (10+ FGA). Ogre: Warrior Rating. Assassin: 3 × STL (Rogue thresholds). Shaman: AST (Cleric thresholds) |
@@ -433,5 +433,5 @@ Gaps in the rules above, filled in for the first build. All live in `src/rules/`
 - [ ] Tune PP earn rates and upgrade costs in playtests
 - [ ] Horde scaling: tie horde strength to PP invested
 - [ ] Mid-week injury exception: needed, and what form?
-- [ ] Playtest horde difficulty: tuned to ~76% bot wins, ~7 rounds, ~1.7 heroes fallen per battle (the bot is a weak player; target ~85–90% for a thoughtful human)
+- [ ] Playtest horde difficulty: tuned to ~78% bot wins, ~7.5 rounds, ~1.6 heroes fallen per battle (the bot is a weak player; target ~85–90% for a thoughtful human)
 - [ ] Explore class-specific energy gain in combat, e.g. Warrior +1 when hit, Cleric +1 per heal cast, Rogue +2 on a kill

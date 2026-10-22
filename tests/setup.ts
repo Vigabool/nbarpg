@@ -23,3 +23,5 @@ rules.monsters.warlock.damageByTier = [4, 5, 6, 7, 8];
 rules.monsters.hunter.damageByTier = [4, 5, 6, 7, 8];
 rules.monsters.assassin.damageByTier = [5, 6, 7, 8, 9];
 rules.monsters.shaman.damageByTier = [2, 2, 3, 4, 4];
+rules.horde.minions.teamPointsPerGoblin = 25;
+rules.horde.minions.waveShare = [0.5, 0.25, 0.25];
