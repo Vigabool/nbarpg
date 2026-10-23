@@ -59,7 +59,7 @@
     ],
     "passives": [],
     "abilities": [
-      { "id": "double-strike", "name": "Double Strike", "cost": 5, "description": "Two Longbow attacks (no energy gained)", "target": { "type": "enemy" }, "effects": [{ "type": "gearAttack", "times": 2 }] },
+      { "id": "double-strike", "name": "Double Strike", "cost": 6, "description": "Two Longbow attacks, on one enemy or split between two (no energy gained)", "target": { "type": "enemies", "count": 2 }, "effects": [{ "type": "gearAttack", "times": 2 }] },
       { "id": "aimed-shot", "name": "Aimed Shot", "cost": 6, "description": "12 damage, ignores armor", "target": { "type": "enemy" }, "effects": [{ "type": "damage", "amount": 12, "pierce": true }] },
       { "id": "summon-wolf", "name": "Summon Wolf", "cost": 8, "description": "Wolf: 12 HP, 4 damage per round", "target": { "type": "none" }, "effects": [{ "type": "summon", "unit": "wolf", "count": 1 }] },
       { "id": "summon-bear", "name": "Summon Bear", "cost": 14, "description": "Bear: 25 HP, 5 damage per round, taunts 1 enemy each round", "target": { "type": "none" }, "effects": [{ "type": "summon", "unit": "bear", "count": 1 }] },

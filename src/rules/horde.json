@@ -1,27 +1,111 @@
 {
   "mirrors": [
-    { "heroClass": "wizard", "champion": "warlock", "rankBy": "pts", "rank": 1 },
-    { "heroClass": "ranger", "champion": "hunter", "rankBy": "pts", "rank": 2 },
-    { "heroClass": "warrior", "champion": "ogre", "rankBy": "reb", "rank": 1 },
-    { "heroClass": "rogue", "champion": "assassin", "rankBy": "stl", "rank": 1 },
-    { "heroClass": "cleric", "champion": "shaman", "rankBy": "ast", "rank": 1 }
+    {
+      "heroClass": "wizard",
+      "champion": "warlock",
+      "rankBy": "pts",
+      "rank": 1
+    },
+    {
+      "heroClass": "ranger",
+      "champion": "hunter",
+      "rankBy": "pts",
+      "rank": 2
+    },
+    {
+      "heroClass": "warrior",
+      "champion": "ogre",
+      "rankBy": "reb",
+      "rank": 1
+    },
+    {
+      "heroClass": "rogue",
+      "champion": "assassin",
+      "rankBy": "stl",
+      "rank": 1
+    },
+    {
+      "heroClass": "cleric",
+      "champion": "shaman",
+      "rankBy": "ast",
+      "rank": 1
+    }
   ],
   "championRating": {
-    "warlock": { "rating": { "pts": 1 }, "thresholds": "ranger" },
-    "hunter": { "rating": { "pts": 1 }, "thresholds": "ranger", "tierShift": { "made": "fgm", "attempts": "fga", "minAttempts": 10, "upAtOrAbove": 0.55, "downBelow": 0.4 } },
-    "ogre": { "rating": { "dreb": 1, "oreb": 2, "blk": 3 }, "thresholds": "warrior" },
-    "assassin": { "rating": { "stl": 3 }, "thresholds": "rogue" },
-    "shaman": { "rating": { "ast": 1 }, "thresholds": "cleric" }
+    "warlock": {
+      "rating": {
+        "pts": 1
+      },
+      "thresholds": "ranger"
+    },
+    "hunter": {
+      "rating": {
+        "pts": 1
+      },
+      "thresholds": "ranger",
+      "tierShift": {
+        "made": "fgm",
+        "attempts": "fga",
+        "minAttempts": 10,
+        "upAtOrAbove": 0.55,
+        "downBelow": 0.4
+      }
+    },
+    "ogre": {
+      "rating": {
+        "dreb": 1,
+        "oreb": 2,
+        "blk": 3
+      },
+      "thresholds": "warrior"
+    },
+    "assassin": {
+      "rating": {
+        "stl": 3
+      },
+      "thresholds": "rogue"
+    },
+    "shaman": {
+      "rating": {
+        "ast": 1
+      },
+      "thresholds": "cleric"
+    }
   },
   "minions": {
     "teamPointsPerGoblin": 35,
-    "waveShare": [0.2, 0.4, 0.4],
+    "waveShare": [
+      0.2,
+      0.4,
+      0.4
+    ],
     "damageByTeamFgPct": [
-      { "below": 0.43, "damage": 2 },
-      { "below": 0.5, "damage": 3 },
-      { "below": 2, "damage": 4 }
+      {
+        "below": 0.43,
+        "damage": 2
+      },
+      {
+        "below": 0.5,
+        "damage": 3
+      },
+      {
+        "below": 2,
+        "damage": 4
+      }
     ]
   },
-  "warlord": { "score": { "pts": 1, "reb": 1, "ast": 1 }, "hpMultiplier": 2, "damageBonus": 2, "extraActions": 1 },
-  "turnoversPerStagger": 3
+  "warlord": {
+    "score": {
+      "pts": 1,
+      "reb": 1,
+      "ast": 1
+    },
+    "hpMultiplier": 2,
+    "damageBonus": 2,
+    "extraActions": 1
+  },
+  "turnoversPerStagger": 3,
+  "championWave": {
+    "shaman": 1
+  }
 }

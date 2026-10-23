@@ -533,13 +533,11 @@ function applyEffect(
       const gearDef = rules.classes[hero.heroClass].gear[0];
       const gearEffect = gearDef.effects.find((x) => x.type === 'damage');
       const gearBase = gearEffect && gearEffect.type === 'damage' && gearEffect.amount !== 'gear' ? gearEffect.amount : hero.gear;
-      let targetId = targets[0];
       for (let i = 0; i < effect.times; i++) {
-        let e = state.enemies.find((x) => x.id === targetId && x.alive);
-        // If the first target falls, follow-up attacks go to the weakest remaining enemy.
+        // Hits cycle through the chosen targets; if one has fallen, the hit goes to the weakest enemy left.
+        let e = state.enemies.find((x) => x.id === targets[i % targets.length] && x.alive);
         if (!e) e = [...livingEnemies(state)].sort((a, b) => a.hp - b.hp)[0];
         if (!e) break;
-        targetId = e.id;
         const dealt = damageEnemy(state, e, heroHitAmount(hero, gearBase), false);
         parts.push(`${dealt} to ${e.name}${e.alive ? '' : ' (defeated)'}`);
       }
@@ -840,8 +838,8 @@ function doSpecial(state: BattleState, enemy: EnemyState, rules: Rules): boolean
       return true;
     }
     case 'shaman': {
-      for (const e of livingEnemies(state)) e.drum = { amount: sp.shaman.bonus, round: state.round + 1 };
-      log(state, 'enemy', `${enemy.name} beats the ${sp.shaman.name}: the horde deals +${sp.shaman.bonus} damage next round.`, enemy.id, undefined, `⚠ ${sp.shaman.short}: +${sp.shaman.bonus} next round`);
+      for (const e of livingEnemies(state)) e.drum = { amount: sp.shaman.bonus, round: state.round };
+      log(state, 'enemy', `${enemy.name} beats the ${sp.shaman.name}: the horde deals +${sp.shaman.bonus} damage this round.`, enemy.id, undefined, `⚠ ${sp.shaman.short}: horde +${sp.shaman.bonus}`);
       return true;
     }
   }
@@ -932,7 +930,10 @@ export function endRound(prev: BattleState, rules: Rules = defaultRules): Battle
   afterDamage(state);
   if (state.phase !== 'party') return state;
 
-  for (const enemy of [...livingEnemies(state)]) {
+  // A Shaman beating the War Drum goes first so the whole horde hits with it this round.
+  const drummer = (e: EnemyState) => rules.monsters[e.kind].behavior === 'shaman' && specialDue(e, state.round, rules);
+  const order = [...livingEnemies(state)].sort((a, b) => Number(drummer(b)) - Number(drummer(a)));
+  for (const enemy of order) {
     if (justArrived(state, enemy)) continue;
     for (let a = 0; a <= enemy.extraActions; a++) enemyAct(state, enemy, a, rules);
   }

@@ -179,7 +179,7 @@ Gear damage and armor use the player's season-average Rating, mapped to the same
 
 | Ability | Cost | Effect |
 | --- | --- | --- |
-| Double Strike | 5 | Two gear attacks |
+| Double Strike | 6 | Two Longbow attacks, on one enemy or split between two |
 | Aimed Shot | 6 | 12 damage, ignores armor |
 | Summon Wolf | 8 | Wolf: 12 HP, 4 damage per round |
 | Summon Bear | 14 | Bear: 25 HP, 5 damage per round, taunts 1 enemy each round |
@@ -250,7 +250,7 @@ Monsters follow fixed behaviors; the opposing player's tier scales their HP and 
 | Warlock | Lowest-HP of Wizard and Cleric | **Hex:** party curse (−2 damage, 2 turns) + 3 to every hero, ignoring armor | Whole party | 18 → 36 | 8 → 15 |
 | Hunter | Ignores taunts; lowest-armor hero | **Volley:** hits the two lowest-armor heroes | Back line | 20 → 40 | 8 → 15 |
 | Assassin | Lowest-HP hero; each hit drains 2 energy | **Execute:** double damage to a hero below half HP | Injured heroes | 16 → 32 | 10 → 18 |
-| Shaman | Heals the most injured monster and shields the horde | **War Drum:** every monster +2 damage next round | Your damage dealers | 18 → 36 | 4 → 8 |
+| Shaman | Arrives with wave 1. Heals the most injured monster and shields the horde | **War Drum:** drums first, then every monster deals +2 damage that round (lines up with wave 2's goblins in round 2) | Your damage dealers | 18 → 36 | 4 → 8 |
 | Warlord | Its Champion's behavior and special, double HP, two actions | — | The whole party | 2 × Champion | Champion + 2; +5 when enraged |
 
 Specials are telegraphed: the Champion's card shows a ⚠ warning the round before. Champion damage is about 1.9× the first draft. Simulation showed the horde rarely threatened the party; the extra goblins later let Champion damage come back down a little.

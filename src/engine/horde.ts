@@ -170,9 +170,12 @@ export function buildHorde(picks: HeroGamePick[], data: SeasonData, rules: Rules
     gi += n;
   });
   const byStrength = [...champions].sort((a, b) => strength(a) - strength(b));
-  const wave2Count = Math.ceil(byStrength.length / 2);
-  waves[1].push(...byStrength.slice(0, wave2Count));
-  waves[2].push(...byStrength.slice(wave2Count), warlord);
+  const pinnedWave = (c: MonsterSpec) => rules.horde.championWave?.[c.kind as ChampionKind];
+  for (const c of byStrength) if (pinnedWave(c)) waves[pinnedWave(c)! - 1].push(c);
+  const rest = byStrength.filter((c) => !pinnedWave(c));
+  const wave2Count = Math.ceil(rest.length / 2);
+  waves[1].push(...rest.slice(0, wave2Count));
+  waves[2].push(...rest.slice(wave2Count), warlord);
 
   let n = 0;
   for (const wave of waves) for (const mon of wave) mon.id = `m${++n}`;

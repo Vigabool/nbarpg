@@ -85,7 +85,7 @@ export function chooseAction(
       if (has('summon-wolf') && state.summons.filter((s) => s.alive).length < 2 && hero.pool >= 14) return act(has('summon-wolf'));
       const big = byThreat.find((e) => e.hp >= 12);
       if (has('aimed-shot') && big) return act(has('aimed-shot'), [big.id]);
-      if (has('double-strike')) return act(has('double-strike'), [byHpAsc[0].id]);
+      if (has('double-strike')) return act(has('double-strike'), byHpAsc.slice(0, 2).map((e) => e.id));
       return gear();
     }
   }

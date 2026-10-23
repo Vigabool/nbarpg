@@ -34,7 +34,7 @@
     "shaman": {
       "name": "War Drum",
       "short": "Drum",
-      "description": "Every monster deals +2 damage next round",
+      "description": "Beats the drum before the horde acts: every monster deals +2 damage this round",
       "bonus": 2
     }
   },

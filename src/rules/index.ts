@@ -143,6 +143,8 @@ export interface HordeConfig {
     damageByTeamFgPct: { below: number; damage: number }[];
   };
   warlord: { score: RatingFormula; hpMultiplier: number; damageBonus: number; extraActions: number };
+  /** Champions that always join a specific wave (1-based), e.g. the Shaman in wave 1. */
+  championWave?: Partial<Record<ChampionKind, number>>;
   turnoversPerStagger: number;
 }
 

@@ -514,16 +514,29 @@ describe('champion specials (every 3rd round)', () => {
     }
   });
 
-  it('Shaman War Drum adds +2 damage to the horde next round', () => {
+  it('Shaman War Drum adds +2 damage to the whole horde that round', () => {
+    // The goblin is listed first, but the drummer still goes first.
     const g = monster({ hp: 999, damage: 5 });
     const sh = monster({ kind: 'shaman', hp: 99, damage: 0, tier: 'good' });
     let s = toRound3(battle([[g, sh]]));
     const hp3 = hero(s, 'warrior').hp;
-    s = endRound(s); // drum beaten in round 3
-    expect(hero(s, 'warrior').hp).toBe(hp3 - 3);
+    s = endRound(s); // round 3: drum, then the goblin hits for 5 + 2 − 2 armor
+    expect(hero(s, 'warrior').hp).toBe(hp3 - 5);
     const hp4 = hero(s, 'warrior').hp;
-    s = endRound(s); // round 4: 5 + 2 − 2 armor
-    expect(hero(s, 'warrior').hp).toBe(hp4 - 5);
+    s = endRound(s); // round 4: back to 5 − 2
+    expect(hero(s, 'warrior').hp).toBe(hp4 - 3);
+  });
+
+  it('Double Strike can split its two hits between enemies', () => {
+    const a = monster({ hp: 20 });
+    const b = monster({ hp: 20 });
+    let s = battle([[a, b]]);
+    s = act(s, 'ranger', 'double-strike', [a.id, b.id]);
+    expect(enemy(s, a.id).hp).toBe(16);
+    expect(enemy(s, b.id).hp).toBe(16);
+    expect(hero(s, 'ranger').pool).toBe(20 - 6);
+    s = act(s, 'wizard', 'staff', [a.id]);
+    expect(() => act(s, 'ranger', 'double-strike', [a.id, b.id])).toThrow();
   });
 
   it('the Warlord enrages at half HP', () => {

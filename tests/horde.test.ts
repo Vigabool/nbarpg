@@ -55,16 +55,18 @@ describe('horde generation', () => {
     const goblins = all.filter((m) => m.kind === 'goblin');
     const expected = Math.floor(pts / rules.horde.minions.teamPointsPerGoblin);
     expect(goblins.length).toBe(expected);
-    expect(horde.waves[0].every((m) => m.kind === 'goblin')).toBe(true);
-    expect(horde.waves[0].length).toBe(Math.round(expected / 2));
+    const wave1Goblins = horde.waves[0].filter((m) => m.kind === 'goblin');
+    expect(wave1Goblins.length).toBe(Math.round(expected / 2));
   });
 
-  it('puts the Warlord last and the weaker champions in wave 2', () => {
+  it('puts the Shaman in wave 1, the Warlord last, and the weaker champions in wave 2', () => {
+    expect(horde.waves[0].filter((m) => m.kind !== 'goblin').map((m) => m.kind)).toEqual(['shaman']);
     expect(horde.waves[2].at(-1)?.isWarlord).toBe(true);
+    // Four non-Warlord champions; the Shaman is pinned, the other three split 2 / 1.
     const champs2 = horde.waves[1].filter((m) => m.kind !== 'goblin');
     const champs3 = horde.waves[2].filter((m) => m.kind !== 'goblin' && !m.isWarlord);
     expect(champs2.length).toBe(2);
-    expect(champs3.length).toBe(2);
+    expect(champs3.length).toBe(1);
   });
 
   it('moves down the list when one player would fill two mirrors', () => {
