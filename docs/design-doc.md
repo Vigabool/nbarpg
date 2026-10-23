@@ -415,7 +415,7 @@ Gaps in the rules above, filled in for the first build. All live in `src/rules/`
 | Stagger | Spent on the Champion's first actions after it arrives |
 | Summons | Act after the party phase and bite the lowest-HP enemy. The Bear taunts the hardest-hitting untaunted enemy. Summons are valid targets for "lowest HP" targeting |
 | Longsword | Can only target an enemy that attacked the Ranger last round |
-| Double Strike | Two Longbow attacks; if the first kills, the second hits the weakest enemy |
+| Double Strike | Two Longbow attacks on one or two chosen enemies; a hit whose target has already fallen goes to the weakest enemy left |
 | Crits / Empower | Multiply the whole next damaging action (all its targets), stack multiplicatively, then are consumed |
 | Buff stacking | The same buff (Parry, Shield Wall, Ready Crit, Empower) can't stack with itself in a round; different buffs combine |
 | Pool penalties | Cleric pays −2 for every turnover, on top of the universal −2 per turnover above 2. Triple-double gives +12 total (not +18). Pool floor 0 |
