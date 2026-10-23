@@ -1,5 +1,5 @@
 import { rules as defaultRules, type Rules } from '../rules';
-import { endRound, listActions, livingEnemies, performAction, type ActionOption, type BattleState, type HeroAction, type HeroState } from './combat';
+import { endRound, listActions, pickableEnemies, performAction, type ActionOption, type BattleState, type HeroAction, type HeroState } from './combat';
 
 /**
  * A simple rule-based player used by the batch simulator and tests. It is not
@@ -14,7 +14,8 @@ export function chooseAction(
   const opts = listActions(state, hero.id, rules).filter((o) => o.available && !exclude.has(o.def.id));
   if (opts.length === 0) return null;
   const has = (id: string) => opts.find((o) => o.def.id === id);
-  const enemies = livingEnemies(state);
+  // Only enemies a single-target attack can pick (the guarded Shaman is skipped).
+  const enemies = pickableEnemies(state, rules);
   const byHpAsc = [...enemies].sort((a, b) => a.hp - b.hp);
   const byThreat = [...enemies].sort((a, b) => b.damage - a.damage || b.hp - a.hp);
   const allies = state.heroes.filter((h) => h.alive);

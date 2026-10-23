@@ -286,6 +286,18 @@ function findUnit(state: BattleState, id: string): HeroState | SummonState | Ene
   return state.heroes.find((h) => h.id === id) ?? state.summons.find((s) => s.id === id) ?? state.enemies.find((e) => e.id === id);
 }
 
+/** Guarded by the Pack: can't be targeted while enough goblins are alive. */
+export function isGuarded(state: BattleState, e: EnemyState, rules: Rules = defaultRules): boolean {
+  const g = rules.combat.packGuard;
+  if (!g.guarded.includes(rules.monsters[e.kind].behavior)) return false;
+  return state.enemies.filter((x) => x.alive && x.kind === 'goblin').length >= g.minGoblins;
+}
+
+/** Enemies that single-target attacks and summons can pick. */
+export function pickableEnemies(state: BattleState, rules: Rules = defaultRules): EnemyState[] {
+  return livingEnemies(state).filter((e) => !isGuarded(state, e, rules));
+}
+
 export function ignoresTaunt(e: EnemyState, rules: Rules = defaultRules): boolean {
   return !!rules.monsters[e.kind].ignoresTaunt;
 }
@@ -294,7 +306,7 @@ function validTargets(state: BattleState, hero: HeroState, def: ActionDef, rules
   const t = def.target;
   switch (t.type) {
     case 'enemy': {
-      let es = livingEnemies(state);
+      let es = pickableEnemies(state, rules);
       if (t.nonBoss) es = es.filter((e) => !e.isWarlord);
       if (t.attackedSelfLastRound) es = es.filter((e) => hero.attackedByLastRound.includes(e.id));
       // A pure taunt (Provoke) can't target an enemy that ignores taunts.
@@ -302,6 +314,7 @@ function validTargets(state: BattleState, hero: HeroState, def: ActionDef, rules
       return es.map((e) => e.id);
     }
     case 'enemies':
+      return pickableEnemies(state, rules).map((e) => e.id);
     case 'allEnemies':
       return livingEnemies(state).map((e) => e.id);
     case 'ally': {
@@ -536,7 +549,7 @@ function applyEffect(
       for (let i = 0; i < effect.times; i++) {
         // Hits cycle through the chosen targets; if one has fallen, the hit goes to the weakest enemy left.
         let e = state.enemies.find((x) => x.id === targets[i % targets.length] && x.alive);
-        if (!e) e = [...livingEnemies(state)].sort((a, b) => a.hp - b.hp)[0];
+        if (!e) e = [...pickableEnemies(state, rules)].sort((a, b) => a.hp - b.hp)[0];
         if (!e) break;
         const dealt = damageEnemy(state, e, heroHitAmount(hero, gearBase), false);
         parts.push(`${dealt} to ${e.name}${e.alive ? '' : ' (defeated)'}`);
@@ -895,7 +908,7 @@ function summonsAct(state: BattleState) {
         log(state, 'summon', `${s.name} taunts ${pick.name}.`, s.id, [pick.id]);
       }
     }
-    const target = [...livingEnemies(state)].sort((a, b) => a.hp - b.hp)[0];
+    const target = [...pickableEnemies(state)].sort((a, b) => a.hp - b.hp)[0];
     if (!target) continue;
     const dealt = damageEnemy(state, target, s.damage, false);
     log(state, 'summon', `${s.name} bites ${target.name} for ${dealt}${target.alive ? '' : ' (defeated)'}.`, s.id, [target.id]);

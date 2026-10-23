@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { endRound, livingEnemies, listActions, nextWaveRound, performAction, previewEnemyPhase, actionDamage, enemyDamage, packBonus, type BattleState } from '../src/engine/combat';
+import { endRound, livingEnemies, listActions, nextWaveRound, performAction, previewEnemyPhase, actionDamage, enemyDamage, isGuarded, packBonus, type BattleState } from '../src/engine/combat';
 import { rules } from '../src/rules';
 import { battle, heroSetup, monster, party } from './helpers';
 
@@ -558,5 +558,33 @@ describe('Pack Tactics', () => {
     expect(enemyDamage(s, enemy(s, gs[0].id))).toBe(4);
     // Champions don't get it.
     expect(packBonus(s, { ...enemy(s, gs[0].id), kind: 'ogre' })).toBe(0);
+  });
+});
+
+describe('Guarded by the Pack', () => {
+  it('protects the Shaman from targeted attacks while 2+ goblins live', () => {
+    const sh = monster({ kind: 'shaman', hp: 30, damage: 0, tier: 'good' });
+    const g1 = monster({ hp: 4, damage: 0 });
+    const g2 = monster({ hp: 4, damage: 0 });
+    let s = battle([[sh, g1, g2]], party({ wizard: { fg3m: 6, pts: 10, ast: 10 } }));
+    expect(isGuarded(s, enemy(s, sh.id))).toBe(true);
+    const bolt = listActions(s, 'wizard').find((o) => o.def.id === 'lightning-bolt')!;
+    expect(bolt.validTargets).not.toContain(sh.id);
+    expect(listActions(s, 'wizard').find((o) => o.def.id === 'fireball')!.validTargets).not.toContain(sh.id);
+    // Hits on every enemy still land.
+    s = act(s, 'wizard', 'chain-lightning');
+    expect(enemy(s, sh.id).hp).toBe(20);
+    // Both goblins fell to the chain: the guard is down.
+    expect(isGuarded(s, enemy(s, sh.id))).toBe(false);
+    expect(listActions(s, 'warrior').find((o) => o.def.id === 'axe')!.validTargets).toContain(sh.id);
+  });
+
+  it('drops once fewer than 2 goblins remain', () => {
+    const sh = monster({ kind: 'shaman', hp: 30, damage: 0, tier: 'good' });
+    const g1 = monster({ hp: 4, damage: 0 });
+    const g2 = monster({ hp: 40, damage: 0 });
+    let s = battle([[sh, g1, g2]]);
+    s = act(s, 'warrior', 'axe', [g1.id]);
+    expect(isGuarded(s, enemy(s, sh.id))).toBe(false);
   });
 });

@@ -62,5 +62,13 @@
     "name": "Pack Tactics",
     "description": "+1 damage for each other goblin on the field",
     "bonusPerOtherGoblin": 1
+  },
+  "packGuard": {
+    "name": "Guarded by the Pack",
+    "description": "Can't be targeted while 2 or more goblins are alive; attacks that hit every enemy still land",
+    "minGoblins": 2,
+    "guarded": [
+      "shaman"
+    ]
   }
 }
