@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState, type ReactNode } from 'react';
-import type { SeasonData } from '../data/types';
+import type { SeasonData, StatKey, StatLine } from '../data/types';
 import { autoDraft } from '../app/autoDraft';
 import { MOVES_PER_CHAPTER, currentWeek, rosterCost, rosterMoves, type SaveGame } from '../app/game';
 import { eligiblePlayers } from '../engine/calibration';
@@ -14,6 +14,51 @@ type Slots = Partial<Record<HeroClass, number>>;
 const RESERVES = rules.salary.rosterSize - rules.salary.heroSlots;
 
 const isClassSort = (s: Sort): s is HeroClass => (CLASSES as readonly string[]).includes(s);
+
+interface StatChip {
+  label: string;
+  value: string;
+  /** Feeds the selected class's energy. */
+  hl: boolean;
+}
+
+const BASE_STATS: { key: StatKey; label: string }[] = [
+  { key: 'pts', label: 'PTS' },
+  { key: 'reb', label: 'REB' },
+  { key: 'ast', label: 'AST' },
+  { key: 'stl', label: 'STL' },
+  { key: 'blk', label: 'BLK' },
+];
+const EXTRA_LABEL: Partial<Record<StatKey, string>> = { fg3m: '3PM', ftm: 'FTM', oreb: 'OREB', dreb: 'DREB', tov: 'TO' };
+
+/**
+ * Season averages for the roster list. With a class selected, the stats that
+ * feed that class's energy are highlighted, and any it uses beyond the base
+ * five (3PM, FTM, shooting %, turnovers) are added.
+ */
+function playerStats(avg: StatLine, c?: HeroClass): StatChip[] {
+  const cls = c ? rules.classes[c] : undefined;
+  const used = new Set(Object.keys(cls?.rating ?? {}) as StatKey[]);
+  const chips: StatChip[] = BASE_STATS.map(({ key, label }) => ({
+    label,
+    value: avg[key].toFixed(1),
+    hl: used.has(key) || (key === 'reb' && (used.has('oreb') || used.has('dreb'))),
+  }));
+  if (!cls) return chips;
+  for (const key of used) {
+    if (BASE_STATS.some((b) => b.key === key) || key === 'dreb') continue;
+    chips.push({ label: EXTRA_LABEL[key] ?? key.toUpperCase(), value: avg[key].toFixed(1), hl: true });
+  }
+  for (const m of cls.modifiers) {
+    if (m.type === 'percentage') {
+      const pct = avg[m.attempts] > 0 ? (avg[m.made] / avg[m.attempts]) * 100 : 0;
+      chips.push({ label: m.label, value: `${pct.toFixed(0)}%`, hl: true });
+    } else if (m.type === 'perTurnover') {
+      chips.push({ label: 'TO', value: avg.tov.toFixed(1), hl: true });
+    }
+  }
+  return chips;
+}
 
 /** Splits a saved roster into class slots and reserves. */
 function initialSlots(game: SaveGame, data: SeasonData): { slots: Slots; reserves: number[] } {
@@ -262,7 +307,8 @@ export function RosterBuilder({ data, game, onChange }: { data: SeasonData; game
           <PlayerRow
             key={p.id}
             name={p.name}
-            meta={`${p.team} · ${p.gp} GP · ${p.avg.pts.toFixed(1)} PTS ${p.avg.reb.toFixed(1)} REB ${p.avg.ast.toFixed(1)} AST · ${gamesCount(gamesThisWeek)} this week`}
+            meta={`${p.team} · ${p.gp} GP · ${gamesCount(gamesThisWeek)} this week`}
+            stats={playerStats(p.avg, isClassSort(sort) ? sort : undefined)}
             salary={salary}
             slots={slots}
             reservesFull={reserves.length >= RESERVES}
@@ -305,6 +351,7 @@ export function RosterBuilder({ data, game, onChange }: { data: SeasonData; game
 function PlayerRow({
   name,
   meta,
+  stats,
   salary,
   slots,
   reservesFull,
@@ -315,6 +362,7 @@ function PlayerRow({
 }: {
   name: string;
   meta: string;
+  stats: StatChip[];
   salary: SalaryBreakdown;
   slots: Slots;
   reservesFull: boolean;
@@ -328,6 +376,13 @@ function PlayerRow({
       <div style={{ minWidth: 0 }}>
         <div style={{ fontWeight: 650 }}>{name}</div>
         <div className="tiny muted num">{meta}</div>
+        <div className="stat-line num">
+          {stats.map((st) => (
+            <span key={st.label} className={st.hl ? 'hl' : undefined}>
+              <b>{st.value}</b> {st.label}
+            </span>
+          ))}
+        </div>
       </div>
       <div className={`num salary${overCap ? ' warn' : ''}`} style={{ fontWeight: 700, textAlign: 'right' }} title={overCap ? 'Would put you over the cap' : undefined}>
         {money(salary.salary)}
