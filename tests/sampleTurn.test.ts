@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildSteps } from '../src/ui/SampleTurn';
+import { buildSteps } from '../src/ui/sampleTurnScript';
 
 describe('How to play: sample turn', () => {
   it('plays its scripted round without errors and tells the intended story', () => {
