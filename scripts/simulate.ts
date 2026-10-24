@@ -15,4 +15,5 @@ console.log(`Win rate: ${(r.winRate * 100).toFixed(1)}%  (losses to round cap: $
 console.log(`Average rounds: ${r.avgRounds.toFixed(1)}  ·  heroes fallen per battle: ${r.fallenPerBattle.toFixed(2)}`);
 console.log(`Waves cleared: ${r.wavesCleared.map((c, i) => `${i}: ${c}`).join('  ')}`);
 console.log(`Goblin attacks per battle: ${r.goblinAttacks.toFixed(1)} (${r.goblinDamage.toFixed(1)} damage)`);
+if (r.topplesPerBattle) console.log(`Topples per battle: ${r.topplesPerBattle.toFixed(1)}`);
 console.log(`Average starting energy: ${r.avgPool.toFixed(1)}  ·  monsters per battle: ${r.monsters.toFixed(1)} (goblins ${r.goblins.toFixed(1)})`);

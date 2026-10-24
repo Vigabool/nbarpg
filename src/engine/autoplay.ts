@@ -1,5 +1,5 @@
 import { rules as defaultRules, type Rules } from '../rules';
-import { actionDamage, canFumble, endRound, justArrived, listActions, livingEnemies, pickableEnemies, performAction, spendFumble, type ActionOption, type BattleState, type HeroAction, type HeroState } from './combat';
+import { actionDamage, canFumble, endRound, toppleThreshold, justArrived, listActions, livingEnemies, pickableEnemies, performAction, spendFumble, type ActionOption, type BattleState, type HeroAction, type HeroState } from './combat';
 
 /**
  * A simple rule-based player used by the batch simulator and tests. It is not
@@ -19,7 +19,12 @@ export function chooseAction(
   const byHpAsc = [...enemies].sort((a, b) => a.hp - b.hp);
   // An exposed Phylactery comes first: it halves damage to the Lich.
   const phyl = (e: { kind: string }) => (e.kind === 'phylactery' ? 1 : 0);
-  const byThreat = [...enemies].sort((a, b) => phyl(b) - phyl(a) || b.damage - a.damage || b.hp - a.hp);
+  // Topple: focus the giant closest to falling (least damage still needed this round).
+  const toGo = (e: (typeof enemies)[number]) => {
+    const t = toppleThreshold(state, e, rules);
+    return t === null || e.toppled ? 1e9 : t - (e.toppleDamage ?? 0);
+  };
+  const byThreat = [...enemies].sort((a, b) => phyl(b) - phyl(a) || toGo(a) - toGo(b) || b.damage - a.damage || b.hp - a.hp);
   const allies = state.heroes.filter((h) => h.alive);
   const fallen = state.heroes.filter((h) => !h.alive);
   const act = (o: ActionOption | undefined, targetIds: string[] = []): HeroAction | null =>

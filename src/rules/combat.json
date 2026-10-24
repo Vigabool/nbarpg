@@ -28,6 +28,25 @@
       "short": "Breath",
       "description": "Breathes fire over the whole party: every hero takes its full damage (armor still helps)"
     },
+    "boulderToss": {
+      "name": "Boulder Toss",
+      "short": "Boulder",
+      "description": "Hurls a boulder over your front line at the lowest-HP hero other than the Warrior for 1.25× its damage, knocking them prone. Taunts can't stop it",
+      "multiplier": 1.25
+    },
+    "spearThrow": {
+      "name": "Spear Throw",
+      "short": "Spear",
+      "description": "One huge spear at the lowest-armor hero for 1.5× its damage",
+      "multiplier": 1.5
+    },
+    "giantLord": {
+      "name": "Avalanche",
+      "short": "Avalanche",
+      "description": "Brings the mountain down: every hero takes its damage −3 and loses 2 energy",
+      "penalty": 3,
+      "energyLoss": 2
+    },
     "goblinToss": {
       "name": "Goblin Toss",
       "short": "Toss",
@@ -155,5 +174,11 @@
     "name": "Asleep",
     "description": "Sleeps on its hoard until the final wave arrives or a hero hits it. While asleep it takes extra damage (an ambush), and attacks that hit every enemy pass it by. A hit wakes it at the end of that round, groggy: one action a round until the final wave arrives",
     "damageMultiplier": 2
+  },
+  "topple": {
+    "name": "Topple",
+    "description": "Deal 35% of a giant's max HP in one round and it's toppled: it loses its next action, and a special about to fire is cancelled. The count resets each round",
+    "threshold": 0.35,
+    "bossThreshold": 0.45
   }
 }

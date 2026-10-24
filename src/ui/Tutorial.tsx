@@ -538,8 +538,18 @@ export function monsterPassives(kind: MonsterKind, encounter?: string): { title:
       text: `${c.phylactery.description}. When the Lich falls, the Phylactery shatters.`,
     });
   const ov = encounterOf(encounter).monsters[kind];
-  for (const p of [ov?.aura, ov?.poisonOnHit, ov?.boneHarvest, ov?.restless, ov?.moltenHide, ov?.shinyThief]) if (p) out.push({ title: p.name, text: `${p.description}.` });
+  for (const p of [ov?.aura, ov?.poisonOnHit, ov?.boneHarvest, ov?.restless, ov?.moltenHide, ov?.shinyThief, ov?.regenerate, ov?.rallyingSaga]) if (p) out.push({ title: p.name, text: `${p.description}.` });
   if (kind === 'goblin' && hasTwist('hoardTithe', encounter)) out.push({ title: c.hoardTithe.name, text: `${c.hoardTithe.description}.` });
+  if (kind !== 'goblin' && hasTwist('topple', encounter)) {
+    const boss = !!encounterOf(encounter).boss && encounterOf(encounter).boss === kind;
+    const pct = Math.round((boss ? c.topple.bossThreshold : c.topple.threshold) * 100);
+    out.push({
+      title: boss ? 'Unshakable' : c.topple.name,
+      text: boss
+        ? `Takes ${pct}% of its max HP in one round to topple, but a toppled Lord loses both actions.`
+        : `${pct}% of its max HP in one round topples it: it loses its next action, special included. The count resets each round.`,
+    });
+  }
   if (behavior === 'dragon') {
     out.push({ title: c.dragonSleep.name, text: `${c.dragonSleep.description}.` });
     out.push({ title: 'Hoard', text: `+1 damage per ${c.hoardTithe.coinsPerDamage} coins in its hoard (up to +${c.hoardTithe.maxBonus}).` });

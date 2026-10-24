@@ -25,13 +25,15 @@ export interface SimResult {
   /** Goblin attacks that landed on a hero or summon, per battle. */
   goblinAttacks: number;
   goblinDamage: number;
+  /** Champions knocked down by Topple (the Giant's Hall), per battle. */
+  topplesPerBattle: number;
 }
 
 export function simulate(data: SeasonData, battles: number, seedIn = 1, encounter?: string, policy: BotPolicy = {}): SimResult {
   let seed = seedIn;
   const rand = () => ((seed = (seed * 1103515245 + 12345) % 2 ** 31) / 2 ** 31);
   const pool = eligiblePlayers(data);
-  const r = { won: 0, lost: 0, rounds: 0, waves: [0, 0, 0, 0], fallen: 0, roundCap: 0, pools: [] as number[], horde: 0, goblins: 0, gobAttacks: 0, gobDamage: 0 };
+  const r = { won: 0, lost: 0, rounds: 0, waves: [0, 0, 0, 0], fallen: 0, roundCap: 0, pools: [] as number[], horde: 0, goblins: 0, gobAttacks: 0, gobDamage: 0, topples: 0 };
   for (let b = 0; b < battles; b++) {
     const week = data.weeks[Math.floor(rand() * data.weeks.length)];
     const draw = pool.filter(() => rand() < 0.33);
@@ -61,6 +63,7 @@ export function simulate(data: SeasonData, battles: number, seedIn = 1, encounte
     r.rounds += end.round;
     r.waves[Math.min(3, end.stats.wavesCleared)]++;
     r.fallen += end.heroes.filter((h) => !h.alive).length;
+    r.topples += end.log.filter((l) => l.short === '⛰️ Toppled').length;
     for (const l of end.log) {
       const actor = end.enemies.find((e) => e.id === l.actorId);
       if (l.side !== 'enemy' || actor?.kind !== 'goblin' || !l.short?.startsWith('→')) continue;
@@ -80,6 +83,7 @@ export function simulate(data: SeasonData, battles: number, seedIn = 1, encounte
     monsters: r.horde / n,
     goblins: r.goblins / n,
     goblinAttacks: r.gobAttacks / n,
+    topplesPerBattle: r.topples / n,
     goblinDamage: r.gobDamage / n,
   };
 }

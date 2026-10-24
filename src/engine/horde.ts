@@ -73,6 +73,10 @@ export function traitsFor(line: BoxLine, max: number, rules: Rules = defaultRule
     .map((t) => t.id);
 }
 
+/** A role Champion's stat after the encounter's scale (the Giant's Hall makes them bigger). */
+const scaled = (n: number, stat: 'hp' | 'damage', rules: Rules, encounter?: string) =>
+  Math.round(n * (encounterOf(encounter, rules).statScale?.[stat] ?? 1));
+
 /** A role nobody mirrors this week (its hero sits out): an average, traitless monster. */
 function baselineChampion(kind: ChampionKind, rules: Rules, encounter?: string): MonsterSpec {
   const def = rules.monsters[kind];
@@ -81,8 +85,8 @@ function baselineChampion(kind: ChampionKind, rules: Rules, encounter?: string):
     id: '',
     kind,
     name: monsterName(kind, encounter, rules),
-    hp: def.hpByTier![tierIndex(tier)],
-    damage: def.damageByTier![tierIndex(tier)],
+    hp: scaled(def.hpByTier![tierIndex(tier)], 'hp', rules, encounter),
+    damage: scaled(def.damageByTier![tierIndex(tier)], 'damage', rules, encounter),
     tier,
     isWarlord: false,
     extraActions: 0,
@@ -107,8 +111,8 @@ function makeChampion(
     id: '',
     kind,
     name: `${monsterName(kind, encounter, rules)} · ${playerName}`,
-    hp: def.hpByTier![ti],
-    damage: def.damageByTier![ti],
+    hp: scaled(def.hpByTier![ti], 'hp', rules, encounter),
+    damage: scaled(def.damageByTier![ti], 'damage', rules, encounter),
     tier,
     isWarlord: false,
     extraActions: 0,

@@ -342,6 +342,33 @@ A red dragon's mountain lair, guarded by kobold zealots and drakes. Its puzzle i
 
 **Balance (bot simulator, 1,000 battles):** letting it sleep 60% bot wins (7.1 rounds); opening with a full ambush (`--ambush`) 55% (6.2 rounds). Neither choice dominates. The groggy rule matters: without it, an ambush that didn't kill the Dragon outright was a near-certain loss.
 
+### The Giant's Hall
+
+A frost giant lord's mead hall. Few foes, each a mountain. A different shape: one or two giants per wave plus a few wolves, so the puzzle is concentrating damage, not spreading it.
+
+| Role (mirrors) | Mechanics | The Giant's Hall |
+| --- | --- | --- |
+| Minion | Goblin (12 HP, 1 per 90 points) | Ice Wolf |
+| Brute (Warrior) | Ogre with Boulder Toss | Stone Giant |
+| Caster (Wizard) | Warlock (Blizzard = Hex) | Rime Witch |
+| Sniper (Ranger) | Hunter with Spear Throw | Giant Huntsman |
+| Stalker (Rogue) | Assassin + Regenerate | Frost Troll |
+| Support (Cleric) | Shaman (War Chant = War Drum) + Rallying Saga | Skald |
+| Boss | Giant Lord (Unshakable, Avalanche) | Giant Lord |
+
+Role Champions get ×1.4 HP and damage here.
+
+**Twist · Topple:** deal 35% of a giant's max HP in one round and it's toppled: it loses its next action, and a special about to fire is cancelled. Each card shows a topple bar ("⛰️ 11/23") that fills live during your turn and empties at the start of each round. Wolves can't be toppled.
+
+**Role tweaks:**
+- **Stone Giant · Boulder Toss** (replaces Ground Slam): 1.25× damage to the lowest-HP hero other than the Warrior, knocked prone; taunts can't stop it.
+- **Giant Huntsman · Spear Throw** (replaces Volley): one spear, 1.5× damage, at the lowest-armor hero.
+- **Frost Troll · Regenerate:** heals 4 at round end unless it was toppled or took fire that round.
+- **Skald · Rallying Saga:** while it lives, every giant needs 5 more damage to topple. Kill it first.
+- **Giant Lord · Unshakable:** needs 45% of its max HP to topple, but a toppled Lord loses both actions. **Avalanche:** every hero takes its damage −3 and loses 2 energy. HP 48–96, damage 10–16.
+
+**Balance (bot simulator, 1,000 battles):** 64% bot wins, 7.7 rounds, 3 topples per battle. The bot focuses the giant closest to toppling.
+
 Encounters without their own boss fall back to the classic Warlord: a boosted copy of the top performer's Champion (double HP, +2 damage).
 
 ## Monster behaviors

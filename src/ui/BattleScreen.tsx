@@ -10,6 +10,7 @@ import {
   previewRound,
   actionDamage,
   commandSources,
+  toppleThreshold,
   actionsThisRound,
   hoardBonus,
   canFumble,
@@ -481,6 +482,22 @@ function Meter({ value, max, kind }: { value: number; max: number; kind: 'hp' | 
   );
 }
 
+/** Topple: damage this round toward knocking a giant down. */
+function ToppleBar({ e, state }: { e: EnemyState; state: BattleState }) {
+  const t = toppleThreshold(state, e);
+  if (t === null) return null;
+  if (e.toppled) return <div className="topple-bar down">⛰️ Toppled: loses its next turn</div>;
+  const n = Math.min(t, e.toppleDamage ?? 0);
+  return (
+    <div className="topple-bar" role="meter" aria-label={`Topple: ${n} of ${t} damage this round`} aria-valuenow={n} aria-valuemax={t}>
+      <span style={{ width: `${(n / t) * 100}%` }} />
+      <b className="num">
+        ⛰️ {n}/{t}
+      </b>
+    </div>
+  );
+}
+
 /** A compact status marker. Tap to show what it means. */
 function Tag({ icon, text, tone = '', passThrough = false }: { icon: ReactNode; text: string; tone?: string; passThrough?: boolean }) {
   const [open, setOpen] = useState(false);
@@ -525,6 +542,9 @@ function EnemyIcons({ e, state }: { e: EnemyState; state: BattleState }) {
     icons.push({ icon: '⚱️ ½', tone: 'shield', label: 'Takes half damage while its Phylactery stands' });
   if (isGuarded(state, e)) icons.push({ icon: '🔒', tone: 'shield', label: 'Guarded by the pack' });
   if (e.intangible) icons.push({ icon: '👻 Intangible', tone: 'ghost', label: 'Intangible: only spells and Cleric attacks can touch it' });
+  const ovr = encounterOf(state.encounter).monsters[e.kind];
+  if (ovr?.regenerate) icons.push({ icon: `♻️+${ovr.regenerate.amount}`, tone: 'good', label: `${ovr.regenerate.name}: ${ovr.regenerate.description}` });
+  if (ovr?.rallyingSaga) icons.push({ icon: `🎶 +${ovr.rallyingSaga.bonus}⛰️`, tone: 'warn', label: `${ovr.rallyingSaga.name}: ${ovr.rallyingSaga.description}` });
   if (e.groggy) icons.push({ icon: '😵 Groggy', tone: '', label: 'Groggy: one action a round until the final wave arrives' });
   const ov = encounterOf(state.encounter).monsters[e.kind];
   if (ov?.dragonkin && hasTwist('dragonscale', state.encounter)) icons.push({ icon: '🔥½', tone: 'shield', label: 'Dragonscale: half damage from fire' });
@@ -625,6 +645,7 @@ const specialNow = (intent?: Intent) => !!intent?.short.some((s) => s.startsWith
 
 function IntentLine({ e, state, intent }: { e: EnemyState; state: BattleState; intent?: Intent }) {
   if (e.asleep) return <div className="u-intent sleep">{sleepText(e)}</div>;
+  if (e.toppled) return null; // the topple bar already says so
   if (justArrived(state, e)) return <div className="u-intent muted">Arrived · acts next round</div>;
   if (!intent?.short.length) return null;
   const special = intent.short.filter((s) => s.startsWith('⚠'));
@@ -694,6 +715,7 @@ function EnemyCard({
         )}
       </div>
       <Meter kind="hp" value={e.hp} max={e.maxHp} />
+      <ToppleBar e={e} state={state} />
       <IntentLine e={e} state={state} intent={intent} />
       <div className="u-foot">
         <TraitChips e={e} state={state} />

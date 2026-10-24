@@ -106,6 +106,12 @@ export interface EnemyState {
   waking?: boolean;
   /** Woken early by a hit: one action a round until the final wave arrives. */
   groggy?: boolean;
+  /** Topple: damage taken this round, and whether it's down (loses its next action). */
+  toppleDamage?: number;
+  toppled?: boolean;
+  toppledRound?: number;
+  /** The last round it took fire damage (stops a Frost Troll regenerating). */
+  burnedRound?: number;
   /** Box-score traits (see rules/traits.json). */
   traits?: TraitId[];
   /** Swat: the round it last negated a hit. */
@@ -252,7 +258,9 @@ function describeWave(enemies: EnemyState[], encounter: string | undefined, rule
   const minions = enemies.filter((e) => e.kind === 'goblin');
   const named = enemies.filter((e) => e.kind !== 'goblin').map((e) => e.name);
   const n = minions.length;
-  return [n ? `${n} ${monsterName('goblin', encounter, rules).toLowerCase()}${n > 1 ? 's' : ''}` : '', ...named].filter(Boolean).join(', ');
+  const one = monsterName('goblin', encounter, rules);
+  const many = encounterOf(encounter, rules).monsters.goblin?.plural ?? `${one}s`;
+  return [n ? `${n} ${(n > 1 ? many : one).toLowerCase()}` : '', ...named].filter(Boolean).join(', ');
 }
 
 function log(state: BattleState, side: LogEntry['side'], text: string, actorId?: string, targetIds?: string[], short?: string) {
@@ -296,6 +304,15 @@ function wake(state: BattleState, e: EnemyState, arrivedRound: number, why: stri
   e.arrivedRound = arrivedRound;
   if (state.hoard) state.hoard.sealed = true;
   log(state, 'system', `🐉 ${e.name} wakes ${why}! The hoard is sealed at ${state.hoard?.coins ?? 0} coins.`, e.id);
+}
+
+/** Topple: damage a giant must take in one round to fall, or null if it can't be toppled. */
+export function toppleThreshold(state: BattleState, e: EnemyState, rules: Rules = defaultRules): number | null {
+  if (!hasTwist('topple', state.encounter, rules) || e.kind === 'goblin') return null;
+  const t = rules.combat.topple;
+  const enc = encounterOf(state.encounter, rules);
+  const saga = state.enemies.reduce((sum, x) => sum + (x.alive ? enc.monsters[x.kind]?.rallyingSaga?.bonus ?? 0 : 0), 0);
+  return Math.ceil(e.maxHp * (e.isWarlord ? t.bossThreshold : t.threshold)) + saga;
 }
 
 /** Hoard Tithe: the Dragon's bonus damage from its hoard. */
@@ -359,6 +376,7 @@ function riseHp(e: EnemyState): number {
 
 function startRound(state: BattleState, rules: Rules) {
   if (state.round > 1) log(state, 'system', `Round ${state.round} begins. Every hero can act again.`);
+  for (const e of state.enemies) e.toppleDamage = 0;
   // Restless Dead: bone piles reassemble at half HP and fight this round.
   const rising = state.enemies.filter((e) => e.pile);
   for (const e of rising) {
@@ -565,6 +583,17 @@ function damageEnemy(
   if (behaviorFor(state, enemy, rules) === 'lich' && phylactery(state, rules)) amount *= rules.combat.phylactery.damageTaken;
   const dealt = Math.max(0, Math.floor(amount) - (pierce ? 0 : enemyArmor(enemy)));
   enemy.hp = Math.max(0, enemy.hp - dealt);
+  if (source.fire && dealt > 0) enemy.burnedRound = state.round;
+  // Topple: enough damage in one round knocks a giant down.
+  const topple = toppleThreshold(state, enemy, rules);
+  if (topple !== null && enemy.hp > 0 && !enemy.toppled && dealt > 0) {
+    enemy.toppleDamage = (enemy.toppleDamage ?? 0) + dealt;
+    if (enemy.toppleDamage >= topple) {
+      enemy.toppled = true;
+      enemy.toppledRound = state.round;
+      log(state, 'system', `⛰️ ${enemy.name} is toppled and loses its next ${enemy.extraActions ? 'turn' : 'action'}!`, enemy.id);
+    }
+  }
   if (enemy.hp === 0 && enemy.alive && hasTrait(enemy, 'secondChance') && !enemy.secondChanceUsed) {
     // Second Chance: back up once, at a fraction of its HP.
     enemy.secondChanceUsed = true;
@@ -1107,6 +1136,36 @@ function doSpecial(state: BattleState, enemy: EnemyState, rules: Rules): boolean
   const sp = rules.combat.specials;
   const dmg = enemyDamage(state, enemy, rules);
   switch (activeSpecial(state, enemy, rules)?.key) {
+    case 'boulderToss': {
+      // Over the front line: the lowest-HP hero who isn't the Warrior, if there is one.
+      const heroes = targetableHeroes(state);
+      const target = [...(heroes.some((h) => h.heroClass !== 'warrior') ? heroes.filter((h) => h.heroClass !== 'warrior') : heroes)].sort((a, b) => a.hp - b.hp)[0];
+      if (!target) return false;
+      const hit = hitHero(state, enemy, target, Math.round(dmg * sp.boulderToss.multiplier), rules);
+      const name = rules.classes[target.heroClass].name;
+      if (target.alive) target.skipNextTurn = true;
+      log(state, 'enemy', `${enemy.name} hurls a boulder: ${hit.text}${target.alive ? `; the ${name} is knocked prone` : ''}.`, enemy.id, [target.id], `⚠ ${sp.boulderToss.short} → ${hit.short}`);
+      return true;
+    }
+    case 'spearThrow': {
+      const target = [...targetableHeroes(state)].sort((a, b) => a.armor - b.armor || a.hp - b.hp)[0];
+      if (!target) return false;
+      const hit = hitHero(state, enemy, target, Math.round(dmg * sp.spearThrow.multiplier), rules);
+      log(state, 'enemy', `${enemy.name} throws a spear: ${hit.text}.`, enemy.id, [target.id], `⚠ ${sp.spearThrow.short} → ${hit.short}`);
+      return true;
+    }
+    case 'giantLord': {
+      const a = sp.giantLord;
+      const hits = targetableHeroes(state).map((h) => {
+        const hit = hitHero(state, enemy, h, Math.max(0, dmg - a.penalty), rules);
+        const lost = Math.min(h.pool, a.energyLoss);
+        h.pool -= lost;
+        return `${hit.text}${lost ? `, −${lost} energy` : ''}`;
+      });
+      if (!hits.length) return false;
+      log(state, 'enemy', `${enemy.name} brings down an ${a.name}: ${hits.join('; ')}.`, enemy.id, undefined, `⚠ ${a.short}: all heroes ${Math.max(0, dmg - a.penalty)}, −${a.energyLoss} energy`);
+      return true;
+    }
     case 'netShot': {
       const target = [...targetableHeroes(state)].sort((a, b) => a.armor - b.armor || a.hp - b.hp)[0];
       if (!target) return false;
@@ -1351,6 +1410,12 @@ export function endRound(prev: BattleState, rules: Rules = defaultRules): Battle
   const order = [...awake(state)].sort((a, b) => Number(drummer(b)) - Number(drummer(a)));
   for (const enemy of order) {
     if (justArrived(state, enemy)) continue;
+    if (enemy.toppled) {
+      // A toppled giant spends its whole turn getting up (the Giant Lord loses both actions).
+      enemy.toppled = false;
+      log(state, 'enemy', `${enemy.name} is down and loses its turn.`, enemy.id, undefined, '⛰️ Toppled');
+      continue;
+    }
     for (let a = 0; a < actionsThisRound(enemy); a++) enemyAct(state, enemy, a, rules);
   }
 
@@ -1391,6 +1456,14 @@ export function endRound(prev: BattleState, rules: Rules = defaultRules): Battle
       state.hoard.coins += n;
       log(state, 'system', `💰 ${n} kobold${n > 1 ? 's tithe' : ' tithes'} to the hoard (${state.hoard.coins} coins).`);
     }
+  }
+  // Regenerate: a Frost Troll heals unless it was toppled or burned this round.
+  for (const e of state.enemies) {
+    const regen = encounterOf(state.encounter, rules).monsters[e.kind]?.regenerate;
+    if (!regen || !e.alive || e.hp >= e.maxHp || e.toppledRound === state.round || e.burnedRound === state.round) continue;
+    const healed = Math.min(regen.amount, e.maxHp - e.hp);
+    e.hp += healed;
+    log(state, 'system', `♻️ ${e.name} regenerates ${healed} HP.`, e.id);
   }
   const hot = rules.traits.hotHand;
   for (const e of state.enemies) {

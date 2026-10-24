@@ -22,9 +22,9 @@ export type Tier = (typeof TIERS)[number];
 export const CLASSES = ['warrior', 'ranger', 'cleric', 'rogue', 'wizard'] as const;
 export type HeroClass = (typeof CLASSES)[number];
 export type ChampionKind = 'ogre' | 'warlock' | 'hunter' | 'assassin' | 'shaman';
-export type MonsterKind = 'goblin' | ChampionKind | 'chieftain' | 'lich' | 'phylactery' | 'dragon';
-export type Behavior = 'default' | ChampionKind | 'chieftain' | 'lich' | 'wraith' | 'phylactery' | 'dragon';
-export type Twist = 'packTactics' | 'packGuard' | 'restlessDead' | 'hoardTithe' | 'dragonscale';
+export type MonsterKind = 'goblin' | ChampionKind | 'chieftain' | 'lich' | 'phylactery' | 'dragon' | 'giantLord';
+export type Behavior = 'default' | ChampionKind | 'chieftain' | 'lich' | 'wraith' | 'phylactery' | 'dragon' | 'giantLord';
+export type Twist = 'packTactics' | 'packGuard' | 'restlessDead' | 'hoardTithe' | 'dragonscale' | 'topple';
 
 export type RatingFormula = Partial<Record<StatKey, number>>;
 /** Minimum Rating for each tier above Cold. */
@@ -168,6 +168,8 @@ export interface EncounterDef {
   teamPointsPerMinion?: number;
   /** Overrides the minion's HP (e.g. fragile kobolds). */
   minionHp?: number;
+  /** Scales every role Champion's HP and damage (e.g. the Giant's Hall: few foes, each a mountain). */
+  statScale?: { hp: number; damage: number };
   /** Monster kinds that count as goblins for the Chieftain's Command. */
   goblinKin: MonsterKind[];
   /** Encounter rules in play, e.g. Pack Tactics for goblins or Restless Dead for the Crypt. */
@@ -177,6 +179,8 @@ export interface EncounterDef {
 
 export interface EncounterMonster {
   name: string;
+  /** Plural when it isn't name + "s" (e.g. Ice Wolves). */
+  plural?: string;
   short: string;
   icon: string;
   flavor?: string;
@@ -201,6 +205,10 @@ export interface EncounterMonster {
   moltenHide?: { name: string; damage: number; description: string };
   /** Energy it drains also adds coins to the hoard (e.g. the Wyrmling). */
   shinyThief?: { name: string; description: string };
+  /** Heals each round unless toppled or burned that round (e.g. the Frost Troll). */
+  regenerate?: { name: string; amount: number; description: string };
+  /** While it lives, every giant's topple threshold rises (e.g. the Skald). */
+  rallyingSaga?: { name: string; bonus: number; description: string };
 }
 
 /** A box-score trait: a standout stat on the mirrored player's night gives its monster an ability. */
