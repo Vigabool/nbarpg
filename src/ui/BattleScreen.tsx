@@ -9,7 +9,8 @@ import {
   performAction,
   previewRound,
   actionDamage,
-  commandBonus,
+  commandSources,
+  phylactery,
   energyGain,
   enemyDamage,
   packBonus,
@@ -505,7 +506,9 @@ function EnemyIcons({ e, state }: { e: EnemyState; state: BattleState }) {
   if (special && specialDue(e, state.round + 1) && !(special.key === 'fade' && e.intangible)) icons.push({ icon: `⚠ ${special.short}`, tone: 'warn', label: `${special.name} next round` });
   if (e.enraged) icons.push({ icon: `🔥+${rage.damageBonus}`, tone: 'warn', label: 'Enraged' });
   if (e.drum && e.drum.round >= state.round) icons.push({ icon: `🥁+${e.drum.amount}`, tone: 'warn', label: 'War Drum' });
-  if (commandBonus(state, e) > 0) icons.push({ icon: `👑+${commandBonus(state, e)}`, tone: 'warn', label: "Chieftain's Command" });
+  for (const c of commandSources(state, e)) icons.push({ icon: `${c.icon}+${c.bonus}`, tone: 'warn', label: c.name });
+  if (behaviorOf(e.kind, state.encounter) === 'lich' && phylactery(state))
+    icons.push({ icon: '⚱️ ½', tone: 'shield', label: 'Takes half damage while its Phylactery stands' });
   if (isGuarded(state, e)) icons.push({ icon: '🔒', tone: 'shield', label: 'Guarded by the pack' });
   if (e.intangible) icons.push({ icon: '👻 Intangible', tone: 'ghost', label: 'Intangible: only spells and Cleric attacks can touch it' });
   if (ignoresTaunt(e)) icons.push({ icon: '⊘⚑', tone: '', label: 'Ignores taunts' });
@@ -559,6 +562,7 @@ function EnemyCard({
   onClick: () => void;
 }) {
   const dmg = enemyDamage(state, e);
+  const inert = behaviorOf(e.kind, state.encounter) === 'phylactery';
   return (
     <div
       className={`unit-c${e.isWarlord ? ' warlord' : ' champion'}${e.intangible ? ' intangible' : ''}${threat ? ' threat' : ''}${targetable ? ' target' : ''}${targeted ? ' targeted' : ''}`}
@@ -572,11 +576,13 @@ function EnemyCard({
           {foeIcon(e, state.encounter)} {foeShort(e, state.encounter)}
           {e.tier && <TierDot tier={e.tier} />}
         </span>
-        <span className="u-dmg num">
-          {dmgMark(e, state.encounter)}
-          {dmg}
-          {e.isWarlord ? '×2' : ''}
-        </span>
+        {!inert && (
+          <span className="u-dmg num">
+            {dmgMark(e, state.encounter)}
+            {dmg}
+            {e.isWarlord ? '×2' : ''}
+          </span>
+        )}
       </div>
       <Meter kind="hp" value={e.hp} max={e.maxHp} />
       <IntentLine e={e} state={state} intent={intent} />
@@ -650,18 +656,18 @@ function GoblinStack({
           </button>
         ))}
       </div>
-      {(pack > 0 || commandBonus(state, first) > 0) && (
+      {(pack > 0 || commandSources(state, first).length > 0) && (
         <div className="u-foot">
           {pack > 0 && (
             <span className="tag static" aria-label={`Pack Tactics +${pack}`}>
               🐺+{pack}
             </span>
           )}
-          {commandBonus(state, first) > 0 && (
-            <span className="tag static warn" aria-label="Chieftain's Command">
-              👑+{commandBonus(state, first)}
+          {commandSources(state, first).map((c) => (
+            <span key={c.name} className="tag static warn" aria-label={`${c.name} +${c.bonus}`}>
+              {c.icon}+{c.bonus}
             </span>
-          )}
+          ))}
         </div>
       )}
       {justArrived(state, first) ? (
@@ -713,7 +719,8 @@ function EnemyDetail({
   if (e.drum && e.drum.round >= state.round) now.push({ text: `🥁 War Drum +${e.drum.amount} ${e.drum.round === state.round ? 'this round' : 'next round'}`, tone: 'warn' });
   if (isGuarded(state, e)) now.push({ text: '🔒 Guarded now', tone: 'shield' });
   if (packBonus(state, e) > 0) now.push({ text: `🐺 Pack +${packBonus(state, e)}`, tone: '' });
-  if (commandBonus(state, e) > 0) now.push({ text: `👑 Chieftain's Command +${commandBonus(state, e)}`, tone: 'warn' });
+  for (const c of commandSources(state, e)) now.push({ text: `${c.icon} ${c.name} +${c.bonus}`, tone: 'warn' });
+  if (behaviorOf(e.kind, state.encounter) === 'lich' && phylactery(state)) now.push({ text: '⚱️ Takes half damage while its Phylactery stands', tone: 'shield' });
   if (e.tauntedBy) {
     const h = state.heroes.find((x) => x.id === e.tauntedBy);
     now.push({ text: `⚑ Taunted by ${h ? rules.classes[h.heroClass].name : state.summons.find((x) => x.id === e.tauntedBy)?.name ?? 'an ally'}`, tone: 'taunt' });
@@ -812,7 +819,7 @@ function EnemyDetail({
           {monsterPassives(e.kind, state.encounter).map((p) => (
             <Feature key={p.title} title={`Passive · ${p.title}`} text={p.text} />
           ))}
-          <button className="btn small" style={{ alignSelf: 'flex-start' }} onClick={() => onHelp((e.isWarlord ? 'warlord' : e.kind) as EnemyPage)}>
+          <button className="btn small" style={{ alignSelf: 'flex-start' }} onClick={() => onHelp((e.isWarlord || e.kind === 'phylactery' ? 'warlord' : e.kind) as EnemyPage)}>
             More in How to play →
           </button>
         </div>

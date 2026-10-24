@@ -195,6 +195,22 @@ export function buildHorde(picks: HeroGamePick[], data: SeasonData, rules: Rules
   const wave2Count = Math.ceil(rest.length / 2);
   waves[1].push(...rest.slice(0, wave2Count));
   waves[2].push(...rest.slice(wave2Count), warlord);
+  // A boss companion (the Lich's Phylactery) arrives beside the boss at its tier.
+  if (enc.boss && enc.bossCompanion) {
+    const def = rules.monsters[enc.bossCompanion];
+    const t = tierIndex(warlord.tier ?? 'cold');
+    waves[2].push({
+      id: '',
+      kind: enc.bossCompanion,
+      name: monsterName(enc.bossCompanion, encounter, rules),
+      tier: warlord.tier,
+      hp: def.hpByTier![t],
+      damage: def.damageByTier![t],
+      isWarlord: false,
+      extraActions: 0,
+      staggers: 0,
+    });
+  }
 
   let n = 0;
   for (const wave of waves) for (const mon of wave) mon.id = `m${++n}`;

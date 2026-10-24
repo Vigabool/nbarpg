@@ -1,5 +1,5 @@
 import { CLASSES, rules as defaultRules, type ActionDef, type Effect, type HeroClass, type Rules, type SummonKind } from '../rules';
-import { behaviorOf, hasTwist, isGoblinKin, monsterName, specialFor, type SpecialInfo } from './encounter';
+import { behaviorOf, encounterOf, hasTwist, isGoblinKin, monsterIcon, monsterName, specialFor, type SpecialInfo } from './encounter';
 import type { MonsterSpec } from './horde';
 import type { PoolBreakdown } from './rating';
 
@@ -92,6 +92,8 @@ export interface EnemyState {
   /** Restless Dead: a destroyed skeleton waiting to reassemble next round, and how often it has. */
   pile?: boolean;
   rises?: number;
+  /** Destroyed for good by fire or holy damage: even Raise Dead can't bring it back. */
+  destroyed?: boolean;
 }
 
 export interface LogEntry {
@@ -351,6 +353,8 @@ function findUnit(state: BattleState, id: string): HeroState | SummonState | Ene
 
 /** Guarded by the Pack: can't be targeted while enough goblins are alive. */
 export function isGuarded(state: BattleState, e: EnemyState, rules: Rules = defaultRules): boolean {
+  // The Phylactery hides behind any skeleton still standing.
+  if (behaviorFor(state, e, rules) === 'phylactery') return state.enemies.some((x) => x.alive && x.kind === 'goblin');
   const g = rules.combat.packGuard;
   if (!hasTwist('packGuard', state.encounter, rules)) return false;
   if (!g.guarded.includes(behaviorFor(state, e, rules))) return false;
@@ -470,17 +474,28 @@ function damageEnemy(
   rules: Rules = defaultRules,
   source: DamageSource = {},
 ): number {
+  // Phylactery: the Lich takes reduced damage while its soul is safe.
+  if (behaviorFor(state, enemy, rules) === 'lich' && phylactery(state, rules)) amount *= rules.combat.phylactery.damageTaken;
   const dealt = Math.max(0, Math.floor(amount) - (pierce ? 0 : enemyArmor(enemy)));
   enemy.hp = Math.max(0, enemy.hp - dealt);
   if (enemy.hp === 0 && enemy.alive) {
     enemy.alive = false;
     if (enemy.isWarlord) state.stats.warlordDefeated = true;
-    // Restless Dead: skeletons leave a bone pile unless fire or holy damage ended them.
-    if (enemy.kind === 'goblin' && hasTwist('restlessDead', state.encounter, rules) && !source.fire && !source.holy) {
-      const lich = state.enemies.some((x) => x.alive && behaviorFor(state, x, rules) === 'lich');
-      const again = lich || (enemy.rises ?? 0) < rules.combat.restlessDead.rises;
-      if (again && riseHp(enemy) >= rules.combat.restlessDead.minHp) enemy.pile = true;
+    // Restless Dead: skeletons leave a bone pile, halving each time, unless fire or holy damage ended them.
+    if (enemy.kind === 'goblin' && hasTwist('restlessDead', state.encounter, rules)) {
+      if (source.fire || source.holy) enemy.destroyed = true;
+      else if (riseHp(enemy) >= rules.combat.restlessDead.minHp) enemy.pile = true;
     }
+    const behavior = behaviorFor(state, enemy, rules);
+    if (behavior === 'lich') {
+      const p = phylactery(state, rules);
+      if (p) {
+        p.alive = false;
+        p.hp = 0;
+        log(state, 'system', `With the Lich gone, ${p.name} shatters.`, p.id);
+      }
+    }
+    if (behavior === 'phylactery') log(state, 'system', `${enemy.name} shatters: the Lich takes full damage now!`, enemy.id);
   }
   const rage = rules.combat.warlordEnrage;
   if (enemy.isWarlord && enemy.alive && !enemy.enraged && enemy.hp <= enemy.maxHp * rage.atHpFraction) {
@@ -488,6 +503,11 @@ function damageEnemy(
     log(state, 'system', `${enemy.name} is enraged: +${rage.damageBonus} damage for the rest of the battle!`, enemy.id);
   }
   return dealt;
+}
+
+/** The Lich's Phylactery, while it stands. */
+export function phylactery(state: BattleState, rules: Rules = defaultRules): EnemyState | undefined {
+  return state.enemies.find((x) => x.alive && behaviorFor(state, x, rules) === 'phylactery');
 }
 
 /** Pack Tactics: bonus damage a goblin gets from the other goblins on the field. */
@@ -499,9 +519,23 @@ export function packBonus(state: BattleState, e: EnemyState, rules: Rules = defa
 
 /** Chieftain's Command: bonus damage for every goblin while a Chieftain lives. */
 export function commandBonus(state: BattleState, e: EnemyState, rules: Rules = defaultRules): number {
-  if (!isGoblinKin(e.kind, state.encounter, rules)) return 0;
-  const chief = state.enemies.some((x) => x.alive && behaviorFor(state, x, rules) === 'chieftain');
-  return chief ? rules.combat.chieftainCommand.bonus : 0;
+  return commandSources(state, e, rules).reduce((t, s) => t + s.bonus, 0);
+}
+
+/** Who is buffing this enemy: the Chieftain (every goblin) or a minion aura such as the Wight's Unholy Vigor. */
+export function commandSources(state: BattleState, e: EnemyState, rules: Rules = defaultRules): { icon: string; name: string; bonus: number }[] {
+  const out: { icon: string; name: string; bonus: number }[] = [];
+  const living = state.enemies.filter((x) => x.alive);
+  if (isGoblinKin(e.kind, state.encounter, rules) && living.some((x) => behaviorFor(state, x, rules) === 'chieftain'))
+    out.push({ icon: '👑', name: rules.combat.chieftainCommand.name, bonus: rules.combat.chieftainCommand.bonus });
+  if (e.kind === 'goblin') {
+    const enc = encounterOf(state.encounter, rules);
+    for (const kind of new Set(living.map((x) => x.kind))) {
+      const aura = enc.monsters[kind]?.aura;
+      if (aura) out.push({ icon: monsterIcon(kind, state.encounter, rules), name: aura.name, bonus: aura.bonus });
+    }
+  }
+  return out;
 }
 
 /** What an enemy hits for this round, after enrage, War Drum, Pack Tactics, the Chieftain and curses. */
@@ -959,13 +993,12 @@ function doSpecial(state: BattleState, enemy: EnemyState, rules: Rules): boolean
       return true;
     }
     case 'raiseDead': {
-      const dead = state.enemies.filter((e) => e.kind === 'goblin' && !e.alive && riseHp(e) >= rules.combat.restlessDead.minHp);
+      // Skeletons that crumbled from weapon hits; bone piles rise on their own, fire and holy kills stay down.
+      const dead = state.enemies.filter((e) => e.kind === 'goblin' && !e.alive && !e.pile && !e.destroyed);
       if (!dead.length) return false;
       for (const e of dead) {
         e.alive = true;
-        e.pile = false;
-        e.hp = riseHp(e);
-        e.rises = (e.rises ?? 0) + 1;
+        e.hp = Math.min(e.maxHp, rules.combat.restlessDead.minHp);
         e.arrivedRound = state.round;
         e.poison = null;
         e.weaken = null;
@@ -1013,7 +1046,7 @@ function doSpecial(state: BattleState, enemy: EnemyState, rules: Rules): boolean
 }
 
 function enemyAct(state: BattleState, enemy: EnemyState, actionNumber: number, rules: Rules) {
-  if (!enemy.alive) return;
+  if (!enemy.alive || behaviorFor(state, enemy, rules) === 'phylactery') return;
   if (enemy.staggers > 0) {
     enemy.staggers--;
     log(state, 'enemy', `${enemy.name} is staggered and loses its action.`, enemy.id, undefined, '💫 Staggered');

@@ -515,7 +515,13 @@ export function monsterPassives(kind: MonsterKind, encounter?: string): { title:
       text: `Instead of attacking, it drains every hero for ${range(Object.values(c.wraith.drainByTier))} (by tier), ignoring armor, and heals itself.`,
     });
   }
-  if (behavior === 'lich') out.push({ title: c.masterOfTheDead.name, text: `${c.masterOfTheDead.description}. Fire and holy damage still end them.` });
+  if (behavior === 'lich' || behavior === 'phylactery')
+    out.push({
+      title: `${c.phylactery.name} · ${range(rules.monsters.phylactery.hpByTier)} HP`,
+      text: `${c.phylactery.description}. When the Lich falls, the Phylactery shatters.`,
+    });
+  const aura = encounterOf(encounter).monsters[kind]?.aura;
+  if (aura) out.push({ title: aura.name, text: `${aura.description}.` });
   if (behavior === 'chieftain') out.push({ title: c.chieftainCommand.name, text: `${c.chieftainCommand.description}: minions and the goblin Champions, not the Ogre. Kill the Chieftain and the buff ends.` });
   if (m.ignoresTaunt) out.push({ title: 'Ignores taunts', text: "Provoke, Bulwark and the Bear don't work on it." });
   if (hasTwist('packGuard', encounter) && c.packGuard.guarded.includes(behavior)) out.push({ title: c.packGuard.name, text: `${c.packGuard.description}.` });

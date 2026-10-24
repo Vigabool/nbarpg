@@ -21,8 +21,8 @@ export type Tier = (typeof TIERS)[number];
 export const CLASSES = ['warrior', 'ranger', 'cleric', 'rogue', 'wizard'] as const;
 export type HeroClass = (typeof CLASSES)[number];
 export type ChampionKind = 'ogre' | 'warlock' | 'hunter' | 'assassin' | 'shaman';
-export type MonsterKind = 'goblin' | ChampionKind | 'chieftain' | 'lich';
-export type Behavior = 'default' | ChampionKind | 'chieftain' | 'lich' | 'wraith';
+export type MonsterKind = 'goblin' | ChampionKind | 'chieftain' | 'lich' | 'phylactery';
+export type Behavior = 'default' | ChampionKind | 'chieftain' | 'lich' | 'wraith' | 'phylactery';
 export type Twist = 'packTactics' | 'packGuard' | 'restlessDead';
 
 export type RatingFormula = Partial<Record<StatKey, number>>;
@@ -159,6 +159,8 @@ export interface EncounterDef {
   tagline: string;
   /** Boss monster kind; without one the classic Warlord (a boosted Champion) is used. */
   boss?: MonsterKind;
+  /** Arrives beside the boss at its tier (e.g. the Lich's Phylactery). */
+  bossCompanion?: MonsterKind;
   /** Monster kinds that count as goblins for the Chieftain's Command. */
   goblinKin: MonsterKind[];
   /** Encounter rules in play, e.g. Pack Tactics for goblins or Restless Dead for the Crypt. */
@@ -178,6 +180,8 @@ export interface EncounterMonster {
   special?: string;
   specialName?: string;
   specialShort?: string;
+  /** While it lives, every minion deals extra damage (e.g. the Wight's Unholy Vigor). */
+  aura?: { name: string; bonus: number; description: string };
 }
 
 export interface Rules {

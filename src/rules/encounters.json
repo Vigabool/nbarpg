@@ -59,6 +59,7 @@
       "name": "The Crypt",
       "tagline": "A necromancer's tomb where the dead won't stay down. Fire and holy power end them for good.",
       "boss": "lich",
+      "bossCompanion": "phylactery",
       "twists": [
         "restlessDead"
       ],
@@ -104,12 +105,22 @@
           "short": "Wight",
           "icon": "🧟",
           "special": "raiseDead",
-          "description": "Heals the most injured undead and shields the horde (+2 armor through next round)"
+          "description": "Heals the most injured undead and shields the horde (+2 armor through next round)",
+          "aura": {
+            "name": "Unholy Vigor",
+            "bonus": 1,
+            "description": "+1 damage for every skeleton while the Wight lives"
+          }
         },
         "lich": {
           "name": "Lich",
           "short": "Lich",
           "icon": "☠️"
+        },
+        "phylactery": {
+          "name": "Phylactery",
+          "short": "Phylactery",
+          "icon": "⚱️"
         }
       }
     }

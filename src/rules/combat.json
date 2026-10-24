@@ -51,7 +51,7 @@
     "raiseDead": {
       "name": "Raise Dead",
       "short": "Raise",
-      "description": "Every destroyed skeleton reassembles, even ones destroyed for good; they fight from next round"
+      "description": "Every skeleton that crumbled from weapon hits rises again at 2 HP, fighting from next round. Fire and holy kills stay down"
     },
     "lich": {
       "name": "Death Bolt",
@@ -100,21 +100,21 @@
   },
   "restlessDead": {
     "name": "Restless Dead",
-    "description": "A destroyed skeleton reassembles at the start of next round with half its HP, once. Fire and holy damage destroy it for good",
-    "minHp": 2,
-    "rises": 1
+    "description": "A fallen skeleton reassembles at the start of next round with half its HP: 8, 4, then 2. At 2 HP the next hit ends it. Fire and holy damage destroy it for good",
+    "minHp": 2
   },
-  "masterOfTheDead": {
-    "name": "Master of the Dead",
-    "description": "While the Lich lives, skeletons keep reassembling, halving each time (8, 4, 2 HP). At 2 HP, the next hit ends them"
+  "phylactery": {
+    "name": "Phylactery",
+    "description": "The Lich takes half damage while its Phylactery stands. The Phylactery can't be targeted while any skeleton stands (attacks that hit every enemy still land)",
+    "damageTaken": 0.5
   },
   "wraith": {
     "drainByTier": {
       "cold": 1,
       "average": 1,
-      "good": 2,
+      "good": 1,
       "great": 2,
-      "elite": 3
+      "elite": 2
     },
     "healFraction": 0.5
   }

@@ -17,7 +17,9 @@ export function chooseAction(
   // Only enemies a single-target attack can pick (the guarded Shaman is skipped).
   const enemies = pickableEnemies(state, rules);
   const byHpAsc = [...enemies].sort((a, b) => a.hp - b.hp);
-  const byThreat = [...enemies].sort((a, b) => b.damage - a.damage || b.hp - a.hp);
+  // An exposed Phylactery comes first: it halves damage to the Lich.
+  const phyl = (e: { kind: string }) => (e.kind === 'phylactery' ? 1 : 0);
+  const byThreat = [...enemies].sort((a, b) => phyl(b) - phyl(a) || b.damage - a.damage || b.hp - a.hp);
   const allies = state.heroes.filter((h) => h.alive);
   const fallen = state.heroes.filter((h) => !h.alive);
   const act = (o: ActionOption | undefined, targetIds: string[] = []): HeroAction | null =>
@@ -41,7 +43,7 @@ export function chooseAction(
       if (has('bulwark') && enemies.length >= 4) return act(has('bulwark'));
       if (has('second-wind') && hero.hp <= hero.maxHp - 14) return act(has('second-wind'));
       const provoke = has('provoke');
-      const threat = byThreat.find((e) => e.kind !== 'goblin' && !e.tauntedBy && provoke?.validTargets.includes(e.id));
+      const threat = byThreat.find((e) => e.kind !== 'goblin' && !phyl(e) && !e.tauntedBy && provoke?.validTargets.includes(e.id));
       if (provoke && threat && hero.hp > hero.maxHp * 0.4) return act(provoke, [threat.id]);
       if (has('shield-wall') && enemies.length >= 5 && hero.pool >= 14) return act(has('shield-wall'));
       return gear();
@@ -55,7 +57,7 @@ export function chooseAction(
       if (has('cure-all') && injured.length >= 3) return act(has('cure-all'));
       const worst = [...allies].sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
       if (has('cure-wounds') && worst && worst.hp <= worst.maxHp * 0.6) return act(has('cure-wounds'), [worst.id]);
-      const champ = byThreat.find((e) => e.kind !== 'goblin' && !e.weaken);
+      const champ = byThreat.find((e) => e.kind !== 'goblin' && !phyl(e) && !e.weaken);
       if (has('curse') && champ && champ.damage >= 7) return act(has('curse'), [champ.id]);
       return gear();
     }
