@@ -43,6 +43,8 @@ export interface HeroState {
   lastStand: boolean;
   /** Damage reduction from the Warlock's curse, counted in party phases. */
   curse: { amount: number; rounds: number } | null;
+  /** Poison from an enemy's hits (e.g. Dirty Arrows), ticking after the horde acts. */
+  poison?: { perRound: number; rounds: number; sourceId: string } | null;
   signatureUnlocked: boolean;
   legendaryUnlocked: boolean;
   signatureReady: boolean;
@@ -517,10 +519,13 @@ function damageEnemy(
   if (enemy.hp === 0 && enemy.alive) {
     enemy.alive = false;
     if (enemy.isWarlord) state.stats.warlordDefeated = true;
-    // Restless Dead: skeletons leave a bone pile, halving each time, unless fire or holy damage ended them.
-    if (enemy.kind === 'goblin' && hasTwist('restlessDead', state.encounter, rules)) {
+    // Restless Dead: skeletons (and other restless dead, like the Skeletal Archer) leave a bone pile,
+    // halving each time, unless fire or holy damage ended them.
+    const restless = encounterOf(state.encounter, rules).monsters[enemy.kind]?.restless;
+    if ((enemy.kind === 'goblin' || restless) && hasTwist('restlessDead', state.encounter, rules)) {
       if (source.fire || source.holy) enemy.destroyed = true;
-      else if (riseHp(enemy) >= rules.combat.restlessDead.minHp) enemy.pile = true;
+      else if (enemy.kind === 'goblin' ? riseHp(enemy) >= rules.combat.restlessDead.minHp : (enemy.rises ?? 0) < restless!.rises) enemy.pile = true;
+      if (enemy.kind === 'goblin' && !enemy.destroyed) boneHarvest(state, rules);
     }
     const behavior = behaviorFor(state, enemy, rules);
     if (behavior === 'lich') {
@@ -539,6 +544,28 @@ function damageEnemy(
     log(state, 'system', `${enemy.name} is enraged: +${rage.damageBonus} damage for the rest of the battle!`, enemy.id);
   }
   return dealt;
+}
+
+/** Bone Harvest: a skeleton crumbling from weapon hits feeds any living Bone Giant. */
+function boneHarvest(state: BattleState, rules: Rules) {
+  const enc = encounterOf(state.encounter, rules);
+  for (const x of state.enemies) {
+    const bh = enc.monsters[x.kind]?.boneHarvest;
+    if (!bh || !x.alive || x.hp >= x.maxHp) continue;
+    const healed = Math.min(bh.heal, x.maxHp - x.hp);
+    x.hp += healed;
+    log(state, 'system', `🦴 ${x.name} absorbs the bones and heals ${healed}.`, x.id);
+  }
+}
+
+/** The special this enemy would use now: Goblin Toss needs a goblin to throw, else it's Ground Slam. */
+export function activeSpecial(state: BattleState, e: EnemyState, rules: Rules = defaultRules): SpecialInfo | null {
+  const sp = specialOf(e, state.encounter, rules);
+  if (sp?.key === 'goblinToss' && !state.enemies.some((x) => x.alive && x.kind === 'goblin')) {
+    const slam = rules.combat.specials.ogre;
+    return { key: 'ogre', name: slam.name, short: slam.short, description: slam.description };
+  }
+  return sp;
 }
 
 /** The Lich's Phylactery, while it stands. */
@@ -967,6 +994,11 @@ function hitHero(state: BattleState, enemy: EnemyState, h: HeroState, raw: numbe
     h.pool -= stolen;
     if (stolen) text += `, steals ${stolen} energy`;
   }
+  const dirty = encounterOf(state.encounter, rules).monsters[enemy.kind]?.poisonOnHit;
+  if (dirty && dealt > 0 && h.hp > 0) {
+    h.poison = { perRound: dirty.perRound, rounds: dirty.rounds, sourceId: enemy.id };
+    text += `, poisoned`;
+  }
   if (h.hp <= 0) {
     h.hp = 0;
     h.alive = false;
@@ -996,7 +1028,18 @@ function targetableHeroes(state: BattleState): HeroState[] {
 function doSpecial(state: BattleState, enemy: EnemyState, rules: Rules): boolean {
   const sp = rules.combat.specials;
   const dmg = enemyDamage(state, enemy, rules);
-  switch (specialOf(enemy, state.encounter, rules)?.key) {
+  switch (activeSpecial(state, enemy, rules)?.key) {
+    case 'goblinToss': {
+      // The weakest goblin is spent as the projectile; taunts can't stop a throw.
+      const goblin = state.enemies.filter((x) => x.alive && x.kind === 'goblin').sort((a, b) => a.hp - b.hp)[0];
+      const target = [...targetableHeroes(state)].sort((a, b) => a.hp - b.hp)[0];
+      if (!goblin || !target) return false;
+      goblin.alive = false;
+      goblin.hp = 0;
+      const hit = hitHero(state, enemy, target, Math.round(dmg * sp.goblinToss.multiplier), rules);
+      log(state, 'enemy', `${enemy.name} hurls ${goblin.name} at the ${rules.classes[target.heroClass].name}: ${hit.text}.`, enemy.id, [target.id, goblin.id], `⚠ ${sp.goblinToss.short} → ${hit.short}`);
+      return true;
+    }
     case 'warlock': {
       const c = rules.combat.warlockCurse;
       const hits: string[] = [];
@@ -1211,6 +1254,23 @@ export function endRound(prev: BattleState, rules: Rules = defaultRules): Battle
   for (const enemy of order) {
     if (justArrived(state, enemy)) continue;
     for (let a = 0; a < actionsThisRound(enemy); a++) enemyAct(state, enemy, a, rules);
+  }
+
+  // Poison on heroes ticks once the horde has acted.
+  for (const h of state.heroes) {
+    if (!h.alive || !h.poison) continue;
+    const p = h.poison;
+    const dealt = Math.min(p.perRound, h.hp - (h.lastStand ? 1 : 0));
+    h.hp -= Math.max(0, dealt);
+    if (dealt > 0) (state.pendingHits ??= {})[h.id] = dealt;
+    const name = rules.classes[h.heroClass].name;
+    if (h.hp <= 0) {
+      h.hp = 0;
+      h.alive = false;
+      state.stats.anyHeroFell = true;
+    }
+    log(state, 'enemy', `☣ Poison deals ${dealt} to the ${name}${h.alive ? '' : ` — ${name} falls`}.`, p.sourceId, [h.id], `☣ ${name} ${dealt}${h.alive ? '' : ' 💀'}`);
+    h.poison = --p.rounds > 0 && h.alive ? p : null;
   }
 
   if (state.heroes.every((h) => !h.alive)) {

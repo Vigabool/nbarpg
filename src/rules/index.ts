@@ -162,6 +162,8 @@ export interface EncounterDef {
   boss?: MonsterKind;
   /** Arrives beside the boss at its tier (e.g. the Lich's Phylactery). */
   bossCompanion?: MonsterKind;
+  /** Overrides horde.minions.teamPointsPerGoblin (e.g. fewer, tougher skeletons). */
+  teamPointsPerMinion?: number;
   /** Monster kinds that count as goblins for the Chieftain's Command. */
   goblinKin: MonsterKind[];
   /** Encounter rules in play, e.g. Pack Tactics for goblins or Restless Dead for the Crypt. */
@@ -183,6 +185,12 @@ export interface EncounterMonster {
   specialShort?: string;
   /** While it lives, every minion deals extra damage (e.g. the Wight's Unholy Vigor). */
   aura?: { name: string; bonus: number; description: string };
+  /** Its hits also poison heroes (e.g. the Goblin Sharpshooter's Dirty Arrows). */
+  poisonOnHit?: { name: string; perRound: number; rounds: number; description: string };
+  /** Heals whenever a minion crumbles from weapon hits (e.g. the Bone Giant). */
+  boneHarvest?: { name: string; heal: number; description: string };
+  /** Reassembles like a skeleton after a weapon kill, this many times (e.g. the Skeletal Archer). */
+  restless?: { name: string; rises: number; description: string };
 }
 
 /** A box-score trait: a standout stat on the mirrored player's night gives its monster an ability. */

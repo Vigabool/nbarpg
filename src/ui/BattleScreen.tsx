@@ -18,7 +18,7 @@ import {
   packBonus,
   specialDue,
   nextWaveRound,
-  specialOf,
+  activeSpecial,
   ignoresTaunt,
   isGuarded,
   type ActionOption,
@@ -509,7 +509,7 @@ interface Intent {
 
 /** Compact, non-interactive status icons for enemy cards. Details live in the detail sheet. */
 function EnemyIcons({ e, state }: { e: EnemyState; state: BattleState }) {
-  const special = specialOf(e, state.encounter);
+  const special = activeSpecial(state, e);
   const rage = rules.combat.warlordEnrage;
   const icons: { icon: string; tone: string; label: string }[] = [];
   // A Wraith that is already intangible has nothing to fade from.
@@ -790,7 +790,7 @@ function EnemyDetail({
   if (groups.length === 0) return null;
   const enemies = groups[Math.min(idx, groups.length - 1)];
   const e = enemies[0];
-  const special = specialOf(e, state.encounter);
+  const special = activeSpecial(state, e);
   const [, player] = e.name.split(' · ');
   const rage = rules.combat.warlordEnrage;
   const n = rules.combat.specialEveryNRounds;
@@ -1011,6 +1011,9 @@ function HeroRow({
         {h.armor > 0 && <Tag passThrough icon={`⛨${h.armor}`} text={`+${h.armor} armor this round`} tone="shield" />}
         {h.nextAttackMultiplier > 1 && <Tag passThrough icon={`✦×${h.nextAttackMultiplier}`} text={`Next attack deals ×${h.nextAttackMultiplier}`} tone="good" />}
         {h.curse && <Tag passThrough icon={`↓${h.curse.amount}`} text={`Cursed: −${h.curse.amount} damage for ${h.curse.rounds} turns`} tone="curse" />}
+        {h.poison && (
+          <Tag passThrough icon={`☣${h.poison.perRound}`} text={`Poisoned: ${h.poison.perRound} damage after the horde acts, ${h.poison.rounds} more time${h.poison.rounds > 1 ? 's' : ''}`} tone="poison" />
+        )}
         {h.prone && <Tag passThrough icon="⤵" text="Prone: can't act this round" tone="warn" />}
         {h.skipNextTurn && <Tag passThrough icon="⤵" text="Knocked prone: skips next round" tone="warn" />}
         {h.untargetableRounds > 0 && <Tag passThrough icon="👻" text="Untargetable this round" tone="good" />}

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { enemyDamage, livingEnemies, previewEnemyPhase, specialDue, specialOf } from '../engine/combat';
+import { activeSpecial, enemyDamage, livingEnemies, previewEnemyPhase, specialDue } from '../engine/combat';
 import { rules } from '../rules';
 import { monsterIcon } from '../engine/encounter';
 import { CLASS_ICON } from './common';
@@ -37,7 +37,7 @@ export function SampleTurn() {
         {livingEnemies(s).length === 0 && <div className="tiny muted">No goblins left.</div>}
         {livingEnemies(s).map((e) => {
           const hit = targets.has(e.id);
-          const sp = specialOf(e, s.encounter);
+          const sp = activeSpecial(s, e);
           return (
             <div key={e.id} className={`sample-row${hit ? ' hit' : ''}${actors.has(e.id) ? ' acted' : ''}`}>
               <span className="sample-name">

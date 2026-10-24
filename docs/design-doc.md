@@ -275,6 +275,10 @@ Turnovers work separately, as Fumbles the party spends (see Monster behaviors).
 
 **Twist:** Pack Tactics (+1 damage per other goblin *minion*) and Guarded by the Pack (the Shaman can't be targeted while 2+ goblin minions live).
 
+**Role tweaks** (small, so the roles feel different from the Crypt's without changing their jobs):
+- **Ogre · Goblin Toss** (replaces Ground Slam): hurls one of its goblins over your front line at the lowest-HP hero for 1.5× damage. Taunts can't stop a throw, and the goblin is spent. With no goblins left it uses Ground Slam instead, so clearing minions trades a targeted, untauntable hit for a spread-out one; the Ogre never goes quiet.
+- **Sharpshooter · Dirty Arrows:** its hits also poison (2 damage after the horde acts, for 2 rounds).
+
 **Goblin Chieftain (boss kit).** The week's best opposing performance leads the horde; its best tier as any Champion type sets its strength (HP 36–72, damage 10–19), and if that player was already mirrored they become the Chieftain instead. Two actions a round and the boss enrage (+5 below half HP).
 - **Passive · Chieftain's Command:** every goblin (minions and the goblin Champions, not the Ogre) deals +1 damage while the Chieftain lives.
 - **Special · Call the Pack** (every other round on the field, telegraphed): two fresh goblins join and fight from the next round.
@@ -297,11 +301,17 @@ A necromancer's tomb where the dead won't stay down.
 
 **Wraith.** Starts intangible: it can't be targeted except by spells (every Wizard attack but the staff) and Cleric attacks, and the first such hit makes it solid. Every turn it drains life from every hero (2–4 by tier, ignoring armor) and heals for half of what it drained. Special · **Fade** (every other round, telegraphed): it becomes intangible again. The puzzle is whether to spend a spell making it hittable or keep soaking the drain.
 
+**Bone Giant · Bone Harvest:** heals 2 whenever a skeleton crumbles from weapon hits; fire and holy kills give it nothing.
+
+**Skeletal Archer · Restless:** it's a skeleton too. A weapon kill leaves a bone pile and it reassembles once at half HP; fire and holy end it for good.
+
+**Fewer, tougher dead:** the Crypt raises 1 skeleton per 45 opposing points (the Goblin Horde uses 40), since each skeleton takes three weapon kills.
+
 **Wight.** Passive · **Unholy Vigor:** every skeleton deals +1 damage while it lives. Special · **Raise Dead** (replaces War Drum): every skeleton that crumbled from weapon hits rises again at 2 HP. Fire and holy kills stay down. Kill it early.
 
 **Lich (boss kit).** Two actions a round and the boss enrage, like the Chieftain, but a frail caster (HP 14–29, damage 6–11). Special · **Death Bolt:** 1.5× damage to the lowest-HP hero, ignoring armor. Passive · **Phylactery:** a ⚱️ Phylactery (6–10 HP, never acts) arrives beside it. While it stands the Lich takes half damage, and it can't be targeted while any skeleton stands (attacks that hit every enemy still land). When the Lich falls the Phylactery shatters, so it's a shortcut, not a requirement.
 
-**Balance (bot simulator, 1,000 battles):** Crypt 67.5% bot wins, 7.2 rounds, 2.1 heroes fallen; Goblin Horde 75.5%, 7.3 rounds. The bot doesn't save fire and holy for skeletons, so players who do should find the Crypt closer to the Horde. Only Crypt-specific values were tuned.
+**Balance (bot simulator, 1,000 battles):** target 60–65% bot wins (the bot ignores traits, Fumbles and the fire/holy puzzle, so players should land higher). Crypt 61%, 7.2 rounds; Goblin Horde 65%, 7.6 rounds.
 
 Encounters without their own boss fall back to the classic Warlord: a boosted copy of the top performer's Champion (double HP, +2 damage).
 

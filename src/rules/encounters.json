@@ -22,7 +22,8 @@
           "name": "Ogre",
           "short": "Ogre",
           "icon": "👹",
-          "flavor": "Hired muscle"
+          "flavor": "Hired muscle",
+          "special": "goblinToss"
         },
         "warlock": {
           "name": "Goblin Hexer",
@@ -32,7 +33,13 @@
         "hunter": {
           "name": "Goblin Sharpshooter",
           "short": "Sharpshooter",
-          "icon": "🎯"
+          "icon": "🎯",
+          "poisonOnHit": {
+            "name": "Dirty Arrows",
+            "perRound": 2,
+            "rounds": 2,
+            "description": "Its hits also poison the target: 2 damage a round for 2 rounds"
+          }
         },
         "assassin": {
           "name": "Goblin Cutthroat",
@@ -63,6 +70,7 @@
       "twists": [
         "restlessDead"
       ],
+      "teamPointsPerMinion": 45,
       "goblinKin": [],
       "monsters": {
         "goblin": {
@@ -76,7 +84,12 @@
           "short": "Bone Giant",
           "icon": "🦴",
           "specialName": "Grave Slam",
-          "specialShort": "Slam"
+          "specialShort": "Slam",
+          "boneHarvest": {
+            "name": "Bone Harvest",
+            "heal": 2,
+            "description": "Heals 2 whenever a skeleton crumbles from weapon hits; fire and holy kills give it nothing"
+          }
         },
         "warlock": {
           "name": "Necromancer",
@@ -90,7 +103,12 @@
           "short": "Archer",
           "icon": "🏹",
           "specialName": "Arrow Storm",
-          "specialShort": "Storm"
+          "specialShort": "Storm",
+          "restless": {
+            "name": "Restless",
+            "rises": 1,
+            "description": "A weapon kill leaves a bone pile: it reassembles once at half HP next round. Fire and holy damage end it for good"
+          }
         },
         "assassin": {
           "name": "Wraith",

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { canFumble, endRound, livingEnemies, spendFumble, specialDue, listActions, nextWaveRound, performAction, previewEnemyPhase, previewRound, actionDamage, commandBonus, enemyDamage, isGuarded, packBonus, type BattleState } from '../src/engine/combat';
 import { rules } from '../src/rules';
+
+const DIRTY = rules.encounters.encounters['goblin-horde'].monsters.hunter!.poisonOnHit!.perRound;
 import { battle, heroSetup, monster, party } from './helpers';
 
 const act = (s: BattleState, heroId: BattleState['heroes'][number]['id'], actionId: string, targetIds: string[] = []) =>
@@ -238,8 +240,8 @@ describe('the horde', () => {
     s = act(s, 'warrior', 'shield-bash', [h.id]);
     s = endRound(s);
     expect(hero(s, 'warrior').hp).toBe(40);
-    // Ties on armor (0) go to the lowest HP: the Wizard (22).
-    expect(hero(s, 'wizard').hp).toBe(16);
+    // Ties on armor (0) go to the lowest HP: the Wizard (22). Goblin Sharpshooters' Dirty Arrows also poison.
+    expect(hero(s, 'wizard').hp).toBe(16 - DIRTY);
   });
 
   it('Assassins drain pool on each hit', () => {
@@ -370,7 +372,7 @@ describe('taunt immunity', () => {
     expect(enemy(s, h.id).tauntedBy).toBeNull();
     expect(s.log.at(-1)!.text).toContain('ignores the taunt');
     s = endRound(s);
-    expect(hero(s, 'wizard').hp).toBe(22 - 6);
+    expect(hero(s, 'wizard').hp).toBe(22 - 6 - DIRTY);
   });
 
   it('Bulwark taunts everything except the Hunter', () => {

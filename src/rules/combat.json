@@ -12,6 +12,12 @@
       "description": "Hits every hero for its damage −2 and knocks its target prone",
       "splashPenalty": 2
     },
+    "goblinToss": {
+      "name": "Goblin Toss",
+      "short": "Toss",
+      "description": "Hurls one of its goblins over your front line at the lowest-HP hero for 1.5× its damage (taunts can't stop a throw; the goblin is spent). With no goblins left, it uses Ground Slam instead",
+      "multiplier": 1.5
+    },
     "hunter": {
       "name": "Volley",
       "short": "Volley",
