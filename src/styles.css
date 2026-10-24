@@ -433,3 +433,5 @@ select.input { appearance: auto; }
 .now-chip.taunt { color: var(--gold-2); border-color: var(--gold); }
 .now-chip.poison { color: var(--poison); border-color: var(--poison); }
 .now-chip.curse { color: #d59cf5; border-color: #9b5cc4; }
+.enc-chip { cursor: pointer; font-size: 0.8rem; padding: 4px 12px; }
+.enc-chip.on { color: var(--gold-2); border-color: var(--gold); background: var(--card-2); }

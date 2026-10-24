@@ -4,11 +4,11 @@ import { buildHorde, opponentOf, playerLine, type MonsterSpec } from '../engine/
 import { computePool } from '../engine/rating';
 import { playerGamesInWeek } from '../engine/week';
 import { CLASSES, rules, type HeroClass } from '../rules';
-import { encounterOf, monsterIcon } from '../engine/encounter';
+import { encounterIds, encounterOf, monsterIcon, monsterName } from '../engine/encounter';
 import { ClassName, TierChip, formatDate, statLine } from './common';
 
-function mirrorFor(c: HeroClass, playerId: number, gameId: string, data: SeasonData): MonsterSpec | undefined {
-  const h = buildHorde([{ heroClass: c, playerId, gameId }], data);
+function mirrorFor(c: HeroClass, playerId: number, gameId: string, data: SeasonData, encounter?: string): MonsterSpec | undefined {
+  const h = buildHorde([{ heroClass: c, playerId, gameId }], data, undefined, encounter);
   return [...h.waves.flat()].find((m) => m.source?.mirrorOf === c);
 }
 
@@ -17,7 +17,8 @@ export function SelectGames({ data, game, onChange }: { data: SeasonData; game: 
   const heroes = CLASSES.filter((c) => game.assignments[c] !== undefined);
   const picks = readyPicks(game, data);
   const playing = heroes.filter((c) => playerGamesInWeek(data, week, game.assignments[c]!).length > 0);
-  const horde = picks.length ? buildHorde(picks, data) : null;
+  const horde = picks.length ? buildHorde(picks, data, undefined, game.encounter) : null;
+  const enc = encounterOf(game.encounter);
   const allPicked = playing.every((c) => game.gamePicks[c]);
 
   const pick = (c: HeroClass, gameId: string) => onChange({ ...game, gamePicks: { ...game.gamePicks, [c]: gameId } });
@@ -66,7 +67,7 @@ export function SelectGames({ data, game, onChange }: { data: SeasonData; game: 
                 const line = playerLine(data, gid, pid)!;
                 const pool = computePool(c, line);
                 const opp = opponentOf(line.team, g);
-                const mirror = mirrorFor(c, pid, gid, data);
+                const mirror = mirrorFor(c, pid, gid, data, game.encounter);
                 const selected = game.gamePicks[c] === gid;
                 return (
                   <button key={gid} className={`card flat selectable game-option stack${selected ? ' selected' : ''}`} style={{ gap: 6 }} onClick={() => pick(c, gid)}>
@@ -97,7 +98,7 @@ export function SelectGames({ data, game, onChange }: { data: SeasonData; game: 
                     </div>
                     {mirror && (
                       <div className="mirror tiny">
-                        Brings {monsterIcon(mirror.kind)} <strong>{mirror.name}</strong> · {statLine(mirror.source!.line)}
+                        Brings {monsterIcon(mirror.kind, game.encounter)} <strong>{mirror.name}</strong> · {statLine(mirror.source!.line)}
                         <br />
                         <TierChip tier={mirror.tier!} /> {mirror.hp} HP · {mirror.damage} dmg
                       </div>
@@ -113,9 +114,27 @@ export function SelectGames({ data, game, onChange }: { data: SeasonData; game: 
       {horde && (
         <section className="card stack">
           <div className="stack" style={{ gap: 2 }}>
-            <span className="section-label">This week's encounter</span>
-            <h2>{encounterOf().name}</h2>
-            <span className="small muted">{encounterOf().tagline}</span>
+            <div className="spread">
+              <span className="section-label">This week's encounter</span>
+              <label className="row tiny muted" style={{ gap: 6 }}>
+                Testing:
+                <select
+                  className="input"
+                  id="encounter-pick"
+                  style={{ minHeight: 30, padding: '2px 8px', width: 'auto' }}
+                  value={game.encounter ?? rules.encounters.default}
+                  onChange={(e) => onChange({ ...game, encounter: e.target.value })}
+                >
+                  {encounterIds().map((id) => (
+                    <option key={id} value={id}>
+                      {encounterOf(id).name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <h2>{enc.name}</h2>
+            <span className="small muted">{enc.tagline}</span>
           </div>
           {horde.waves.map((wave, i) => {
             const goblins = wave.filter((m) => m.kind === 'goblin');
@@ -128,12 +147,12 @@ export function SelectGames({ data, game, onChange }: { data: SeasonData; game: 
                 <div className="row">
                   {goblins.length > 0 && (
                     <span className="chip">
-                      {monsterIcon('goblin')} {goblins.length} goblins ({[...new Set(goblins.map((g) => g.damage))].join('/')} dmg)
+                      {monsterIcon('goblin', game.encounter)} {goblins.length} × {monsterName('goblin', game.encounter)} ({[...new Set(goblins.map((g) => g.damage))].join('/')} dmg)
                     </span>
                   )}
                   {named.map((m) => (
                     <span key={m.id} className={`chip ${m.isWarlord ? 'warn' : ''}`}>
-                      {monsterIcon(m.kind)} {m.name} · {m.hp} HP · {m.damage} dmg{m.isWarlord ? ' ×2 actions' : ''}
+                      {monsterIcon(m.kind, game.encounter)} {m.name} · {m.hp} HP · {m.damage} dmg{m.isWarlord ? ' ×2 actions' : ''}
                     </span>
                   ))}
                 </div>

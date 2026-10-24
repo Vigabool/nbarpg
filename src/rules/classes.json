@@ -11,15 +11,15 @@
     ],
     "gear": [
       { "id": "staff", "name": "Staff", "description": "G damage to 1 enemy · +2 energy", "target": { "type": "enemy" }, "effects": [{ "type": "damage", "amount": "gear" }, { "type": "gainEnergy", "amount": 2 }] },
-      { "id": "magic-missile", "name": "Magic Missile", "cost": 1, "description": "G + 2 damage to 1 enemy, never misses and ignores armor", "target": { "type": "enemy" }, "effects": [{ "type": "damage", "amount": "gear", "bonus": 2, "pierce": true }] }
+      { "id": "magic-missile", "tags": ["spell"], "name": "Magic Missile", "cost": 1, "description": "G + 2 damage to 1 enemy, never misses and ignores armor", "target": { "type": "enemy" }, "effects": [{ "type": "damage", "amount": "gear", "bonus": 2, "pierce": true }] }
     ],
     "passives": [],
     "abilities": [
       { "id": "shield", "name": "Shield", "cost": 3, "description": "+5 armor this round", "target": { "type": "self" }, "effects": [{ "type": "armor", "amount": 5 }] },
-      { "id": "lightning-bolt", "name": "Lightning Bolt", "cost": 7, "description": "14 damage to 1 target", "target": { "type": "enemy" }, "effects": [{ "type": "damage", "amount": 14 }] },
-      { "id": "fireball", "name": "Fireball", "cost": 10, "description": "8 damage to up to 3 targets", "target": { "type": "enemies", "count": 3 }, "effects": [{ "type": "damage", "amount": 8 }] },
-      { "id": "chain-lightning", "name": "Chain Lightning", "unlock": "signature", "description": "10 damage to every enemy in the wave", "target": { "type": "allEnemies" }, "effects": [{ "type": "damage", "amount": 10 }] },
-      { "id": "meteor", "name": "Meteor", "unlock": "legendary", "description": "20 damage to every enemy in the wave", "target": { "type": "allEnemies" }, "effects": [{ "type": "damage", "amount": 20 }] }
+      { "id": "lightning-bolt", "tags": ["spell"], "name": "Lightning Bolt", "cost": 7, "description": "14 damage to 1 target", "target": { "type": "enemy" }, "effects": [{ "type": "damage", "amount": 14 }] },
+      { "id": "fireball", "tags": ["spell", "fire"], "name": "Fireball", "cost": 10, "description": "8 damage to up to 3 targets", "target": { "type": "enemies", "count": 3 }, "effects": [{ "type": "damage", "amount": 8 }] },
+      { "id": "chain-lightning", "tags": ["spell"], "name": "Chain Lightning", "unlock": "signature", "description": "10 damage to every enemy in the wave", "target": { "type": "allEnemies" }, "effects": [{ "type": "damage", "amount": 10 }] },
+      { "id": "meteor", "tags": ["spell", "fire"], "name": "Meteor", "unlock": "legendary", "description": "20 damage to every enemy in the wave", "target": { "type": "allEnemies" }, "effects": [{ "type": "damage", "amount": 20 }] }
     ]
   },
   "rogue": {

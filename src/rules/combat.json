@@ -42,6 +42,22 @@
       "short": "Call",
       "description": "Two fresh goblins join the fight",
       "goblins": 2
+    },
+    "fade": {
+      "name": "Fade",
+      "short": "Fade",
+      "description": "Becomes intangible again"
+    },
+    "raiseDead": {
+      "name": "Raise Dead",
+      "short": "Raise",
+      "description": "Every destroyed skeleton reassembles, even ones destroyed for good; they fight from next round"
+    },
+    "lich": {
+      "name": "Death Bolt",
+      "short": "Bolt",
+      "description": "Blasts the lowest-HP hero for 1.5× damage, ignoring armor",
+      "multiplier": 1.5
     }
   },
   "warlockCurse": {
@@ -81,5 +97,25 @@
     "name": "Chieftain's Command",
     "description": "Every goblin deals +1 damage while the Chieftain lives",
     "bonus": 1
+  },
+  "restlessDead": {
+    "name": "Restless Dead",
+    "description": "A destroyed skeleton reassembles at the start of next round at half HP, once. Fire and holy damage destroy it for good",
+    "riseHp": 4,
+    "rises": 1
+  },
+  "masterOfTheDead": {
+    "name": "Master of the Dead",
+    "description": "While the Lich lives, skeletons reassemble every time, not just once"
+  },
+  "wraith": {
+    "drainByTier": {
+      "cold": 1,
+      "average": 1,
+      "good": 2,
+      "great": 2,
+      "elite": 3
+    },
+    "healFraction": 0.5
   }
 }

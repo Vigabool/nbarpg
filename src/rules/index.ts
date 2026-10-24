@@ -21,7 +21,9 @@ export type Tier = (typeof TIERS)[number];
 export const CLASSES = ['warrior', 'ranger', 'cleric', 'rogue', 'wizard'] as const;
 export type HeroClass = (typeof CLASSES)[number];
 export type ChampionKind = 'ogre' | 'warlock' | 'hunter' | 'assassin' | 'shaman';
-export type MonsterKind = 'goblin' | ChampionKind | 'chieftain';
+export type MonsterKind = 'goblin' | ChampionKind | 'chieftain' | 'lich';
+export type Behavior = 'default' | ChampionKind | 'chieftain' | 'lich' | 'wraith';
+export type Twist = 'packTactics' | 'packGuard' | 'restlessDead';
 
 export type RatingFormula = Partial<Record<StatKey, number>>;
 /** Minimum Rating for each tier above Cold. */
@@ -84,6 +86,8 @@ export interface ActionDef {
   cost?: number;
   /** Signature needs a double-double, Legendary a triple-double. */
   unlock?: 'signature' | 'legendary';
+  /** Spells can touch intangible foes; fire (like holy) destroys restless dead for good. */
+  tags?: ('spell' | 'fire')[];
   target: TargetSpec;
   effects: Effect[];
 }
@@ -118,7 +122,7 @@ export interface SummonDef {
 
 export interface MonsterDef {
   name: string;
-  behavior: 'default' | ChampionKind | 'chieftain';
+  behavior: Behavior;
   /** Taunts (Provoke, Bulwark, Shield Bash, the Bear) have no effect. */
   ignoresTaunt?: boolean;
   mirrors?: HeroClass;
@@ -157,7 +161,23 @@ export interface EncounterDef {
   boss?: MonsterKind;
   /** Monster kinds that count as goblins for the Chieftain's Command. */
   goblinKin: MonsterKind[];
-  monsters: Record<MonsterKind, { name: string; short: string; icon: string; flavor?: string }>;
+  /** Encounter rules in play, e.g. Pack Tactics for goblins or Restless Dead for the Crypt. */
+  twists: Twist[];
+  monsters: Partial<Record<MonsterKind, EncounterMonster>>;
+}
+
+export interface EncounterMonster {
+  name: string;
+  short: string;
+  icon: string;
+  flavor?: string;
+  /** Overrides the role's behavior and description (e.g. the Crypt's Wraith). */
+  behavior?: Behavior;
+  description?: string;
+  /** Overrides which special it uses (a key of combat.specials), or just its name. */
+  special?: string;
+  specialName?: string;
+  specialShort?: string;
 }
 
 export interface Rules {

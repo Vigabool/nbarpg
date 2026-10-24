@@ -241,7 +241,7 @@ Gear damage and armor use the player's season-average Rating, mapped to the same
 
 ## Encounters
 
-**Each battle is an encounter: a themed horde that re-skins the monster roles and brings its own boss and twist.** The roles stay mechanical building blocks (Brute, Caster, Sniper, Stalker, Support, each mirroring a hero class), so new encounters are mostly configuration in `src/rules/encounters.json`. How a week's encounter is chosen (rotation, random, scaling through the season) is still open; for now every battle is the Goblin Horde.
+**Each battle is an encounter: a themed horde that re-skins the monster roles and brings its own boss and twist.** The roles stay mechanical building blocks (Brute, Caster, Sniper, Stalker, Support, each mirroring a hero class), so new encounters are mostly configuration in `src/rules/encounters.json`. How a week's encounter is chosen (rotation, random, scaling through the season) is still open; for now the Goblin Horde is the default, and a "Testing:" selector on the pick-games screen switches the week's encounter.
 
 ### Goblin Horde
 
@@ -260,6 +260,30 @@ Gear damage and armor use the player's season-average Rating, mapped to the same
 **Goblin Chieftain (boss kit).** The week's best opposing performance leads the horde; its best tier as any Champion type sets its strength (HP 36–72, damage 10–19), and if that player was already mirrored they become the Chieftain instead. Two actions a round and the boss enrage (+5 below half HP).
 - **Passive · Chieftain's Command:** every goblin (minions and the goblin Champions, not the Ogre) deals +1 damage while the Chieftain lives.
 - **Special · Call the Pack** (every other round on the field, telegraphed): two fresh goblins join and fight from the next round.
+
+### The Crypt
+
+A necromancer's tomb where the dead won't stay down.
+
+| Role (mirrors) | Mechanics | The Crypt |
+| --- | --- | --- |
+| Minion | Goblin | Skeleton |
+| Support (Cleric) | Shaman → Raise Dead | Wight |
+| Sniper (Ranger) | Hunter | Skeletal Archer |
+| Brute (Warrior) | Ogre | Bone Giant |
+| Caster (Wizard) | Warlock | Necromancer |
+| Stalker (Rogue) | Wraith (own behavior) | Wraith |
+| Boss | Lich | Lich |
+
+**Twist · Restless Dead:** a skeleton that falls becomes a bone pile and reassembles at 4 HP at the start of the next round. Each skeleton rises once on its own; while the Lich lives they keep rising. **Fire (Fireball, Meteor) and holy damage (every Cleric attack) destroy them for good.** A bone pile keeps its wave open and blocks victory.
+
+**Wraith.** Starts intangible: it can't be targeted except by spells (every Wizard attack but the staff) and Cleric attacks, and the first such hit makes it solid. Every turn it drains life from every hero (1–3 by tier, ignoring armor) and heals for half of what it drained. Special · **Fade** (every other round, telegraphed): it becomes intangible again. The puzzle is whether to spend a spell making it hittable or keep soaking the drain.
+
+**Wight · Raise Dead** (replaces War Drum): every fallen skeleton rises at 4 HP.
+
+**Lich (boss kit).** Two actions a round and the boss enrage, like the Chieftain, but built as a frail caster (HP 24–48, damage 6–11). Passive · **Master of the Dead:** skeletons keep reassembling while it lives. Special · **Death Bolt:** 1.5× damage to the lowest-HP hero, ignoring armor.
+
+**Balance (bot simulator, 400 battles):** Crypt 70% bot wins, 7.6 rounds, 2.1 heroes fallen; Goblin Horde 73%, 7.3 rounds. Only Crypt-specific values (Wraith drain, Lich arrays) were tuned, so the shared Champion arrays are untouched.
 
 Encounters without their own boss fall back to the classic Warlord: a boosted copy of the top performer's Champion (double HP, +2 damage).
 

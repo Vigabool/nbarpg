@@ -37,7 +37,7 @@ export function SampleTurn() {
         {livingEnemies(s).length === 0 && <div className="tiny muted">No goblins left.</div>}
         {livingEnemies(s).map((e) => {
           const hit = targets.has(e.id);
-          const sp = specialOf(e);
+          const sp = specialOf(e, s.encounter);
           return (
             <div key={e.id} className={`sample-row${hit ? ' hit' : ''}${actors.has(e.id) ? ' acted' : ''}`}>
               <span className="sample-name">

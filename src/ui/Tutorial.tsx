@@ -4,7 +4,7 @@ import type { ActionDef } from '../rules';
 import { CLASSES, rules, type ChampionKind, type HeroClass, type MonsterKind } from '../rules';
 import type { JSX, ReactNode } from 'react';
 import { SampleTurn } from './SampleTurn';
-import { encounterOf, monsterIcon, monsterName, monsterShort } from '../engine/encounter';
+import { behaviorOf, encounterIds, encounterOf, hasTwist, monsterDescription, monsterIcon, monsterName, monsterShort, specialFor } from '../engine/encounter';
 import { CLASS_ICON, money } from './common';
 
 const SEEN_KEY = 'nbarpg.tutorialSeen';
@@ -47,7 +47,7 @@ export type TutorialTopic =
   | { tab: 'basics' }
   | { tab: 'sample' }
   | { tab: 'classes'; heroClass?: HeroClass; abilityId?: string }
-  | { tab: 'enemies'; enemy?: EnemyPage };
+  | { tab: 'enemies'; enemy?: EnemyPage; encounter?: string };
 
 export function Tutorial({ onClose, topic }: { onClose: () => void; topic?: TutorialTopic }) {
   const [tab, setTab] = useState<Tab>(topic?.tab ?? 'basics');
@@ -124,7 +124,12 @@ export function Tutorial({ onClose, topic }: { onClose: () => void; topic?: Tuto
             />
           )}
 
-          {tab === 'enemies' && <EnemiesTab initial={topic?.tab === 'enemies' ? topic.enemy : undefined} />}
+          {tab === 'enemies' && (
+            <EnemiesTab
+              initial={topic?.tab === 'enemies' ? topic.enemy : undefined}
+              initialEncounter={topic?.tab === 'enemies' ? topic.encounter : undefined}
+            />
+          )}
         </div>
 
         <div className="spread">
@@ -347,43 +352,44 @@ function range(arr?: number[]): string {
   return arr[0] === arr.at(-1) ? `${arr[0]}` : `${arr[0]}–${arr.at(-1)}`;
 }
 
-function EnemiesTab({ initial }: { initial?: EnemyPage }) {
+function EnemiesTab({ initial, initialEncounter }: { initial?: EnemyPage; initialEncounter?: string }) {
   const [page, setPage] = useState<EnemyPage>(initial ?? 'goblin');
+  const [encId, setEncId] = useState<string>(initialEncounter ?? rules.encounters.default);
   const c = rules.combat;
   const w = rules.horde.warlord;
   const every = c.specialEveryNRounds === 2 ? 'every other round' : `every ${c.specialEveryNRounds} rounds`;
-  const enc = encounterOf();
+  const enc = encounterOf(encId);
   // The boss page shows the encounter's own boss, or the classic Warlord.
-  const label = (p: EnemyPage) => (p === 'warlord' ? (enc.boss ? monsterShort(enc.boss) : 'Warlord') : monsterShort(p));
-  const icon = (p: EnemyPage) => (p === 'warlord' ? (enc.boss ? monsterIcon(enc.boss) : '👑') : monsterIcon(p));
+  const label = (p: EnemyPage) => (p === 'warlord' ? (enc.boss ? monsterShort(enc.boss, encId) : 'Warlord') : monsterShort(p, encId));
+  const icon = (p: EnemyPage) => (p === 'warlord' ? (enc.boss ? monsterIcon(enc.boss, encId) : '👑') : monsterIcon(p, encId));
 
   let body: JSX.Element;
   if (page === 'goblin') {
     const bands = rules.horde.minions.damageByTeamFgPct.map((b) => b.damage);
     body = (
       <>
-        <EnemyHead icon={icon(page)} name={monsterName('goblin')} sub="Minion · from opposing team points" />
+        <EnemyHead icon={icon(page)} name={monsterName('goblin', encId)} sub="Minion · from opposing team points" />
         <div className="row" style={{ gap: 6 }}>
           <span className="chip">❤ {rules.monsters.goblin.hp} HP</span>
           <span className="chip">⚔ {range(bands)} by team FG%</span>
           <span className="chip">1 per {rules.horde.minions.teamPointsPerGoblin} opposing points</span>
         </div>
-        <p className="small">{monsterBehavior('goblin')}.</p>
-        {monsterPassives('goblin').map((p) => (
+        <p className="small">{monsterBehavior('goblin', encId)}.</p>
+        {monsterPassives('goblin', encId).map((p) => (
           <Feature key={p.title} title={`Passive · ${p.title}`} text={p.text} />
         ))}
         <Feature
           title="Waves"
-          text={`Goblins split ${rules.horde.minions.waveShare.map((x) => `${Math.round(x * 100)}%`).join(' / ')} across the three waves. Wave 1's pack guards the Shaman.`}
+          text={`Minions split ${rules.horde.minions.waveShare.map((x) => `${Math.round(x * 100)}%`).join(' / ')} across the three waves.${hasTwist('packGuard', encId) ? " Wave 1's pack guards the Shaman." : ''}`}
         />
       </>
     );
   } else if (page === 'warlord' && enc.boss) {
     const boss = rules.monsters[enc.boss];
-    const sp = (c.specials as Record<string, { name: string; description: string } | undefined>)[boss.behavior];
+    const sp = specialFor(enc.boss, encId);
     body = (
       <>
-        <EnemyHead icon={icon(page)} name={monsterName(enc.boss)} sub="The boss · the week's best opposing performance" />
+        <EnemyHead icon={icon(page)} name={monsterName(enc.boss, encId)} sub="The boss · the week's best opposing performance" />
         <div className="row" style={{ gap: 6 }}>
           <span className="chip">❤ {range(boss.hpByTier)} HP</span>
           <span className="chip">⚔ {range(boss.damageByTier)}</span>
@@ -395,7 +401,7 @@ function EnemiesTab({ initial }: { initial?: EnemyPage }) {
           wave.
         </p>
         {sp && <Feature title={`⚠ Special · ${sp.name}`} text={`${sp.description}. Fires ${every} on the field, starting its 2nd round; flagged ⚠ the round before.`} warn />}
-        {monsterPassives(enc.boss).map((p) => (
+        {monsterPassives(enc.boss, encId).map((p) => (
           <Feature key={p.title} title={`Passive · ${p.title}`} text={p.text} />
         ))}
         <Feature
@@ -427,19 +433,23 @@ function EnemiesTab({ initial }: { initial?: EnemyPage }) {
     );
   } else {
     const m = rules.monsters[page];
-    const sp = (c.specials as Record<string, { name: string; description: string } | undefined>)[m.behavior];
-    const behavior = monsterBehavior(page);
-    const passives = monsterPassives(page);
+    const sp = specialFor(page, encId);
+    const behavior = monsterBehavior(page, encId);
+    const passives = monsterPassives(page, encId);
     body = (
       <>
         <EnemyHead
           icon={icon(page)}
-          name={monsterName(page)}
+          name={monsterName(page, encId)}
           sub={`Mirrors your ${rules.classes[m.mirrors!].name}${enc.monsters[page]?.flavor ? ` · ${enc.monsters[page]!.flavor}` : ''}`}
         />
         <div className="row" style={{ gap: 6 }}>
           <span className="chip">❤ {range(m.hpByTier)} HP</span>
-          <span className="chip">⚔ {range(m.damageByTier)}</span>
+          {behaviorOf(page, encId) === 'wraith' ? (
+            <span className="chip">💧 {range(Object.values(c.wraith.drainByTier))} to every hero</span>
+          ) : (
+            <span className="chip">⚔ {range(m.damageByTier)}</span>
+          )}
           <span className="chip">Scaled by the opposing player's night</span>
         </div>
         <p className="small">{behavior}.</p>
@@ -455,7 +465,13 @@ function EnemiesTab({ initial }: { initial?: EnemyPage }) {
     <div className="stack" style={{ gap: 12 }}>
       <div className="stack" style={{ gap: 2 }}>
         <span className="section-label">Encounter</span>
-        <strong>{enc.name}</strong>
+        <div className="row" style={{ gap: 6 }}>
+          {encounterIds().map((id) => (
+            <button key={id} className={`chip enc-chip${id === encId ? ' on' : ''}`} onClick={() => setEncId(id)}>
+              {encounterOf(id).name}
+            </button>
+          ))}
+        </div>
         <span className="small muted">{enc.tagline}</span>
       </div>
       <p className="small muted" style={{ margin: 0 }}>
@@ -478,8 +494,8 @@ function EnemiesTab({ initial }: { initial?: EnemyPage }) {
 }
 
 /** What a monster does, without its special or passives (shown separately). */
-export function monsterBehavior(kind: MonsterKind): string {
-  return rules.monsters[kind].description
+export function monsterBehavior(kind: MonsterKind, encounter?: string): string {
+  return monsterDescription(kind, encounter)
     .split('. Special:')[0]
     .split('. Passive:')[0]
     .replace(/\s*Arrives with wave \d+\./, '')
@@ -488,17 +504,28 @@ export function monsterBehavior(kind: MonsterKind): string {
 }
 
 /** A monster's standing rules, as titled cards. */
-export function monsterPassives(kind: MonsterKind): { title: string; text: string }[] {
+export function monsterPassives(kind: MonsterKind, encounter?: string): { title: string; text: string }[] {
   const c = rules.combat;
   const m = rules.monsters[kind];
+  const behavior = behaviorOf(kind, encounter);
   const out: { title: string; text: string }[] = [];
-  if (kind === 'goblin') out.push({ title: c.packTactics.name, text: `${c.packTactics.description}. Thin the pack and every goblin hits softer.` });
-  if (m.behavior === 'chieftain') out.push({ title: c.chieftainCommand.name, text: `${c.chieftainCommand.description}: minions and the goblin Champions, not the Ogre. Kill the Chieftain and the buff ends.` });
+  if (kind === 'goblin' && hasTwist('packTactics', encounter))
+    out.push({ title: c.packTactics.name, text: `${c.packTactics.description}. Thin the pack and every goblin hits softer.` });
+  if (kind === 'goblin' && hasTwist('restlessDead', encounter)) out.push({ title: c.restlessDead.name, text: `${c.restlessDead.description}.` });
+  if (behavior === 'wraith') {
+    out.push({ title: 'Intangible', text: 'Weapon attacks pass through it. Spells and Cleric attacks can hit it, and the first such hit makes it solid.' });
+    out.push({
+      title: 'Life drain',
+      text: `Instead of attacking, it drains every hero for ${range(Object.values(c.wraith.drainByTier))} (by tier), ignoring armor, and heals itself.`,
+    });
+  }
+  if (behavior === 'lich') out.push({ title: c.masterOfTheDead.name, text: `${c.masterOfTheDead.description}. Fire and holy damage still end them.` });
+  if (behavior === 'chieftain') out.push({ title: c.chieftainCommand.name, text: `${c.chieftainCommand.description}: minions and the goblin Champions, not the Ogre. Kill the Chieftain and the buff ends.` });
   const wave = rules.horde.championWave?.[kind as ChampionKind];
   if (wave) out.push({ title: `Arrives with wave ${wave}`, text: 'Always part of this wave, so its timing is predictable.' });
   if (m.ignoresTaunt) out.push({ title: 'Ignores taunts', text: "Provoke, Bulwark and the Bear don't work on it." });
-  if (c.packGuard.guarded.includes(m.behavior)) out.push({ title: c.packGuard.name, text: `${c.packGuard.description}.` });
-  if (m.behavior === 'assassin') out.push({ title: 'Energy drain', text: `Each hit drains ${c.assassinDrain} energy from its target.` });
+  if (hasTwist('packGuard', encounter) && c.packGuard.guarded.includes(behavior)) out.push({ title: c.packGuard.name, text: `${c.packGuard.description}.` });
+  if (behavior === 'assassin') out.push({ title: 'Energy drain', text: `Each hit drains ${c.assassinDrain} energy from its target.` });
   return out;
 }
 

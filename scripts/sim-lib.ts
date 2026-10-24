@@ -27,7 +27,7 @@ export interface SimResult {
   goblinDamage: number;
 }
 
-export function simulate(data: SeasonData, battles: number, seedIn = 1): SimResult {
+export function simulate(data: SeasonData, battles: number, seedIn = 1, encounter?: string): SimResult {
   let seed = seedIn;
   const rand = () => ((seed = (seed * 1103515245 + 12345) % 2 ** 31) / 2 ** 31);
   const pool = eligiblePlayers(data);
@@ -50,7 +50,7 @@ export function simulate(data: SeasonData, battles: number, seedIn = 1): SimResu
       picks.push({ heroClass: c, playerId: best.id, gameId });
     }
     if (picks.length === 0) continue;
-    const prepared = prepareBattle(picks, data);
+    const prepared = prepareBattle(picks, data, undefined, encounter);
     r.horde += prepared.horde.waves.flat().length;
     r.goblins += prepared.horde.waves.flat().filter((m) => m.kind === 'goblin').length;
     for (const p of Object.values(prepared.pools)) r.pools.push(p!.pool);

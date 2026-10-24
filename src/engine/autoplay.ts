@@ -1,5 +1,5 @@
 import { rules as defaultRules, type Rules } from '../rules';
-import { endRound, listActions, pickableEnemies, performAction, type ActionOption, type BattleState, type HeroAction, type HeroState } from './combat';
+import { endRound, listActions, livingEnemies, pickableEnemies, performAction, type ActionOption, type BattleState, type HeroAction, type HeroState } from './combat';
 
 /**
  * A simple rule-based player used by the batch simulator and tests. It is not
@@ -30,7 +30,7 @@ export function chooseAction(
       return act(advanced, [target]);
     }
     const g = opts.find((o) => o.source === 'gear' && o.def.cost === undefined && o.validTargets.length);
-    return g ? act(g, [byHpAsc[0].id]) : null;
+    return g && byHpAsc.length ? act(g, [byHpAsc[0].id]) : null;
   };
   const hpOf = (id: string) => enemies.find((e) => e.id === id)?.hp ?? Infinity;
   const totalEnemyHp = enemies.reduce((s, e) => s + e.hp, 0);
@@ -60,6 +60,10 @@ export function chooseAction(
       return gear();
     }
     case 'wizard': {
+      // Make an intangible foe (the Crypt's Wraith) solid so the party can hit it.
+      const ghost = livingEnemies(state).find((e) => e.intangible);
+      const missile = has('magic-missile');
+      if (ghost && missile?.validTargets.includes(ghost.id)) return act(missile, [ghost.id]);
       if (has('meteor') && totalEnemyHp >= 60) return act(has('meteor'));
       if (has('chain-lightning') && enemies.length >= 4) return act(has('chain-lightning'));
       if (has('fireball') && enemies.length >= 3) return act(has('fireball'), byHpAsc.slice(0, 3).map((e) => e.id));
@@ -77,7 +81,7 @@ export function chooseAction(
       if (has('backstab') && taunted) return act(has('backstab'), [taunted.id]);
       const tanky = byThreat.find((e) => e.hp >= 16 && !e.poison);
       if (has('venom-strike') && tanky) return act(has('venom-strike'), [tanky.id]);
-      if (has('backstab') && byThreat[0].hp >= 10) return act(has('backstab'), [byThreat[0].id]);
+      if (has('backstab') && byThreat[0] && byThreat[0].hp >= 10) return act(has('backstab'), [byThreat[0].id]);
       return gear();
     }
     case 'ranger': {
@@ -87,7 +91,7 @@ export function chooseAction(
       if (has('summon-wolf') && state.summons.filter((s) => s.alive).length < 2 && hero.pool >= 14) return act(has('summon-wolf'));
       const big = byThreat.find((e) => e.hp >= 12);
       if (has('aimed-shot') && big) return act(has('aimed-shot'), [big.id]);
-      if (has('double-strike')) return act(has('double-strike'), byHpAsc.slice(0, 2).map((e) => e.id));
+      if (has('double-strike') && byHpAsc.length) return act(has('double-strike'), byHpAsc.slice(0, 2).map((e) => e.id));
       return gear();
     }
   }

@@ -36,8 +36,8 @@ export function party(lines: Partial<Record<HeroClass, Partial<StatLine>>> = {})
   return CLASSES.map((c) => heroSetup(c, lines[c] ?? avg[c]));
 }
 
-export function battle(waves: MonsterSpec[][], heroes: HeroSetup[] = party()): BattleState {
-  return createBattle(heroes, waves);
+export function battle(waves: MonsterSpec[][], heroes: HeroSetup[] = party(), encounter?: string): BattleState {
+  return createBattle(heroes, waves, undefined, encounter);
 }
 
 export function season(games: { id: string; date: string; home: string; away: string; lines: BoxLine[] }[], names: Record<number, string> = {}): SeasonData {

@@ -27,7 +27,7 @@ import {
 } from '../engine/combat';
 import { rules, type HeroClass, type Tier } from '../rules';
 import { EnemyHead, Feature, monsterBehavior, monsterPassives, type EnemyPage, type TutorialTopic } from './Tutorial';
-import { encounterOf, monsterIcon, monsterName, monsterShort } from '../engine/encounter';
+import { behaviorOf, encounterIds, encounterOf, monsterIcon, monsterName, monsterShort } from '../engine/encounter';
 import { CLASS_ICON, ConfirmButton, TIER_LABEL, TierChip, statLine, weekLabel } from './common';
 
 interface Props {
@@ -130,7 +130,7 @@ export function BattleScreen({ data, game, onChange, onHelp, onQuit }: Props) {
           {next && inRounds !== null && (
             <span className={`chip${inRounds <= 1 ? ' wave-soon' : ''}`} title={`Wave ${state.waveIndex + 2}: ${next.length} monsters`}>
               W{state.waveIndex + 2} {inRounds <= 1 ? 'next round' : `in ${inRounds}`} · {next.length}
-              {next.some((m) => m.isWarlord) ? ' + Warlord' : ''}
+              {next.some((m) => m.isWarlord) ? ` + ${encounterOf(state.encounter).boss ? monsterShort(encounterOf(state.encounter).boss!, state.encounter) : 'Warlord'}` : ''}
             </span>
           )}
         </div>
@@ -204,7 +204,14 @@ export function BattleScreen({ data, game, onChange, onHelp, onQuit }: Props) {
         </div>
       )}
 
-      <div className="section-label">{encounterOf(state.encounter).name}</div>
+      <div className="spread">
+        <div className="section-label">{encounterOf(state.encounter).name}</div>
+        {state.enemies.some((e) => e.pile) && (
+          <span className="tag static warn" aria-label="Bone piles">
+            🦴 {state.enemies.filter((e) => e.pile).length} reassemble next round
+          </span>
+        )}
+      </div>
       <div className="enemy-grid">
         {champions.map((e) => (
           <EnemyCard
@@ -358,7 +365,7 @@ export function BattleScreen({ data, game, onChange, onHelp, onQuit }: Props) {
           onClose={() => setDetail(null)}
           onHelp={(enemy) => {
             setDetail(null);
-            onHelp({ tab: 'enemies', enemy });
+            onHelp({ tab: 'enemies', enemy, encounter: state.encounter });
           }}
         />
       )}
@@ -466,7 +473,7 @@ interface Intent {
 
 /** Compact, non-interactive status icons for enemy cards. Details live in the detail sheet. */
 function EnemyIcons({ e, state }: { e: EnemyState; state: BattleState }) {
-  const special = specialOf(e);
+  const special = specialOf(e, state.encounter);
   const rage = rules.combat.warlordEnrage;
   const icons: { icon: string; tone: string; label: string }[] = [];
   if (special && specialDue(e, state.round + 1)) icons.push({ icon: `⚠ ${special.short}`, tone: 'warn', label: `${special.name} next round` });
@@ -474,6 +481,7 @@ function EnemyIcons({ e, state }: { e: EnemyState; state: BattleState }) {
   if (e.drum && e.drum.round >= state.round) icons.push({ icon: `🥁+${e.drum.amount}`, tone: 'warn', label: 'War Drum' });
   if (commandBonus(state, e) > 0) icons.push({ icon: `👑+${commandBonus(state, e)}`, tone: 'warn', label: "Chieftain's Command" });
   if (isGuarded(state, e)) icons.push({ icon: '🔒', tone: 'shield', label: 'Guarded by the pack' });
+  if (e.intangible) icons.push({ icon: '👻', tone: 'curse', label: 'Intangible' });
   if (ignoresTaunt(e)) icons.push({ icon: '⊘⚑', tone: '', label: 'Ignores taunts' });
   if (e.tauntedBy) icons.push({ icon: '⚑', tone: 'taunt', label: 'Taunted' });
   if (e.poison) icons.push({ icon: `☣${e.poison.perRound}`, tone: 'poison', label: 'Poisoned' });
@@ -497,8 +505,11 @@ function IntentLine({ e, state, intent }: { e: EnemyState; state: BattleState; i
   return <div className="u-intent">{intent.short.join(' · ')}</div>;
 }
 
-/** A classic Warlord is a boosted Champion; an encounter boss (e.g. the Chieftain) is its own kind. */
-const isClassicWarlord = (e: EnemyState) => e.isWarlord && rules.monsters[e.kind].behavior !== 'chieftain';
+/** A classic Warlord is a boosted Champion; an encounter boss (e.g. the Chieftain, the Lich) is its own kind. */
+const BOSS_KINDS = new Set(encounterIds().map((id) => encounterOf(id).boss));
+const isClassicWarlord = (e: EnemyState) => e.isWarlord && !BOSS_KINDS.has(e.kind);
+/** Wraiths drain every hero instead of attacking one, so their number gets a different mark. */
+const dmgMark = (e: EnemyState, enc?: string) => (behaviorOf(e.kind, enc) === 'wraith' ? '💧' : '⚔');
 const foeShort = (e: EnemyState, enc?: string) => (isClassicWarlord(e) ? 'Warlord' : monsterShort(e.kind, enc));
 const foeName = (e: EnemyState, enc?: string) => (isClassicWarlord(e) ? `Warlord ${monsterName(e.kind, enc)}` : monsterName(e.kind, enc));
 const foeIcon = (e: EnemyState, enc?: string) => (isClassicWarlord(e) ? '👑' : monsterIcon(e.kind, enc));
@@ -532,7 +543,8 @@ function EnemyCard({
           {e.tier && <TierDot tier={e.tier} />}
         </span>
         <span className="u-dmg num">
-          ⚔{dmg}
+          {dmgMark(e, state.encounter)}
+          {dmg}
           {e.isWarlord ? '×2' : ''}
         </span>
       </div>
@@ -655,7 +667,7 @@ function EnemyDetail({
   if (groups.length === 0) return null;
   const enemies = groups[Math.min(idx, groups.length - 1)];
   const e = enemies[0];
-  const special = specialOf(e);
+  const special = specialOf(e, state.encounter);
   const [, player] = e.name.split(' · ');
   const rage = rules.combat.warlordEnrage;
   const n = rules.combat.specialEveryNRounds;
@@ -676,6 +688,7 @@ function EnemyDetail({
   if (e.poison) now.push({ text: `☣ Poison ${e.poison.perRound} × ${e.poison.rounds} rounds`, tone: 'poison' });
   if (e.weaken) now.push({ text: `↓ Cursed −${e.weaken.amount} for ${e.weaken.rounds} rounds`, tone: 'curse' });
   if (enemyArmor(e) > 0) now.push({ text: `⛨ Shielded +${enemyArmor(e)}`, tone: 'shield' });
+  if (e.intangible) now.push({ text: '👻 Intangible: only spells and Cleric attacks can touch it', tone: 'curse' });
   if (e.staggers > 0) now.push({ text: `💫 Staggered: loses ${e.staggers > 1 ? `${e.staggers} actions` : 'its next action'}`, tone: '' });
 
   const short = enemies.flatMap((x) => intents[x.id]?.short ?? []);
@@ -717,12 +730,14 @@ function EnemyDetail({
           />
           <div className="row" style={{ gap: 6 }}>
             <span className="chip">❤ {enemies.length > 1 ? enemies.map((x) => x.hp).join(' / ') : `${e.hp}/${e.maxHp}`} HP</span>
-            <span className="chip">⚔ {enemyDamage(state, e)}</span>
+            <span className="chip">
+              {behaviorOf(e.kind, state.encounter) === 'wraith' ? `💧 ${enemyDamage(state, e)} to every hero` : `⚔ ${enemyDamage(state, e)}`}
+            </span>
             {e.isWarlord && <span className="chip">{e.extraActions + 1} actions a round</span>}
           </div>
           {e.spec.source && <div className="tiny muted">{statLine(e.spec.source.line)}</div>}
           <p className="small" style={{ margin: 0 }}>
-            {monsterBehavior(e.kind)}.
+            {monsterBehavior(e.kind, state.encounter)}.
           </p>
           {now.length > 0 && (
             <div className="row" style={{ gap: 6 }}>
@@ -761,7 +776,7 @@ function EnemyDetail({
               }
             />
           )}
-          {monsterPassives(e.kind).map((p) => (
+          {monsterPassives(e.kind, state.encounter).map((p) => (
             <Feature key={p.title} title={`Passive · ${p.title}`} text={p.text} />
           ))}
           <button className="btn small" style={{ alignSelf: 'flex-start' }} onClick={() => onHelp((e.isWarlord ? 'warlord' : e.kind) as EnemyPage)}>

@@ -28,6 +28,8 @@ export interface SaveGame {
   gamePicks: Partial<Record<HeroClass, string>>;
   battle: BattleState | null;
   battlePools: Partial<Record<HeroClass, PoolBreakdown>> | null;
+  /** Encounter for the coming battle (a testing choice until weekly selection is designed). */
+  encounter?: string;
   pp: Record<HeroClass, number>;
   history: WeekResult[];
 }
@@ -81,7 +83,7 @@ export function readyPicks(game: SaveGame, data: SeasonData): HeroGamePick[] {
 }
 
 export function startBattle(game: SaveGame, data: SeasonData): SaveGame {
-  const prepared = prepareBattle(readyPicks(game, data), data);
+  const prepared = prepareBattle(readyPicks(game, data), data, undefined, game.encounter);
   return { ...game, phase: 'battle', battle: prepared.battle, battlePools: prepared.pools };
 }
 

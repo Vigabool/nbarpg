@@ -5,15 +5,112 @@
       "name": "Goblin Horde",
       "tagline": "A goblin warband led by its Chieftain, with a shaman, a sharpshooter, a hexer, a cutthroat and an ogre for hire.",
       "boss": "chieftain",
-      "goblinKin": ["goblin", "warlock", "hunter", "assassin", "shaman"],
+      "goblinKin": [
+        "goblin",
+        "warlock",
+        "hunter",
+        "assassin",
+        "shaman"
+      ],
       "monsters": {
-        "goblin": { "name": "Goblin", "short": "Goblin", "icon": "👺" },
-        "ogre": { "name": "Ogre", "short": "Ogre", "icon": "👹", "flavor": "Hired muscle" },
-        "warlock": { "name": "Goblin Hexer", "short": "Hexer", "icon": "🧙" },
-        "hunter": { "name": "Goblin Sharpshooter", "short": "Sharpshooter", "icon": "🎯" },
-        "assassin": { "name": "Goblin Cutthroat", "short": "Cutthroat", "icon": "🔪" },
-        "shaman": { "name": "Goblin Shaman", "short": "Shaman", "icon": "🪬" },
-        "chieftain": { "name": "Goblin Chieftain", "short": "Chieftain", "icon": "👑" }
+        "goblin": {
+          "name": "Goblin",
+          "short": "Goblin",
+          "icon": "👺"
+        },
+        "ogre": {
+          "name": "Ogre",
+          "short": "Ogre",
+          "icon": "👹",
+          "flavor": "Hired muscle"
+        },
+        "warlock": {
+          "name": "Goblin Hexer",
+          "short": "Hexer",
+          "icon": "🧙"
+        },
+        "hunter": {
+          "name": "Goblin Sharpshooter",
+          "short": "Sharpshooter",
+          "icon": "🎯"
+        },
+        "assassin": {
+          "name": "Goblin Cutthroat",
+          "short": "Cutthroat",
+          "icon": "🔪"
+        },
+        "shaman": {
+          "name": "Goblin Shaman",
+          "short": "Shaman",
+          "icon": "🪬"
+        },
+        "chieftain": {
+          "name": "Goblin Chieftain",
+          "short": "Chieftain",
+          "icon": "👑"
+        }
+      },
+      "twists": [
+        "packTactics",
+        "packGuard"
+      ]
+    },
+    "crypt": {
+      "name": "The Crypt",
+      "tagline": "A necromancer's tomb where the dead won't stay down. Fire and holy power end them for good.",
+      "boss": "lich",
+      "twists": [
+        "restlessDead"
+      ],
+      "goblinKin": [],
+      "monsters": {
+        "goblin": {
+          "name": "Skeleton",
+          "short": "Skeleton",
+          "icon": "💀",
+          "description": "Rattles toward whoever taunted it, then the Warrior, then the lowest-HP hero"
+        },
+        "ogre": {
+          "name": "Bone Giant",
+          "short": "Bone Giant",
+          "icon": "🦴",
+          "specialName": "Grave Slam",
+          "specialShort": "Slam"
+        },
+        "warlock": {
+          "name": "Necromancer",
+          "short": "Necromancer",
+          "icon": "🧙",
+          "specialName": "Enervation",
+          "specialShort": "Enervate"
+        },
+        "hunter": {
+          "name": "Skeletal Archer",
+          "short": "Archer",
+          "icon": "🏹",
+          "specialName": "Arrow Storm",
+          "specialShort": "Storm"
+        },
+        "assassin": {
+          "name": "Wraith",
+          "short": "Wraith",
+          "icon": "👻",
+          "behavior": "wraith",
+          "special": "fade",
+          "description": "Intangible: only spells and Cleric attacks can touch it, and the first such hit makes it solid. Each round it drains every hero, ignoring armor, and heals itself"
+        },
+        "shaman": {
+          "name": "Wight",
+          "short": "Wight",
+          "icon": "🧟",
+          "special": "raiseDead",
+          "description": "Heals the most injured undead and shields the horde (+2 armor through next round)"
+        },
+        "lich": {
+          "name": "Lich",
+          "short": "Lich",
+          "icon": "☠️"
+        }
       }
     }
   }
