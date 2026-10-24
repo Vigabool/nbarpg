@@ -25,13 +25,15 @@ import {
   type SummonState,
 } from '../engine/combat';
 import { rules, type HeroClass, type Tier } from '../rules';
+import type { EnemyPage, TutorialTopic } from './Tutorial';
 import { CLASS_ICON, ConfirmButton, MONSTER_ICON, TIER_LABEL, TierChip, statLine, weekLabel } from './common';
 
 interface Props {
   data: SeasonData;
   game: SaveGame;
   onChange: (g: SaveGame) => void;
-  onHelp: () => void;
+  /** Opens How to play, optionally at a class, ability or enemy page. */
+  onHelp: (topic?: TutorialTopic) => void;
   onQuit: () => void;
 }
 
@@ -271,6 +273,14 @@ export function BattleScreen({ data, game, onChange, onHelp, onQuit }: Props) {
               </strong>
             )}
             <div className="row" style={{ gap: 4, flexWrap: 'nowrap' }}>
+              <button
+                className="btn ghost small icon-only"
+                aria-label={action ? `How ${action.def.name} works` : `How the ${rules.classes[hero.heroClass].name} works`}
+                title="How to play"
+                onClick={() => onHelp({ tab: 'classes', heroClass: hero.heroClass, abilityId: action?.def.id })}
+              >
+                ?
+              </button>
               {targetType === 'enemies' && (
                 <button className="btn primary small" disabled={multi.length === 0} onClick={() => run(action!, multi)}>
                   Cast on {multi.length}
@@ -343,6 +353,10 @@ export function BattleScreen({ data, game, onChange, onHelp, onQuit }: Props) {
           state={state}
           intents={intents}
           onClose={() => setDetail(null)}
+          onHelp={(enemy) => {
+            setDetail(null);
+            onHelp({ tab: 'enemies', enemy });
+          }}
         />
       )}
     </div>
@@ -607,11 +621,13 @@ function EnemyDetail({
   state,
   intents,
   onClose,
+  onHelp,
 }: {
   enemies: EnemyState[];
   state: BattleState;
   intents: Record<string, Intent>;
   onClose: () => void;
+  onHelp: (enemy: EnemyPage) => void;
 }) {
   useEffect(() => {
     const onKey = (ev: KeyboardEvent) => ev.key === 'Escape' && onClose();
@@ -694,6 +710,9 @@ function EnemyDetail({
               {justArrived(state, e) ? 'Just arrived: acts next round.' : plan.length ? plan.join(' ') : 'Nothing planned.'}
             </div>
           </div>
+          <button className="btn small" style={{ alignSelf: 'flex-start' }} onClick={() => onHelp(e.isWarlord ? 'warlord' : e.kind)}>
+            More in How to play →
+          </button>
         </div>
       </div>
     </div>

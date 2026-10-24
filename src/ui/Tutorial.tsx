@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { energyGain, isAttack } from '../engine/combat';
 import type { ActionDef } from '../rules';
 import { CLASSES, rules, type ChampionKind, type HeroClass } from '../rules';
+import type { JSX } from 'react';
 import { CLASS_ICON, MONSTER_ICON, money } from './common';
 
 const SEEN_KEY = 'nbarpg.tutorialSeen';
@@ -30,11 +31,17 @@ const PLAYSTYLE: Record<HeroClass, { draft: string; play: string }> = {
   wizard: { draft: 'Volume three-point shooters', play: 'Burst damage: area spells for crowds, big bolts for Champions.' },
 };
 
-const CHAMPIONS: ChampionKind[] = ['warlock', 'hunter', 'ogre', 'assassin', 'shaman'];
 type Tab = 'basics' | 'classes' | 'enemies';
+export type EnemyPage = 'goblin' | ChampionKind | 'warlord';
 
-export function Tutorial({ onClose }: { onClose: () => void }) {
-  const [tab, setTab] = useState<Tab>('basics');
+/** Where to open How to play, e.g. from a "?" in battle. */
+export type TutorialTopic =
+  | { tab: 'basics' }
+  | { tab: 'classes'; heroClass?: HeroClass; abilityId?: string }
+  | { tab: 'enemies'; enemy?: EnemyPage };
+
+export function Tutorial({ onClose, topic }: { onClose: () => void; topic?: TutorialTopic }) {
+  const [tab, setTab] = useState<Tab>(topic?.tab ?? 'basics');
   const closeRef = useRef<HTMLButtonElement>(null);
   const close = () => {
     markSeen();
@@ -100,43 +107,14 @@ export function Tutorial({ onClose }: { onClose: () => void }) {
             </ol>
           )}
 
-          {tab === 'classes' && <ClassesTab />}
-
-          {tab === 'enemies' && (
-            <div className="stack" style={{ gap: 10 }}>
-              <p className="small muted">
-                Goblins fill out every wave. Each hero's game brings one mirrored Champion, scaled by how that opposing player actually
-                played. Every {rules.combat.specialEveryNRounds === 2 ? 'other' : `${rules.combat.specialEveryNRounds}th`} round on the field
-                each Champion uses its special, flagged ⚠ on its card the round before.
-              </p>
-              <div className="enemy-blurb">
-                <span>{MONSTER_ICON.goblin}</span>
-                <div>
-                  <strong>Goblin</strong> <span className="tiny muted">· from opposing team points</span>
-                  <div className="small">{rules.monsters.goblin.description}.</div>
-                </div>
-              </div>
-              {CHAMPIONS.map((k) => {
-                const m = rules.monsters[k];
-                return (
-                  <div key={k} className="enemy-blurb">
-                    <span>{MONSTER_ICON[k]}</span>
-                    <div>
-                      <strong>{m.name}</strong>{' '}
-                      <span className="tiny muted">
-                        · mirrors your {rules.classes[m.mirrors!].name} · {m.hpByTier![0]}–{m.hpByTier!.at(-1)} HP
-                      </span>
-                      <div className="small">{m.description}.</div>
-                    </div>
-                  </div>
-                );
-              })}
-              <p className="small">
-                <strong>Warlord:</strong> the week's best opposing line. Double HP, +{rules.horde.warlord.damageBonus} damage and two actions a
-                round. Below half HP it becomes enraged: +{rules.combat.warlordEnrage.damageBonus} damage. Opposing turnovers stagger Champions (one lost action per {rules.horde.turnoversPerStagger}).
-              </p>
-            </div>
+          {tab === 'classes' && (
+            <ClassesTab
+              initialClass={topic?.tab === 'classes' ? topic.heroClass : undefined}
+              initialOpen={topic?.tab === 'classes' ? topic.abilityId : undefined}
+            />
           )}
+
+          {tab === 'enemies' && <EnemiesTab initial={topic?.tab === 'enemies' ? topic.enemy : undefined} />}
         </div>
 
         <div className="spread">
@@ -241,9 +219,9 @@ function AbilityDetail({ a, kind }: { a: ActionDef; kind: string }) {
   );
 }
 
-function ClassesTab() {
-  const [c, setC] = useState<HeroClass>('warrior');
-  const [open, setOpen] = useState<string | null>(null);
+function ClassesTab({ initialClass, initialOpen }: { initialClass?: HeroClass; initialOpen?: string }) {
+  const [c, setC] = useState<HeroClass>(initialClass ?? 'warrior');
+  const [open, setOpen] = useState<string | null>(initialOpen ?? null);
   const cls = rules.classes[c];
   const mods = cls.modifiers.map((m) => (m.type === 'percentage' ? `${m.label} bonus/penalty` : 'every turnover costs energy'));
   const groups: { label: string; items: { a: ActionDef; kind: string }[] }[] = [
@@ -346,6 +324,139 @@ function ClassesTab() {
         </span>
         <span>Tap any ability for details.</span>
       </div>
+    </div>
+  );
+}
+
+// ---------- Enemies tab ----------
+
+const ENEMY_PAGES: EnemyPage[] = ['goblin', 'ogre', 'warlock', 'hunter', 'assassin', 'shaman', 'warlord'];
+
+function range(arr?: number[]): string {
+  if (!arr?.length) return '';
+  return arr[0] === arr.at(-1) ? `${arr[0]}` : `${arr[0]}–${arr.at(-1)}`;
+}
+
+function EnemiesTab({ initial }: { initial?: EnemyPage }) {
+  const [page, setPage] = useState<EnemyPage>(initial ?? 'goblin');
+  const c = rules.combat;
+  const w = rules.horde.warlord;
+  const every = c.specialEveryNRounds === 2 ? 'every other round' : `every ${c.specialEveryNRounds} rounds`;
+  const label = (p: EnemyPage) => (p === 'warlord' ? 'Warlord' : rules.monsters[p].name);
+  const icon = (p: EnemyPage) => (p === 'warlord' ? '👑' : MONSTER_ICON[p]);
+
+  let body: JSX.Element;
+  if (page === 'goblin') {
+    const bands = rules.horde.minions.damageByTeamFgPct.map((b) => b.damage);
+    body = (
+      <>
+        <EnemyHead icon={icon(page)} name="Goblin" sub="Minion · from opposing team points" />
+        <div className="row" style={{ gap: 6 }}>
+          <span className="chip">❤ {rules.monsters.goblin.hp} HP</span>
+          <span className="chip">⚔ {range(bands)} by team FG%</span>
+          <span className="chip">1 per {rules.horde.minions.teamPointsPerGoblin} opposing points</span>
+        </div>
+        <p className="small">{rules.monsters.goblin.description.split('. Passive:')[0]}.</p>
+        <Feature title={`Passive · ${c.packTactics.name}`} text={`${c.packTactics.description}. Thin the pack and every goblin hits softer.`} />
+        <Feature
+          title="Waves"
+          text={`Goblins split ${rules.horde.minions.waveShare.map((x) => `${Math.round(x * 100)}%`).join(' / ')} across the three waves. Wave 1's pack guards the Shaman.`}
+        />
+      </>
+    );
+  } else if (page === 'warlord') {
+    body = (
+      <>
+        <EnemyHead icon={icon(page)} name="Warlord" sub="The week's best opposing performance" />
+        <div className="row" style={{ gap: 6 }}>
+          <span className="chip">❤ {w.hpMultiplier}× its Champion's HP</span>
+          <span className="chip">⚔ Champion +{w.damageBonus}</span>
+          <span className="chip">{w.extraActions + 1} actions a round</span>
+        </div>
+        <p className="small">
+          The single best opposing line (points + rebounds + assists) across your chosen games becomes the Warlord: a boosted version of that
+          player's Champion, with its behavior and special. It arrives in the last wave.
+        </p>
+        <Feature
+          title={`Enrage · below ${Math.round(c.warlordEnrage.atHpFraction * 100)}% HP`}
+          text={`+${c.warlordEnrage.damageBonus} damage for the rest of the battle. Save burst for the finish.`}
+        />
+        <Feature title="Picking games" text="Your hero's best night against a team whose star also went off can build your own final boss." />
+      </>
+    );
+  } else {
+    const m = rules.monsters[page];
+    const sp = (c.specials as Record<string, { name: string; description: string } | undefined>)[m.behavior];
+    // The description holds behavior, then "Special: …". Wave and guard notes appear as their own lines below.
+    const behavior = m.description
+      .split('. Special:')[0]
+      .replace(/\s*Arrives with wave \d+\./, '')
+      .replace(/\s*Guarded by the Pack:[^)]*\)/, '')
+      .replace(/\.$/, '');
+    const passives: { title: string; text: string }[] = [];
+    const wave = rules.horde.championWave?.[page as ChampionKind];
+    if (wave) passives.push({ title: `Arrives with wave ${wave}`, text: 'Always part of this wave, so its timing is predictable.' });
+    if (m.ignoresTaunt) passives.push({ title: 'Ignores taunts', text: "Provoke, Bulwark and the Bear don't work on it." });
+    if (c.packGuard.guarded.includes(m.behavior))
+      passives.push({ title: c.packGuard.name, text: `${c.packGuard.description}.` });
+    if (m.behavior === 'assassin') passives.push({ title: 'Energy drain', text: `Each hit drains ${c.assassinDrain} energy from its target.` });
+    body = (
+      <>
+        <EnemyHead icon={icon(page)} name={m.name} sub={`Mirrors your ${rules.classes[m.mirrors!].name}`} />
+        <div className="row" style={{ gap: 6 }}>
+          <span className="chip">❤ {range(m.hpByTier)} HP</span>
+          <span className="chip">⚔ {range(m.damageByTier)}</span>
+          <span className="chip">Scaled by the opposing player's night</span>
+        </div>
+        <p className="small">{behavior}.</p>
+        {sp && <Feature title={`⚠ Special · ${sp.name}`} text={`${sp.description}. Fires ${every} on the field, starting its 2nd round; flagged ⚠ the round before.`} warn />}
+        {passives.map((p) => (
+          <Feature key={p.title} title={`Passive · ${p.title}`} text={p.text} />
+        ))}
+      </>
+    );
+  }
+
+  return (
+    <div className="stack" style={{ gap: 12 }}>
+      <p className="small muted" style={{ margin: 0 }}>
+        Waves arrive on a clock (rounds {c.waveArrivalRounds.join(' and ')}) or as soon as the field is clear. Each hero's game brings one
+        mirrored Champion. Opposing turnovers stagger Champions (one lost action per {rules.horde.turnoversPerStagger}).
+      </p>
+      <div className="class-picker enemy-picker" role="tablist" aria-label="Enemies">
+        {ENEMY_PAGES.map((p) => (
+          <button key={p} role="tab" aria-selected={p === page} className={`class-pick${p === page ? ' active' : ''}`} onClick={() => setPage(p)}>
+            <span className="class-pick-icon" aria-hidden>
+              {icon(p)}
+            </span>
+            <span>{label(p)}</span>
+          </button>
+        ))}
+      </div>
+      <section className="class-panel">{body}</section>
+    </div>
+  );
+}
+
+function EnemyHead({ icon, name, sub }: { icon: string; name: string; sub: string }) {
+  return (
+    <div className="class-head">
+      <span className="class-big-icon" aria-hidden>
+        {icon}
+      </span>
+      <div style={{ minWidth: 0 }}>
+        <h3 className="class-title">{name}</h3>
+        <div className="muted small">{sub}</div>
+      </div>
+    </div>
+  );
+}
+
+function Feature({ title, text, warn }: { title: string; text: string; warn?: boolean }) {
+  return (
+    <div className={`ability-detail${warn ? ' warn' : ''}`}>
+      <strong className="small">{title}</strong>
+      <p className="small">{text}</p>
     </div>
   );
 }

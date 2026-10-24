@@ -400,3 +400,8 @@ select.input { appearance: auto; }
 @media (max-width: 480px) {
   .class-pick span:last-child { font-size: 0.66rem; }
 }
+.enemy-picker { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.ability-detail.warn { border-left-color: var(--danger); }
+@media (max-width: 480px) {
+  .enemy-picker { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}

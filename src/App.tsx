@@ -5,7 +5,7 @@ import { localSaveStore } from './app/storage';
 import type { SaveGame } from './app/game';
 import { ConfirmButton, weekLabel } from './ui/common';
 import { TitleScreen } from './ui/TitleScreen';
-import { Tutorial, tutorialSeen } from './ui/Tutorial';
+import { Tutorial, tutorialSeen, type TutorialTopic } from './ui/Tutorial';
 import { RosterBuilder } from './ui/RosterBuilder';
 import { AssignHeroes } from './ui/AssignHeroes';
 import { SelectGames } from './ui/SelectGames';
@@ -19,7 +19,7 @@ type Load = { status: 'loading' } | { status: 'missing' } | { status: 'ready'; d
 export default function App() {
   const [load, setLoad] = useState<Load>({ status: 'loading' });
   const [game, setGame] = useState<SaveGame | null>(() => localSaveStore.load());
-  const [showTutorial, setShowTutorial] = useState(() => !tutorialSeen());
+  const [tutorial, setTutorial] = useState<TutorialTopic | null>(() => (tutorialSeen() ? null : { tab: 'basics' }));
 
   useEffect(() => {
     fetch(`${import.meta.env.BASE_URL}data/${SEASON}.json`)
@@ -46,7 +46,7 @@ export default function App() {
         <span className="brand">NBA Fantasy RPG</span>
         {active && <span className="crumbs">{weekLabel(data, active.weekIndex)}</span>}
         <div className="row">
-          <button className="btn ghost small" onClick={() => setShowTutorial(true)}>
+          <button className="btn ghost small" onClick={() => setTutorial({ tab: 'basics' })}>
             How to play
           </button>
           {active && (
@@ -57,7 +57,7 @@ export default function App() {
         </div>
       </header>
       )}
-      {showTutorial && <Tutorial onClose={() => setShowTutorial(false)} />}
+      {tutorial && <Tutorial key={JSON.stringify(tutorial)} topic={tutorial} onClose={() => setTutorial(null)} />}
       {data.synthetic && (
         <p className="banner small" role="status">
           Synthetic test data: these players and games are not real. Run the fetch script to load the real season.
@@ -72,7 +72,7 @@ export default function App() {
       ) : active.phase === 'select' ? (
         <SelectGames data={data} game={active} onChange={update} />
       ) : active.phase === 'battle' ? (
-        <BattleScreen data={data} game={active} onChange={update} onHelp={() => setShowTutorial(true)} onQuit={() => update(null)} />
+        <BattleScreen data={data} game={active} onChange={update} onHelp={(topic) => setTutorial(topic ?? { tab: 'basics' })} onQuit={() => update(null)} />
       ) : (
         <ResultScreen data={data} game={active} onChange={update} />
       )}
