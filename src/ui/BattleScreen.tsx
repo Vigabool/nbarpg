@@ -255,6 +255,7 @@ export function BattleScreen({ data, game, onChange, onHelp, onQuit }: Props) {
             targeted={multi.includes(e.id)}
             onClick={() => (isEnemyTarget(e.id) ? clickTarget(e.id) : setDetail([e.id]))}
             onFumble={() => fumble(e.id)}
+            aiming={enemyTargeting}
           />
         ))}
         {goblinGroups.map((g) => (
@@ -617,22 +618,42 @@ function traitSource(id: TraitId, e: EnemyState): string {
 }
 
 /** Fumbles from the opposing player's turnovers: tap to cancel this enemy's next action. */
-function FumbleChip({ e, state, onFumble }: { e: EnemyState; state: BattleState; onFumble: () => void }) {
+function FumbleChip({ e, state, passive, onFumble }: { e: EnemyState; state: BattleState; passive: boolean; onFumble: () => void }) {
+  // Two taps to spend: the first arms it, the second confirms. It disarms after a few seconds.
+  const [armed, setArmed] = useState(false);
+  useEffect(() => {
+    if (!armed) return;
+    const t = setTimeout(() => setArmed(false), 3000);
+    return () => clearTimeout(t);
+  }, [armed]);
   if (e.fumbled) return <span className="tag static fumbled">💫 Fumbling</span>;
   if (!canFumble(state, e)) return null;
   const tov = e.spec.source?.line.tov;
+  const label = (
+    <>
+      💫 {e.fumbles}
+      {tov !== undefined && <span className="fumble-tov"> · {tov} TOV</span>}
+    </>
+  );
+  // While aiming an attack, it's just a label so taps land on the card as a target.
+  if (passive) return <span className="tag static fumble-idle">{label}</span>;
   return (
     <button
       type="button"
-      className="tag fumble"
-      aria-label={`Spend a Fumble: ${e.name} loses its next action (${e.fumbles} left${tov !== undefined ? `, from ${tov} turnovers` : ''})`}
+      className={`tag fumble${armed ? ' armed' : ''}`}
+      aria-label={
+        armed
+          ? `Confirm: spend a Fumble so ${e.name} loses its next action`
+          : `Spend a Fumble on ${e.name} (${e.fumbles} left${tov !== undefined ? `, from ${tov} turnovers` : ''}); tap twice`
+      }
       onClick={(ev) => {
         ev.stopPropagation();
+        if (!armed) return setArmed(true);
+        setArmed(false);
         onFumble();
       }}
     >
-      💫 {e.fumbles}
-      {tov !== undefined && <span className="fumble-tov"> · {tov} TOV</span>}
+      {armed ? '💫 Spend? Tap again' : label}
     </button>
   );
 }
@@ -680,11 +701,14 @@ function EnemyCard({
   targeted,
   onClick,
   onFumble,
+  aiming,
 }: {
   e: EnemyState;
   state: BattleState;
   intent?: Intent;
   onFumble: () => void;
+  /** An attack is being aimed: card taps pick targets, so the Fumble chip goes quiet. */
+  aiming: boolean;
   /** Damage this enemy deals to the hero whose fall is being inspected. */
   threat?: number;
   targetable: boolean;
@@ -719,7 +743,7 @@ function EnemyCard({
       <IntentLine e={e} state={state} intent={intent} />
       <div className="u-foot">
         <TraitChips e={e} state={state} />
-        <FumbleChip e={e} state={state} onFumble={onFumble} />
+        <FumbleChip e={e} state={state} passive={aiming} onFumble={onFumble} />
         <EnemyIcons e={e} state={state} />
       </div>
     </div>

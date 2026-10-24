@@ -257,6 +257,8 @@ select.input { appearance: auto; }
 .unit-c.warlord { border-color: #a0462f; background: linear-gradient(180deg, #3a2027, var(--card)); }
 .unit-c { position: relative; }
 .tag.fumble { cursor: pointer; color: #ffd36b; border-color: #a8842d; background: rgba(255, 211, 107, 0.12); font-weight: 650; }
+.tag.fumble.armed { background: #ffd36b; color: #2a1d00; border-color: #ffd36b; }
+.tag.fumble-idle { color: #ffd36b; border-color: #a8842d; opacity: 0.6; }
 .tag.fumble .fumble-tov { font-weight: 400; opacity: 0.8; }
 .trait-note { color: #f2b8ff; margin-top: 2px; }
 .fumble-note { color: var(--muted, #9a96a8); }
