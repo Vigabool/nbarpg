@@ -277,13 +277,13 @@ A necromancer's tomb where the dead won't stay down.
 
 **Twist · Restless Dead:** a skeleton that falls becomes a bone pile and reassembles at the start of the next round with half its HP: 8 → 4 → 2, and at 2 HP the next hit ends it. **Fire (Fireball, Meteor) and holy damage (every Cleric attack) destroy skeletons for good**, even Raise Dead can't bring them back. A bone pile keeps its wave open and blocks victory.
 
-**Wraith.** Starts intangible: it can't be targeted except by spells (every Wizard attack but the staff) and Cleric attacks, and the first such hit makes it solid. Every turn it drains life from every hero (1–2 by tier, ignoring armor) and heals for half of what it drained. Special · **Fade** (every other round, telegraphed): it becomes intangible again. The puzzle is whether to spend a spell making it hittable or keep soaking the drain.
+**Wraith.** Starts intangible: it can't be targeted except by spells (every Wizard attack but the staff) and Cleric attacks, and the first such hit makes it solid. Every turn it drains life from every hero (2–4 by tier, ignoring armor) and heals for half of what it drained. Special · **Fade** (every other round, telegraphed): it becomes intangible again. The puzzle is whether to spend a spell making it hittable or keep soaking the drain.
 
 **Wight.** Passive · **Unholy Vigor:** every skeleton deals +1 damage while it lives. Special · **Raise Dead** (replaces War Drum): every skeleton that crumbled from weapon hits rises again at 2 HP. Fire and holy kills stay down. Kill it early.
 
 **Lich (boss kit).** Two actions a round and the boss enrage, like the Chieftain, but a frail caster (HP 14–29, damage 6–11). Special · **Death Bolt:** 1.5× damage to the lowest-HP hero, ignoring armor. Passive · **Phylactery:** a ⚱️ Phylactery (6–10 HP, never acts) arrives beside it. While it stands the Lich takes half damage, and it can't be targeted while any skeleton stands (attacks that hit every enemy still land). When the Lich falls the Phylactery shatters, so it's a shortcut, not a requirement.
 
-**Balance (bot simulator, 1,000 battles):** Crypt 68.5% bot wins, 7.3 rounds, 2.2 heroes fallen; Goblin Horde 75.5%, 7.3 rounds. The bot doesn't save fire and holy for skeletons, so players who do should find the Crypt closer to the Horde. Only Crypt-specific values were tuned.
+**Balance (bot simulator, 1,000 battles):** Crypt 67.5% bot wins, 7.2 rounds, 2.1 heroes fallen; Goblin Horde 75.5%, 7.3 rounds. The bot doesn't save fire and holy for skeletons, so players who do should find the Crypt closer to the Horde. Only Crypt-specific values were tuned.
 
 Encounters without their own boss fall back to the classic Warlord: a boosted copy of the top performer's Champion (double HP, +2 damage).
 

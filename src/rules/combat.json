@@ -110,11 +110,11 @@
   },
   "wraith": {
     "drainByTier": {
-      "cold": 1,
-      "average": 1,
-      "good": 1,
-      "great": 2,
-      "elite": 2
+      "cold": 2,
+      "average": 2,
+      "good": 3,
+      "great": 3,
+      "elite": 4
     },
     "healFraction": 0.5
   }
