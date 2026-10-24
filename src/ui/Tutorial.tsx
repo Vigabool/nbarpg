@@ -546,8 +546,8 @@ export function monsterPassives(kind: MonsterKind, encounter?: string): { title:
     out.push({
       title: boss ? 'Unshakable' : c.topple.name,
       text: boss
-        ? `Takes ${pct}% of its max HP in one round to topple, but a toppled Lord loses both actions.`
-        : `${pct}% of its max HP in one round topples it: it loses its next action, special included. The count resets each round.`,
+        ? `Takes ${pct}% of its max HP in one round to topple, but a toppled Lord loses both actions. Landing deals ${c.topple.crashDamage} to every hero.`
+        : `${pct}% of its max HP in one round topples it: it loses its next action, special included. Landing deals ${c.topple.crashDamage} to every hero. The count resets each round.`,
     });
   }
   if (behavior === 'dragon') {

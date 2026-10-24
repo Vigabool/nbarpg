@@ -177,8 +177,9 @@
   },
   "topple": {
     "name": "Topple",
-    "description": "Deal 35% of a giant's max HP in one round and it's toppled: it loses its next action, and a special about to fire is cancelled. The count resets each round",
-    "threshold": 0.35,
-    "bossThreshold": 0.45
+    "description": "Deal 50% of a giant's max HP in one round and it's toppled: it loses its next action, and a special about to fire is cancelled. It shakes the hall as it lands: every hero takes 2 damage. The count resets each round",
+    "threshold": 0.5,
+    "bossThreshold": 0.6,
+    "crashDamage": 2
   }
 }

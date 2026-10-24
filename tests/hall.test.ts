@@ -19,12 +19,15 @@ const toSpecial = (s: BattleState, id: string): BattleState => {
 };
 
 describe("Giant's Hall: Topple", () => {
-  it('35% of max HP in one round topples a giant: it loses its next action', () => {
+  it('half its max HP in one round topples a giant: it loses its next action, and the landing hurts every hero', () => {
     const g = monster({ kind: 'ogre', id: 'G', hp: 100, damage: 10 });
     let s = battle([[g]], party(), HALL);
-    expect(toppleThreshold(s, enemy(s, 'G'))).toBe(35);
-    s = act(patch(s, 'G', { toppleDamage: 34 }), 'warrior', 'axe', ['G']);
+    expect(toppleThreshold(s, enemy(s, 'G'))).toBe(50);
+    s = act(patch(s, 'G', { toppleDamage: 49 }), 'warrior', 'axe', ['G']);
     expect(enemy(s, 'G').toppled).toBe(true);
+    const crash = rules.combat.topple.crashDamage;
+    expect(s.heroes.every((h) => h.hp === h.maxHp - crash)).toBe(true);
+    s = { ...s, heroes: s.heroes.map((h) => ({ ...h, hp: h.maxHp })) };
     s = endRound(s);
     expect(s.heroes.every((h) => h.hp === h.maxHp)).toBe(true);
     expect(s.log.some((l) => l.text.includes('is down and loses its turn'))).toBe(true);
@@ -39,13 +42,13 @@ describe("Giant's Hall: Topple", () => {
     expect(enemy(s, 'G').toppleDamage).toBe(0);
   });
 
-  it('wolves never topple; the Lord needs 45% but loses both actions', () => {
+  it('wolves never topple; the Lord needs 60% but loses both actions', () => {
     const w = monster({ id: 'W', hp: 12 });
     const lord = monster({ kind: 'giantLord', id: 'L', hp: 100, damage: 10, isWarlord: true, extraActions: 1 });
     let s = battle([[w, lord]], party(), HALL);
     expect(toppleThreshold(s, enemy(s, 'W'))).toBeNull();
-    expect(toppleThreshold(s, enemy(s, 'L'))).toBe(45);
-    s = act(patch(s, 'L', { toppleDamage: 44 }), 'warrior', 'axe', ['L']);
+    expect(toppleThreshold(s, enemy(s, 'L'))).toBe(60);
+    s = act(patch(s, 'L', { toppleDamage: 59 }), 'warrior', 'axe', ['L']);
     s = endRound(s);
     expect(s.log.filter((l) => l.actorId === 'L' && l.side === 'enemy' && l.round === 1).map((l) => l.short)).toEqual(['⛰️ Toppled']);
   });
@@ -54,7 +57,7 @@ describe("Giant's Hall: Topple", () => {
     const g = monster({ kind: 'ogre', id: 'G', hp: 100, damage: 0 });
     const skald = monster({ kind: 'shaman', id: 'S', hp: 50, damage: 0 });
     const s = battle([[g, skald]], party(), HALL);
-    expect(toppleThreshold(s, enemy(s, 'G'))).toBe(40);
+    expect(toppleThreshold(s, enemy(s, 'G'))).toBe(55);
   });
 });
 

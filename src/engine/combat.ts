@@ -591,7 +591,27 @@ function damageEnemy(
     if (enemy.toppleDamage >= topple) {
       enemy.toppled = true;
       enemy.toppledRound = state.round;
-      log(state, 'system', `⛰️ ${enemy.name} is toppled and loses its next ${enemy.extraActions ? 'turn' : 'action'}!`, enemy.id);
+      // The hall shakes as it lands: every hero takes a little damage.
+      const crash = rules.combat.topple.crashDamage;
+      const shaken: string[] = [];
+      for (const h of state.heroes) {
+        if (!h.alive) continue;
+        const dealt = Math.min(crash, h.hp - (h.lastStand ? 1 : 0));
+        if (dealt <= 0) continue;
+        h.hp -= dealt;
+        if (h.hp <= 0) {
+          h.hp = 0;
+          h.alive = false;
+          state.stats.anyHeroFell = true;
+          shaken.push(`the ${rules.classes[h.heroClass].name} falls`);
+        }
+      }
+      log(
+        state,
+        'system',
+        `⛰️ ${enemy.name} is toppled and loses its next ${enemy.extraActions ? 'turn' : 'action'}! The hall shakes: ${crash} damage to every hero${shaken.length ? `; ${shaken.join(', ')}` : ''}.`,
+        enemy.id,
+      );
     }
   }
   if (enemy.hp === 0 && enemy.alive && hasTrait(enemy, 'secondChance') && !enemy.secondChanceUsed) {
