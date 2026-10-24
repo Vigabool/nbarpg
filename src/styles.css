@@ -179,8 +179,6 @@ select.input { appearance: auto; }
 .tab.active { color: var(--gold-2); border-bottom-color: var(--gold); }
 .steps { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 10px; }
 .steps li { padding-left: 4px; }
-.class-blurb { display: flex; flex-direction: column; gap: 4px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
-.class-blurb p { margin: 0; }
 .enemy-blurb { display: grid; grid-template-columns: 1.6rem 1fr; gap: 8px; align-items: start; }
 .enemy-blurb > span { font-size: 1.2rem; }
 :focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
@@ -360,4 +358,45 @@ select.input { appearance: auto; }
   .hero-row.summon { grid-template-areas: "name hp hp" "name tags tags"; }
   .h-name { flex-direction: column; align-items: flex-start; gap: 0; }
   .actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* ---------- How to play: classes ---------- */
+.class-picker { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.class-pick {
+  display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 4px; min-width: 0;
+  background: var(--card); border: 1px solid var(--line); border-radius: 12px; cursor: pointer; font-size: 0.75rem; color: var(--muted);
+}
+.class-pick.active { border-color: var(--gold); color: var(--gold-2); background: var(--card-2); }
+.class-pick-icon { font-size: 1.6rem; line-height: 1.1; }
+.class-panel { display: flex; flex-direction: column; gap: 10px; }
+.class-head { display: flex; align-items: center; gap: 12px; }
+.class-big-icon { font-size: 2.4rem; line-height: 1; }
+.class-title { font-size: 1.35rem; }
+.ability-group { display: flex; flex-direction: column; gap: 6px; }
+.group-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; color: var(--faint); }
+.ability-chip {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 4px 6px 4px 12px;
+  font: inherit; font-size: 0.85rem; font-weight: 600; color: var(--text);
+  background: var(--card); border: 1px solid var(--line); border-radius: 999px; cursor: pointer;
+}
+.ability-chip:hover { border-color: var(--faint); }
+.ability-chip.attack { background: color-mix(in srgb, #a83e41 14%, var(--card)); border-color: color-mix(in srgb, #a83e41 45%, var(--line)); }
+.ability-chip.sig { border-color: var(--gold); }
+.ability-chip.open { box-shadow: 0 0 0 2px var(--info); border-color: var(--info); }
+.atk { color: #ff8f7d; }
+.cost-badge { display: inline-grid; place-items: center; min-width: 24px; height: 22px; padding: 0 6px; border-radius: 999px; font-size: 0.72rem; font-weight: 700; background: var(--bg-2); }
+.cost-badge.cost { color: var(--info); }
+.cost-badge.gain { color: var(--good); }
+.cost-badge.sig { color: var(--gold-2); }
+.ability-detail { background: var(--bg); border: 1px solid var(--line); border-left: 3px solid var(--info); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
+.ability-detail p { margin: 0; }
+.chip.kind-attack { color: #ff8f7d; border-color: color-mix(in srgb, #a83e41 60%, var(--line)); }
+.chip.kind-utility { color: var(--info); border-color: color-mix(in srgb, var(--info) 50%, var(--line)); }
+.detail-grid { display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; margin: 0; }
+.detail-grid dt { color: var(--muted); }
+.detail-grid dd { margin: 0; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; border-top: 1px solid var(--line); padding-top: 10px; }
+.legend > span { display: inline-flex; align-items: center; gap: 4px; }
+@media (max-width: 480px) {
+  .class-pick span:last-child { font-size: 0.66rem; }
 }

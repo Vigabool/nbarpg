@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { energyGain, isAttack } from '../engine/combat';
+import type { ActionDef } from '../rules';
 import { CLASSES, rules, type ChampionKind, type HeroClass } from '../rules';
 import { CLASS_ICON, MONSTER_ICON, money } from './common';
 
@@ -99,42 +100,7 @@ export function Tutorial({ onClose }: { onClose: () => void }) {
             </ol>
           )}
 
-          {tab === 'classes' && (
-            <div className="stack" style={{ gap: 10 }}>
-              {CLASSES.map((c) => {
-                const cls = rules.classes[c];
-                const mods = cls.modifiers.map((m) => (m.type === 'percentage' ? `${m.label} bonus/penalty` : 'every turnover costs energy'));
-                return (
-                  <section key={c} className="class-blurb">
-                    <div className="spread">
-                      <h3>
-                        {CLASS_ICON[c]} {cls.name} <span className="muted small">· {cls.role}</span>
-                      </h3>
-                      <span className="tiny muted">{cls.hp} HP</span>
-                    </div>
-                    <p className="small">{PLAYSTYLE[c].play}</p>
-                    <p className="tiny muted">
-                      Energy from <strong>{cls.ratingLabel}</strong>
-                      {mods.length ? ` (${mods.join(', ')})` : ''}. Draft: {PLAYSTYLE[c].draft}.
-                    </p>
-                    <div className="row">
-                      {[...cls.gear, ...cls.abilities].map((a) => {
-                        const gain = energyGain(a);
-                        return (
-                          <span key={a.id} className={`chip${a.unlock ? ' status-taunt' : ''}`} title={a.description}>
-                            {isAttack(a) ? '⚔ ' : ''}
-                            {a.name}{' '}
-                            {a.unlock ? (a.unlock === 'signature' ? '· DD' : '· TD') : gain ? `· +${gain}` : `· ${a.cost}`}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  </section>
-                );
-              })}
-              <p className="tiny muted">⚔ marks attacks (one per round); the rest are utilities. Numbers are energy costs; +2 means the attack gains energy. DD and TD abilities need a double- or triple-double.</p>
-            </div>
-          )}
+          {tab === 'classes' && <ClassesTab />}
 
           {tab === 'enemies' && (
             <div className="stack" style={{ gap: 10 }}>
@@ -185,6 +151,200 @@ export function Tutorial({ onClose }: { onClose: () => void }) {
             </button>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------- Classes tab ----------
+
+function costLabel(a: ActionDef): { text: string; tone: 'gain' | 'cost' | 'sig' } {
+  const gain = energyGain(a);
+  if (a.unlock) return { text: a.unlock === 'signature' ? 'DD' : 'TD', tone: 'sig' };
+  if (gain) return { text: `+${gain}`, tone: 'gain' };
+  return { text: String(a.cost ?? 0), tone: 'cost' };
+}
+
+const TARGET_TEXT: Record<ActionDef['target']['type'], string> = {
+  enemy: '1 enemy',
+  enemies: 'chosen enemies',
+  allEnemies: 'every enemy',
+  ally: '1 ally',
+  allAllies: 'every ally',
+  self: 'self',
+  fallenAlly: '1 fallen ally',
+  allFallen: 'every fallen ally',
+  none: 'the battlefield',
+};
+
+function targetText(a: ActionDef): string {
+  const t = a.target;
+  if (t.type === 'enemies') return `up to ${t.count} enemies`;
+  if (t.type === 'enemy' && t.attackedSelfLastRound) return '1 enemy that attacked you last round';
+  if (t.type === 'enemy' && t.nonBoss) return '1 non-Warlord enemy';
+  return TARGET_TEXT[t.type];
+}
+
+function damageText(a: ActionDef): string | null {
+  for (const e of a.effects) {
+    if (e.type === 'damage') {
+      const base = e.amount === 'gear' ? `gear damage${e.bonus ? ` + ${e.bonus}` : ''}` : `${e.amount + (e.bonus ?? 0)}`;
+      return `${base}${e.pierce ? ', ignores armor' : ''}`;
+    }
+    if (e.type === 'gearAttack') return `${e.times} gear attacks`;
+  }
+  return null;
+}
+
+function AbilityDetail({ a, kind }: { a: ActionDef; kind: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    try {
+      ref.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    } catch {
+      // older browsers without options support
+    }
+  }, [a.id]);
+  const gain = energyGain(a);
+  const attack = isAttack(a);
+  const dmg = damageText(a);
+  const cost = a.unlock
+    ? `Free, once per battle. Needs a ${a.unlock === 'signature' ? 'double-double' : 'triple-double'}.`
+    : gain
+      ? `Free. Gains ${gain} energy.`
+      : `Costs ${a.cost} energy.`;
+  return (
+    <div className="ability-detail" ref={ref} role="region" aria-label={`${a.name} details`}>
+      <div className="spread">
+        <strong>{a.name}</strong>
+        <span className="row" style={{ gap: 4 }}>
+          <span className={`chip ${attack ? 'kind-attack' : 'kind-utility'}`}>{attack ? '⚔ Attack' : 'Utility'}</span>
+          <span className="chip">{kind}</span>
+        </span>
+      </div>
+      <p className="small">{a.description.replace(/\bG\b/g, 'gear damage')}.</p>
+      <dl className="detail-grid small">
+        <dt>Energy</dt>
+        <dd>{cost}</dd>
+        {dmg && (
+          <>
+            <dt>Damage</dt>
+            <dd>{dmg}</dd>
+          </>
+        )}
+        <dt>Targets</dt>
+        <dd>{targetText(a)}</dd>
+        <dt>Use</dt>
+        <dd>{attack ? 'Your one attack this round.' : 'Any number per round while energy lasts.'}</dd>
+      </dl>
+    </div>
+  );
+}
+
+function ClassesTab() {
+  const [c, setC] = useState<HeroClass>('warrior');
+  const [open, setOpen] = useState<string | null>(null);
+  const cls = rules.classes[c];
+  const mods = cls.modifiers.map((m) => (m.type === 'percentage' ? `${m.label} bonus/penalty` : 'every turnover costs energy'));
+  const groups: { label: string; items: { a: ActionDef; kind: string }[] }[] = [
+    { label: 'Weapons', items: cls.gear.map((a) => ({ a, kind: a.cost === undefined ? 'Basic weapon' : 'Advanced weapon' })) },
+    { label: 'Abilities', items: cls.abilities.filter((a) => !a.unlock).map((a) => ({ a, kind: 'Ability' })) },
+    {
+      label: 'Signature & Legendary',
+      items: cls.abilities.filter((a) => a.unlock).map((a) => ({ a, kind: a.unlock === 'signature' ? 'Signature' : 'Legendary' })),
+    },
+  ];
+  const openItem = groups.flatMap((g) => g.items).find((x) => x.a.id === open);
+
+  return (
+    <div className="stack" style={{ gap: 12 }}>
+      <div className="class-picker" role="tablist" aria-label="Classes">
+        {CLASSES.map((k) => (
+          <button
+            key={k}
+            role="tab"
+            aria-selected={k === c}
+            className={`class-pick${k === c ? ' active' : ''}`}
+            onClick={() => {
+              setC(k);
+              setOpen(null);
+            }}
+          >
+            <span className="class-pick-icon" aria-hidden>
+              {CLASS_ICON[k]}
+            </span>
+            <span>{rules.classes[k].name}</span>
+          </button>
+        ))}
+      </div>
+
+      <section className="class-panel">
+        <div className="class-head">
+          <span className="class-big-icon" aria-hidden>
+            {CLASS_ICON[c]}
+          </span>
+          <div style={{ minWidth: 0 }}>
+            <h3 className="class-title">{cls.name}</h3>
+            <div className="muted small">{cls.role}</div>
+          </div>
+        </div>
+        <div className="row" style={{ gap: 6 }}>
+          <span className="chip">❤ {cls.hp} HP</span>
+          <span className="chip">⚡ Energy from {cls.ratingLabel}</span>
+          {mods.map((m) => (
+            <span key={m} className="chip">
+              {m}
+            </span>
+          ))}
+        </div>
+        <p className="small" style={{ margin: 0 }}>
+          {PLAYSTYLE[c].play}
+        </p>
+        <p className="tiny muted" style={{ margin: 0 }}>
+          Draft: {PLAYSTYLE[c].draft}.
+          {cls.passives.map((p) => ` Passive: ${p.name}, ${p.description}.`).join('')}
+        </p>
+
+        {groups.map((g) => (
+          <div key={g.label} className="ability-group">
+            <div className="group-label">{g.label}</div>
+            <div className="row" style={{ gap: 6 }}>
+              {g.items.map(({ a }) => {
+                const cost = costLabel(a);
+                return (
+                  <button
+                    key={a.id}
+                    type="button"
+                    className={`ability-chip${isAttack(a) ? ' attack' : ''}${a.unlock ? ' sig' : ''}${open === a.id ? ' open' : ''}`}
+                    aria-expanded={open === a.id}
+                    onClick={() => setOpen(open === a.id ? null : a.id)}
+                  >
+                    {isAttack(a) && <span className="atk" aria-label="Attack">⚔</span>}
+                    <span>{a.name}</span>
+                    <span className={`cost-badge ${cost.tone}`}>{cost.text}</span>
+                  </button>
+                );
+              })}
+            </div>
+            {openItem && g.items.some((x) => x.a.id === openItem.a.id) && <AbilityDetail a={openItem.a} kind={openItem.kind} />}
+          </div>
+        ))}
+      </section>
+
+      <div className="legend tiny muted">
+        <span>
+          <span className="atk">⚔</span> attack, one per round
+        </span>
+        <span>
+          <span className="cost-badge gain">+2</span> gains energy
+        </span>
+        <span>
+          <span className="cost-badge cost">4</span> energy cost
+        </span>
+        <span>
+          <span className="cost-badge sig">DD</span>/<span className="cost-badge sig">TD</span> needs a double-/triple-double
+        </span>
+        <span>Tap any ability for details.</span>
       </div>
     </div>
   );
