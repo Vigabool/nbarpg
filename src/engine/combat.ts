@@ -1046,6 +1046,9 @@ function enemyAct(state: BattleState, enemy: EnemyState, actionNumber: number, r
   log(state, 'enemy', `${enemy.name} attacks: ${hit.text}.`, enemy.id, [target.unit.id], `→ ${hit.short}`);
 }
 
+/** "Necromancer · CJ McCollum" → "Necromancer"; minions keep their team tag. */
+const foeLabel = (e: EnemyState) => e.name.split(' · ')[0];
+
 function summonsAct(state: BattleState) {
   for (const s of state.summons) {
     if (!s.alive || state.phase !== 'party') continue;
@@ -1055,13 +1058,13 @@ function summonsAct(state: BattleState) {
         .sort((a, b) => b.damage - a.damage)[0];
       if (pick) {
         pick.tauntedBy = s.id;
-        log(state, 'summon', `${s.name} taunts ${pick.name}.`, s.id, [pick.id]);
+        log(state, 'summon', `${s.name} taunts ${pick.name}.`, s.id, [pick.id], `⚑ ${foeLabel(pick)}`);
       }
     }
     const target = [...pickableEnemies(state)].sort((a, b) => a.hp - b.hp)[0];
     if (!target) continue;
     const dealt = damageEnemy(state, target, s.damage, false);
-    log(state, 'summon', `${s.name} bites ${target.name} for ${dealt}${target.alive ? '' : ' (defeated)'}.`, s.id, [target.id]);
+    log(state, 'summon', `${s.name} bites ${target.name} for ${dealt}${target.alive ? '' : ' (defeated)'}.`, s.id, [target.id], `→ ${foeLabel(target)} ${dealt}`);
     afterDamage(state);
   }
 }

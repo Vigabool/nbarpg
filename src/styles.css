@@ -255,6 +255,9 @@ select.input { appearance: auto; }
 }
 .unit-c.champion { background: linear-gradient(180deg, #2f2540, var(--card)); }
 .unit-c.warlord { border-color: #a0462f; background: linear-gradient(180deg, #3a2027, var(--card)); }
+.unit-c.intangible { border-style: dashed; border-color: #8fa6cf; background: linear-gradient(180deg, rgba(143, 166, 207, 0.16), var(--card)); }
+.unit-c.intangible .meter { opacity: 0.45; }
+.tag.ghost { color: #c9d6f0; border-color: #8fa6cf; background: rgba(143, 166, 207, 0.15); }
 .unit-c.target { border-color: var(--info); box-shadow: 0 0 0 2px var(--info); cursor: pointer; }
 .unit-c.targeted { border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold); }
 .u-top { display: flex; justify-content: space-between; align-items: center; gap: 6px; }

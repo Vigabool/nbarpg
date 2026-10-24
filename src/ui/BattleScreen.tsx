@@ -51,16 +51,21 @@ export function BattleScreen({ data, game, onChange, onHelp, onQuit }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   const setBattle = (b: BattleState) => onChange({ ...game, battle: b });
-  const intents = useMemo(() => {
+  const { intents, summonIntents } = useMemo(() => {
     const map: Record<string, Intent> = {};
+    const summon: Record<string, string[]> = {};
     for (const l of previewEnemyPhase(state)) {
+      if (l.side === 'summon' && l.actorId) {
+        (summon[l.actorId] ??= []).push(l.short ?? l.text);
+        continue;
+      }
       const e = state.enemies.find((x) => x.id === l.actorId);
       if (!e) continue;
       const i = (map[e.id] ??= { short: [], full: [] });
       i.short.push(l.short ?? l.text);
       i.full.push(l.text);
     }
-    return map;
+    return { intents: map, summonIntents: summon };
   }, [state]);
   const [detail, setDetail] = useState<string[] | null>(null);
 
@@ -262,7 +267,7 @@ export function BattleScreen({ data, game, onChange, onHelp, onQuit }: Props) {
         {state.summons
           .filter((s) => s.alive)
           .map((s) => (
-            <SummonRow key={s.id} s={s} state={state} />
+            <SummonRow key={s.id} s={s} state={state} intent={summonIntents[s.id]} />
           ))}
       </div>
 
@@ -476,12 +481,13 @@ function EnemyIcons({ e, state }: { e: EnemyState; state: BattleState }) {
   const special = specialOf(e, state.encounter);
   const rage = rules.combat.warlordEnrage;
   const icons: { icon: string; tone: string; label: string }[] = [];
-  if (special && specialDue(e, state.round + 1)) icons.push({ icon: `⚠ ${special.short}`, tone: 'warn', label: `${special.name} next round` });
+  // A Wraith that is already intangible has nothing to fade from.
+  if (special && specialDue(e, state.round + 1) && !(special.key === 'fade' && e.intangible)) icons.push({ icon: `⚠ ${special.short}`, tone: 'warn', label: `${special.name} next round` });
   if (e.enraged) icons.push({ icon: `🔥+${rage.damageBonus}`, tone: 'warn', label: 'Enraged' });
   if (e.drum && e.drum.round >= state.round) icons.push({ icon: `🥁+${e.drum.amount}`, tone: 'warn', label: 'War Drum' });
   if (commandBonus(state, e) > 0) icons.push({ icon: `👑+${commandBonus(state, e)}`, tone: 'warn', label: "Chieftain's Command" });
   if (isGuarded(state, e)) icons.push({ icon: '🔒', tone: 'shield', label: 'Guarded by the pack' });
-  if (e.intangible) icons.push({ icon: '👻', tone: 'curse', label: 'Intangible' });
+  if (e.intangible) icons.push({ icon: '👻 Intangible', tone: 'ghost', label: 'Intangible: only spells and Cleric attacks can touch it' });
   if (ignoresTaunt(e)) icons.push({ icon: '⊘⚑', tone: '', label: 'Ignores taunts' });
   if (e.tauntedBy) icons.push({ icon: '⚑', tone: 'taunt', label: 'Taunted' });
   if (e.poison) icons.push({ icon: `☣${e.poison.perRound}`, tone: 'poison', label: 'Poisoned' });
@@ -532,7 +538,7 @@ function EnemyCard({
   const dmg = enemyDamage(state, e);
   return (
     <div
-      className={`unit-c${e.isWarlord ? ' warlord' : ' champion'}${targetable ? ' target' : ''}${targeted ? ' targeted' : ''}`}
+      className={`unit-c${e.isWarlord ? ' warlord' : ' champion'}${e.intangible ? ' intangible' : ''}${targetable ? ' target' : ''}${targeted ? ' targeted' : ''}`}
       onClick={onClick}
       role="button"
       aria-label={targetable ? `Target ${e.name}` : `${e.name}: details`}
@@ -828,7 +834,7 @@ function HeroRow({ h, selected, targetable, onClick }: { h: HeroState; selected:
   );
 }
 
-function SummonRow({ s, state }: { s: SummonState; state: BattleState }) {
+function SummonRow({ s, state, intent }: { s: SummonState; state: BattleState; intent?: string[] }) {
   const taunting = state.enemies.filter((e) => e.alive && e.tauntedBy === s.id).length;
   return (
     <div className="hero-row summon">
@@ -836,7 +842,7 @@ function SummonRow({ s, state }: { s: SummonState; state: BattleState }) {
         <span className="h-class">
           {s.kind === 'bear' ? '🐻' : '🐺'} {s.name}
         </span>
-        <span className="h-player">Summon</span>
+        <span className="h-player">{intent?.length ? <span className="u-intent">{intent.join(' · ')}</span> : 'Summon'}</span>
       </div>
       <div className="h-hp">
         <Meter kind="hp" value={s.hp} max={s.maxHp} />

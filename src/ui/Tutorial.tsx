@@ -378,10 +378,6 @@ function EnemiesTab({ initial, initialEncounter }: { initial?: EnemyPage; initia
         {monsterPassives('goblin', encId).map((p) => (
           <Feature key={p.title} title={`Passive · ${p.title}`} text={p.text} />
         ))}
-        <Feature
-          title="Waves"
-          text={`Minions split ${rules.horde.minions.waveShare.map((x) => `${Math.round(x * 100)}%`).join(' / ')} across the three waves.${hasTwist('packGuard', encId) ? " Wave 1's pack guards the Shaman." : ''}`}
-        />
       </>
     );
   } else if (page === 'warlord' && enc.boss) {
@@ -521,8 +517,6 @@ export function monsterPassives(kind: MonsterKind, encounter?: string): { title:
   }
   if (behavior === 'lich') out.push({ title: c.masterOfTheDead.name, text: `${c.masterOfTheDead.description}. Fire and holy damage still end them.` });
   if (behavior === 'chieftain') out.push({ title: c.chieftainCommand.name, text: `${c.chieftainCommand.description}: minions and the goblin Champions, not the Ogre. Kill the Chieftain and the buff ends.` });
-  const wave = rules.horde.championWave?.[kind as ChampionKind];
-  if (wave) out.push({ title: `Arrives with wave ${wave}`, text: 'Always part of this wave, so its timing is predictable.' });
   if (m.ignoresTaunt) out.push({ title: 'Ignores taunts', text: "Provoke, Bulwark and the Bear don't work on it." });
   if (hasTwist('packGuard', encounter) && c.packGuard.guarded.includes(behavior)) out.push({ title: c.packGuard.name, text: `${c.packGuard.description}.` });
   if (behavior === 'assassin') out.push({ title: 'Energy drain', text: `Each hit drains ${c.assassinDrain} energy from its target.` });
