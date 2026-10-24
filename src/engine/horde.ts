@@ -1,5 +1,6 @@
 import type { BoxLine, SeasonData } from '../data/types';
-import { rules as defaultRules, tierIndex, type ChampionKind, type HeroClass, type Rules, type Tier } from '../rules';
+import { rules as defaultRules, tierIndex, type ChampionKind, type HeroClass, type MonsterKind, type Rules, type Tier } from '../rules';
+import { encounterOf, monsterName } from './encounter';
 import { computeRating, shiftTier, tierFor } from './rating';
 
 export interface HeroGamePick {
@@ -10,7 +11,7 @@ export interface HeroGamePick {
 
 export interface MonsterSpec {
   id: string;
-  kind: 'goblin' | ChampionKind;
+  kind: MonsterKind;
   name: string;
   hp: number;
   damage: number;
@@ -56,6 +57,7 @@ function makeChampion(
   playerName: string,
   rules: Rules,
   mirrorOf?: HeroClass,
+  encounter?: string,
 ): MonsterSpec {
   const def = rules.monsters[kind];
   const tier = championTier(kind, line, rules);
@@ -63,7 +65,7 @@ function makeChampion(
   return {
     id: '',
     kind,
-    name: `${def.name} · ${playerName}`,
+    name: `${monsterName(kind, encounter, rules)} · ${playerName}`,
     hp: def.hpByTier![ti],
     damage: def.damageByTier![ti],
     tier,
@@ -78,7 +80,8 @@ function strength(m: MonsterSpec): number {
   return tierIndex(m.tier ?? 'cold') * 1000 + m.hp * 10 + m.damage;
 }
 
-export function buildHorde(picks: HeroGamePick[], data: SeasonData, rules: Rules = defaultRules): Horde {
+export function buildHorde(picks: HeroGamePick[], data: SeasonData, rules: Rules = defaultRules, encounter?: string): Horde {
+  const enc = encounterOf(encounter, rules);
   if (picks.length === 0) throw new Error('No heroes are fighting this week');
   const nameOf = (id: number) => data.players[id]?.name ?? `Player ${id}`;
   const used = new Set<string>();
@@ -105,7 +108,7 @@ export function buildHorde(picks: HeroGamePick[], data: SeasonData, rules: Rules
     const line = candidates.find((l) => !used.has(key(pick.gameId, l.playerId)));
     if (!line) continue;
     used.add(key(pick.gameId, line.playerId));
-    champions.push(makeChampion(mirror.champion, line, pick.gameId, nameOf(line.playerId), rules, pick.heroClass));
+    champions.push(makeChampion(mirror.champion, line, pick.gameId, nameOf(line.playerId), rules, pick.heroClass, encounter));
   }
 
   // The Warlord: the single best opposing performance across the chosen games.
@@ -117,25 +120,41 @@ export function buildHorde(picks: HeroGamePick[], data: SeasonData, rules: Rules
       if (!best || score > best.score || (score === best.score && line.min > best.line.min)) best = { line, gameId: opp.gameId, score };
     }
   }
-  let warlordBase = champions.find((c) => c.source!.gameId === best!.gameId && c.source!.playerId === best!.line.playerId);
-  if (warlordBase) {
-    champions.splice(champions.indexOf(warlordBase), 1);
+  // If that player was already mirrored, they become the boss instead.
+  const mirrored = champions.find((c) => c.source!.gameId === best!.gameId && c.source!.playerId === best!.line.playerId);
+  if (mirrored) champions.splice(champions.indexOf(mirrored), 1);
+  // The performance's strength: the best tier it earns as any Champion type.
+  const kinds = order.map((m) => m.champion);
+  const bestKind = kinds.reduce((a, b) =>
+    tierIndex(championTier(b, best!.line, rules)) > tierIndex(championTier(a, best!.line, rules)) ? b : a,
+  );
+  const base = mirrored ?? makeChampion(bestKind, best!.line, best!.gameId, nameOf(best!.line.playerId), rules, undefined, encounter);
+  let warlord: MonsterSpec;
+  if (enc.boss) {
+    // The encounter's own boss (e.g. the Goblin Chieftain), scaled by that performance.
+    const tier = championTier(bestKind, best!.line, rules);
+    const def = rules.monsters[enc.boss];
+    warlord = {
+      ...base,
+      kind: enc.boss,
+      name: `${monsterName(enc.boss, encounter, rules)} · ${nameOf(best!.line.playerId)}`,
+      tier,
+      hp: def.hpByTier![tierIndex(tier)],
+      damage: def.damageByTier![tierIndex(tier)],
+      isWarlord: true,
+      extraActions: w.extraActions,
+    };
   } else {
-    // Not one of the mirrors: use the Champion type where the performance rates highest.
-    const kinds = order.map((m) => m.champion);
-    const kind = kinds.reduce((a, b) =>
-      tierIndex(championTier(b, best!.line, rules)) > tierIndex(championTier(a, best!.line, rules)) ? b : a,
-    );
-    warlordBase = makeChampion(kind, best!.line, best!.gameId, nameOf(best!.line.playerId), rules);
+    // Classic Warlord: a boosted copy of that player's Champion.
+    warlord = {
+      ...base,
+      name: `Warlord ${base.name}`,
+      hp: base.hp * w.hpMultiplier,
+      damage: base.damage + w.damageBonus,
+      isWarlord: true,
+      extraActions: w.extraActions,
+    };
   }
-  const warlord: MonsterSpec = {
-    ...warlordBase,
-    name: `Warlord ${warlordBase.name}`,
-    hp: warlordBase.hp * w.hpMultiplier,
-    damage: warlordBase.damage + w.damageBonus,
-    isWarlord: true,
-    extraActions: w.extraActions,
-  };
 
   // Minions: goblins per opposing team, with damage set by that team's FG%.
   const goblins: MonsterSpec[] = [];
@@ -151,7 +170,7 @@ export function buildHorde(picks: HeroGamePick[], data: SeasonData, rules: Rules
       goblins.push({
         id: '',
         kind: 'goblin',
-        name: `Goblin (${opp.team})`,
+        name: `${monsterName('goblin', encounter, rules)} (${opp.team})`,
         hp: rules.monsters.goblin.hp!,
         damage,
         isWarlord: false,

@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { enemyDamage, livingEnemies, previewEnemyPhase, specialDue, specialOf } from '../engine/combat';
 import { rules } from '../rules';
-import { CLASS_ICON, MONSTER_ICON } from './common';
+import { monsterIcon } from '../engine/encounter';
+import { CLASS_ICON } from './common';
 import { buildSteps } from './sampleTurnScript';
 
 export function SampleTurn() {
@@ -40,7 +41,7 @@ export function SampleTurn() {
           return (
             <div key={e.id} className={`sample-row${hit ? ' hit' : ''}${actors.has(e.id) ? ' acted' : ''}`}>
               <span className="sample-name">
-                {MONSTER_ICON[e.kind]} {e.name}
+                {monsterIcon(e.kind)} {e.name}
               </span>
               <SampleMeter value={e.hp} max={e.maxHp} kind="hp" />
               <span className="sample-note">

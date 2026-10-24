@@ -9,6 +9,7 @@ import {
   performAction,
   previewEnemyPhase,
   actionDamage,
+  commandBonus,
   energyGain,
   enemyDamage,
   packBonus,
@@ -26,7 +27,8 @@ import {
 } from '../engine/combat';
 import { rules, type HeroClass, type Tier } from '../rules';
 import { EnemyHead, Feature, monsterBehavior, monsterPassives, type EnemyPage, type TutorialTopic } from './Tutorial';
-import { CLASS_ICON, ConfirmButton, MONSTER_ICON, TIER_LABEL, TierChip, statLine, weekLabel } from './common';
+import { encounterOf, monsterIcon, monsterName, monsterShort } from '../engine/encounter';
+import { CLASS_ICON, ConfirmButton, TIER_LABEL, TierChip, statLine, weekLabel } from './common';
 
 interface Props {
   data: SeasonData;
@@ -202,7 +204,7 @@ export function BattleScreen({ data, game, onChange, onHelp, onQuit }: Props) {
         </div>
       )}
 
-      <div className="section-label">Horde</div>
+      <div className="section-label">{encounterOf(state.encounter).name}</div>
       <div className="enemy-grid">
         {champions.map((e) => (
           <EnemyCard
@@ -470,6 +472,7 @@ function EnemyIcons({ e, state }: { e: EnemyState; state: BattleState }) {
   if (special && specialDue(e, state.round + 1)) icons.push({ icon: `⚠ ${special.short}`, tone: 'warn', label: `${special.name} next round` });
   if (e.enraged) icons.push({ icon: `🔥+${rage.damageBonus}`, tone: 'warn', label: 'Enraged' });
   if (e.drum && e.drum.round >= state.round) icons.push({ icon: `🥁+${e.drum.amount}`, tone: 'warn', label: 'War Drum' });
+  if (commandBonus(state, e) > 0) icons.push({ icon: `👑+${commandBonus(state, e)}`, tone: 'warn', label: "Chieftain's Command" });
   if (isGuarded(state, e)) icons.push({ icon: '🔒', tone: 'shield', label: 'Guarded by the pack' });
   if (ignoresTaunt(e)) icons.push({ icon: '⊘⚑', tone: '', label: 'Ignores taunts' });
   if (e.tauntedBy) icons.push({ icon: '⚑', tone: 'taunt', label: 'Taunted' });
@@ -494,7 +497,11 @@ function IntentLine({ e, state, intent }: { e: EnemyState; state: BattleState; i
   return <div className="u-intent">{intent.short.join(' · ')}</div>;
 }
 
-const kindLabel = (e: EnemyState) => (e.isWarlord ? 'Warlord' : rules.monsters[e.kind].name);
+/** A classic Warlord is a boosted Champion; an encounter boss (e.g. the Chieftain) is its own kind. */
+const isClassicWarlord = (e: EnemyState) => e.isWarlord && rules.monsters[e.kind].behavior !== 'chieftain';
+const foeShort = (e: EnemyState, enc?: string) => (isClassicWarlord(e) ? 'Warlord' : monsterShort(e.kind, enc));
+const foeName = (e: EnemyState, enc?: string) => (isClassicWarlord(e) ? `Warlord ${monsterName(e.kind, enc)}` : monsterName(e.kind, enc));
+const foeIcon = (e: EnemyState, enc?: string) => (isClassicWarlord(e) ? '👑' : monsterIcon(e.kind, enc));
 
 function EnemyCard({
   e,
@@ -521,7 +528,7 @@ function EnemyCard({
     >
       <div className="u-top">
         <span className="u-name">
-          {MONSTER_ICON[e.kind]} {kindLabel(e)}
+          {foeIcon(e, state.encounter)} {foeShort(e, state.encounter)}
           {e.tier && <TierDot tier={e.tier} />}
         </span>
         <span className="u-dmg num">
@@ -575,7 +582,7 @@ function GoblinStack({
     >
       <div className="u-top">
         <span className="u-name">
-          {MONSTER_ICON.goblin} {first.name}
+          {monsterIcon('goblin', state.encounter)} {first.name}
           {goblins.length > 1 && <span className="count">×{goblins.length}</span>}
         </span>
         <span className="u-dmg num">⚔{dmg}</span>
@@ -598,11 +605,18 @@ function GoblinStack({
           </button>
         ))}
       </div>
-      {pack > 0 && (
+      {(pack > 0 || commandBonus(state, first) > 0) && (
         <div className="u-foot">
-          <span className="tag static" aria-label={`Pack Tactics +${pack}`}>
-            🐺+{pack}
-          </span>
+          {pack > 0 && (
+            <span className="tag static" aria-label={`Pack Tactics +${pack}`}>
+              🐺+{pack}
+            </span>
+          )}
+          {commandBonus(state, first) > 0 && (
+            <span className="tag static warn" aria-label="Chieftain's Command">
+              👑+{commandBonus(state, first)}
+            </span>
+          )}
         </div>
       )}
       {justArrived(state, first) ? (
@@ -641,7 +655,6 @@ function EnemyDetail({
   if (groups.length === 0) return null;
   const enemies = groups[Math.min(idx, groups.length - 1)];
   const e = enemies[0];
-  const def = rules.monsters[e.kind];
   const special = specialOf(e);
   const [, player] = e.name.split(' · ');
   const rage = rules.combat.warlordEnrage;
@@ -655,6 +668,7 @@ function EnemyDetail({
   if (e.drum && e.drum.round >= state.round) now.push({ text: `🥁 War Drum +${e.drum.amount} ${e.drum.round === state.round ? 'this round' : 'next round'}`, tone: 'warn' });
   if (isGuarded(state, e)) now.push({ text: '🔒 Guarded now', tone: 'shield' });
   if (packBonus(state, e) > 0) now.push({ text: `🐺 Pack +${packBonus(state, e)}`, tone: '' });
+  if (commandBonus(state, e) > 0) now.push({ text: `👑 Chieftain's Command +${commandBonus(state, e)}`, tone: 'warn' });
   if (e.tauntedBy) {
     const h = state.heroes.find((x) => x.id === e.tauntedBy);
     now.push({ text: `⚑ Taunted by ${h ? rules.classes[h.heroClass].name : state.summons.find((x) => x.id === e.tauntedBy)?.name ?? 'an ally'}`, tone: 'taunt' });
@@ -666,7 +680,7 @@ function EnemyDetail({
 
   const short = enemies.flatMap((x) => intents[x.id]?.short ?? []);
   const full = enemies.flatMap((x) => intents[x.id]?.full ?? []);
-  const label = (g: EnemyState[]) => (g[0].isWarlord ? 'Warlord' : rules.monsters[g[0].kind].name);
+  const label = (g: EnemyState[]) => foeShort(g[0], state.encounter);
   return (
     <div className="modal-backdrop drawer" onClick={onClose}>
       <div className="modal" role="dialog" aria-modal="true" aria-label="The horde" onClick={(ev) => ev.stopPropagation()}>
@@ -680,7 +694,7 @@ function EnemyDetail({
           {groups.map((g, i) => (
             <button key={g[0].id} role="tab" aria-selected={i === idx} className={`class-pick${i === idx ? ' active' : ''}`} onClick={() => setIdx(i)}>
               <span className="class-pick-icon" aria-hidden>
-                {g[0].isWarlord ? '👑' : MONSTER_ICON[g[0].kind]}
+                {foeIcon(g[0], state.encounter)}
               </span>
               <span>
                 {label(g)}
@@ -692,8 +706,8 @@ function EnemyDetail({
         </div>
         <div className="modal-body class-panel">
           <EnemyHead
-            icon={e.isWarlord ? '👑' : MONSTER_ICON[e.kind]}
-            name={`${e.isWarlord ? `Warlord ${def.name}` : def.name}${enemies.length > 1 ? ` ×${enemies.length}` : ''}`}
+            icon={foeIcon(e, state.encounter)}
+            name={`${foeName(e, state.encounter)}${enemies.length > 1 ? ` ×${enemies.length}` : ''}`}
             sub={
               <span className="row" style={{ gap: 6 }}>
                 {player ? <span>{player}</span> : <span>{e.name}</span>}
@@ -739,14 +753,18 @@ function EnemyDetail({
           {special && <Feature title={`⚠ Special · ${special.name} (${when})`} text={`${special.description}.`} warn />}
           {e.isWarlord && (
             <Feature
-              title={`Warlord · enrages below ${Math.round(rage.atHpFraction * 100)}% HP`}
-              text={`Double HP, +${rules.horde.warlord.damageBonus} damage and two actions a round. Enraged, it hits +${rage.damageBonus} harder.`}
+              title={`Boss · enrages below ${Math.round(rage.atHpFraction * 100)}% HP`}
+              text={
+                isClassicWarlord(e)
+                  ? `Double HP, +${rules.horde.warlord.damageBonus} damage and two actions a round. Enraged, it hits +${rage.damageBonus} harder.`
+                  : `The week's best opposing performance. Two actions a round. Enraged, it hits +${rage.damageBonus} harder.`
+              }
             />
           )}
           {monsterPassives(e.kind).map((p) => (
             <Feature key={p.title} title={`Passive · ${p.title}`} text={p.text} />
           ))}
-          <button className="btn small" style={{ alignSelf: 'flex-start' }} onClick={() => onHelp(e.isWarlord ? 'warlord' : e.kind)}>
+          <button className="btn small" style={{ alignSelf: 'flex-start' }} onClick={() => onHelp((e.isWarlord ? 'warlord' : e.kind) as EnemyPage)}>
             More in How to play →
           </button>
         </div>

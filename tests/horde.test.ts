@@ -27,23 +27,40 @@ describe('horde generation', () => {
   const all = horde.waves.flat();
 
   it('mirrors each hero with the matching opposing player', () => {
-    const byKind = (k: string) => all.find((m) => m.kind === k && !m.isWarlord) ?? (horde.warlord.kind === k ? horde.warlord : undefined);
-    expect(byKind('warlock')?.source?.playerId).toBe(101);
+    const byKind = (k: string) => all.find((m) => m.kind === k && !m.isWarlord);
+    // 101 was the Wizard's mirror but had the best line, so they became the Chieftain instead.
+    expect(byKind('warlock')).toBeUndefined();
     expect(byKind('hunter')?.source?.playerId).toBe(102);
     expect(byKind('ogre')?.source?.playerId).toBe(103);
     expect(byKind('assassin')?.source?.playerId).toBe(104);
     expect(byKind('shaman')?.source?.playerId).toBe(105);
   });
 
-  it('makes the best performance the Warlord, with double HP and +2 damage', () => {
-    // 101: 30 + 4 + 5 = 39, the highest pts+reb+ast.
+  it('makes the best performance the Goblin Chieftain, scaled by that line', () => {
+    // 101: 30 + 4 + 5 = 39, the highest pts+reb+ast. Its best tier as any Champion type sets the
+    // Chieftain's strength: 30 points on 55% shooting is an Elite Sharpshooter line.
     expect(horde.warlord.source?.playerId).toBe(101);
-    expect(horde.warlord.kind).toBe('warlock');
-    // 30 points is a Great Warlock: 32 HP, 7 damage.
-    expect(horde.warlord.tier).toBe('great');
-    expect(horde.warlord.hp).toBe(64);
-    expect(horde.warlord.damage).toBe(9);
+    expect(horde.warlord.kind).toBe('chieftain');
+    expect(horde.warlord.name).toBe('Goblin Chieftain · P101');
+    expect(horde.warlord.tier).toBe('elite');
+    expect(horde.warlord.hp).toBe(rules.monsters.chieftain.hpByTier![4]);
+    expect(horde.warlord.damage).toBe(rules.monsters.chieftain.damageByTier![4]);
     expect(horde.warlord.extraActions).toBe(1);
+  });
+
+  it('uses encounter names for champions and minions', () => {
+    expect(all.find((m) => m.kind === 'hunter')?.name).toBe('Goblin Sharpshooter · P102');
+    expect(all.find((m) => m.kind === 'goblin')?.name).toBe('Goblin (BBB)');
+  });
+
+  it('falls back to the classic Warlord for encounters without their own boss', () => {
+    const noBoss = structuredClone(rules);
+    delete noBoss.encounters.encounters['goblin-horde'].boss;
+    const h = buildHorde(picks, data, noBoss);
+    expect(h.warlord.kind).toBe('warlock');
+    // A Great Warlock doubled, +2 damage.
+    expect(h.warlord.hp).toBe(noBoss.monsters.warlock.hpByTier![3] * 2);
+    expect(h.warlord.damage).toBe(noBoss.monsters.warlock.damageByTier![3] + 2);
   });
 
   it('staggers champions for turnovers (1 per 3)', () => {

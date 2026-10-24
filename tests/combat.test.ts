@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { endRound, livingEnemies, listActions, nextWaveRound, performAction, previewEnemyPhase, actionDamage, enemyDamage, isGuarded, packBonus, type BattleState } from '../src/engine/combat';
+import { endRound, livingEnemies, listActions, nextWaveRound, performAction, previewEnemyPhase, actionDamage, commandBonus, enemyDamage, isGuarded, packBonus, type BattleState } from '../src/engine/combat';
 import { rules } from '../src/rules';
 import { battle, heroSetup, monster, party } from './helpers';
 
@@ -600,5 +600,33 @@ describe('Guarded by the Pack', () => {
     let s = battle([[sh, g1, g2]]);
     s = act(s, 'warrior', 'axe', [g1.id]);
     expect(isGuarded(s, enemy(s, sh.id))).toBe(false);
+  });
+});
+
+describe('Goblin Chieftain', () => {
+  it("Chieftain's Command gives every goblin +1, but not the Ogre", () => {
+    const chief = monster({ kind: 'chieftain', hp: 80, damage: 14, isWarlord: true, extraActions: 1 });
+    const g = monster({ hp: 8, damage: 3 });
+    const hexer = monster({ kind: 'warlock', hp: 30, damage: 10 });
+    const ogre = monster({ kind: 'ogre', hp: 50, damage: 12 });
+    let s = battle([[chief, g, hexer, ogre]]);
+    expect(commandBonus(s, enemy(s, g.id))).toBe(1);
+    expect(commandBonus(s, enemy(s, hexer.id))).toBe(1);
+    expect(commandBonus(s, enemy(s, ogre.id))).toBe(0);
+    expect(commandBonus(s, enemy(s, chief.id))).toBe(0);
+    expect(enemyDamage(s, enemy(s, hexer.id))).toBe(11);
+    // Pack Tactics counts goblin minions only: the lone goblin gets none.
+    expect(packBonus(s, enemy(s, g.id))).toBe(0);
+    s = { ...s, enemies: s.enemies.map((e) => (e.id === chief.id ? { ...e, alive: false, hp: 0 } : e)) };
+    expect(enemyDamage(s, enemy(s, hexer.id))).toBe(10);
+  });
+
+  it('Call the Pack brings two goblins that fight from next round', () => {
+    const chief = monster({ kind: 'chieftain', hp: 999, damage: 0, isWarlord: true, extraActions: 1 });
+    let s = endRound(endRound(battle([[chief]]))); // round 3 is its special round
+    const before = livingEnemies(s).length;
+    s = endRound(s);
+    expect(livingEnemies(s).length).toBe(before + 2);
+    expect(livingEnemies(s).filter((e) => e.kind === 'goblin').every((e) => e.arrivedRound === 3)).toBe(true);
   });
 });

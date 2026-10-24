@@ -4,7 +4,8 @@ import { buildHorde, opponentOf, playerLine, type MonsterSpec } from '../engine/
 import { computePool } from '../engine/rating';
 import { playerGamesInWeek } from '../engine/week';
 import { CLASSES, rules, type HeroClass } from '../rules';
-import { ClassName, MONSTER_ICON, TierChip, formatDate, statLine } from './common';
+import { encounterOf, monsterIcon } from '../engine/encounter';
+import { ClassName, TierChip, formatDate, statLine } from './common';
 
 function mirrorFor(c: HeroClass, playerId: number, gameId: string, data: SeasonData): MonsterSpec | undefined {
   const h = buildHorde([{ heroClass: c, playerId, gameId }], data);
@@ -96,7 +97,7 @@ export function SelectGames({ data, game, onChange }: { data: SeasonData; game: 
                     </div>
                     {mirror && (
                       <div className="mirror tiny">
-                        Brings {MONSTER_ICON[mirror.kind]} <strong>{mirror.name}</strong> · {statLine(mirror.source!.line)}
+                        Brings {monsterIcon(mirror.kind)} <strong>{mirror.name}</strong> · {statLine(mirror.source!.line)}
                         <br />
                         <TierChip tier={mirror.tier!} /> {mirror.hp} HP · {mirror.damage} dmg
                       </div>
@@ -111,7 +112,11 @@ export function SelectGames({ data, game, onChange }: { data: SeasonData; game: 
 
       {horde && (
         <section className="card stack">
-          <h2>Horde preview</h2>
+          <div className="stack" style={{ gap: 2 }}>
+            <span className="section-label">This week's encounter</span>
+            <h2>{encounterOf().name}</h2>
+            <span className="small muted">{encounterOf().tagline}</span>
+          </div>
           {horde.waves.map((wave, i) => {
             const goblins = wave.filter((m) => m.kind === 'goblin');
             const named = wave.filter((m) => m.kind !== 'goblin');
@@ -123,12 +128,12 @@ export function SelectGames({ data, game, onChange }: { data: SeasonData; game: 
                 <div className="row">
                   {goblins.length > 0 && (
                     <span className="chip">
-                      {MONSTER_ICON.goblin} {goblins.length} goblins ({[...new Set(goblins.map((g) => g.damage))].join('/')} dmg)
+                      {monsterIcon('goblin')} {goblins.length} goblins ({[...new Set(goblins.map((g) => g.damage))].join('/')} dmg)
                     </span>
                   )}
                   {named.map((m) => (
                     <span key={m.id} className={`chip ${m.isWarlord ? 'warn' : ''}`}>
-                      {MONSTER_ICON[m.kind]} {m.name} · {m.hp} HP · {m.damage} dmg{m.isWarlord ? ' ×2 actions' : ''}
+                      {monsterIcon(m.kind)} {m.name} · {m.hp} HP · {m.damage} dmg{m.isWarlord ? ' ×2 actions' : ''}
                     </span>
                   ))}
                 </div>

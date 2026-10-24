@@ -9,6 +9,7 @@ import classesJson from './classes.json';
 import summonsJson from './summons.json';
 import monstersJson from './monsters.json';
 import hordeJson from './horde.json';
+import encountersJson from './encounters.json';
 
 /**
  * All game rules live in the JSON files next to this one, so tuning is a data
@@ -20,7 +21,7 @@ export type Tier = (typeof TIERS)[number];
 export const CLASSES = ['warrior', 'ranger', 'cleric', 'rogue', 'wizard'] as const;
 export type HeroClass = (typeof CLASSES)[number];
 export type ChampionKind = 'ogre' | 'warlock' | 'hunter' | 'assassin' | 'shaman';
-export type MonsterKind = 'goblin' | ChampionKind;
+export type MonsterKind = 'goblin' | ChampionKind | 'chieftain';
 
 export type RatingFormula = Partial<Record<StatKey, number>>;
 /** Minimum Rating for each tier above Cold. */
@@ -117,7 +118,7 @@ export interface SummonDef {
 
 export interface MonsterDef {
   name: string;
-  behavior: 'default' | ChampionKind;
+  behavior: 'default' | ChampionKind | 'chieftain';
   /** Taunts (Provoke, Bulwark, Shield Bash, the Bear) have no effect. */
   ignoresTaunt?: boolean;
   mirrors?: HeroClass;
@@ -148,6 +149,17 @@ export interface HordeConfig {
   turnoversPerStagger: number;
 }
 
+/** An encounter re-skins the monster roles and supplies its boss and twist. */
+export interface EncounterDef {
+  name: string;
+  tagline: string;
+  /** Boss monster kind; without one the classic Warlord (a boosted Champion) is used. */
+  boss?: MonsterKind;
+  /** Monster kinds that count as goblins for the Chieftain's Command. */
+  goblinKin: MonsterKind[];
+  monsters: Record<MonsterKind, { name: string; short: string; icon: string; flavor?: string }>;
+}
+
 export interface Rules {
   tiers: TiersConfig;
   pool: {
@@ -170,6 +182,7 @@ export interface Rules {
   summons: Record<SummonKind, SummonDef>;
   monsters: Record<MonsterKind, MonsterDef>;
   horde: HordeConfig;
+  encounters: { default: string; encounters: Record<string, EncounterDef> };
 }
 
 export const rules: Rules = {
@@ -183,6 +196,7 @@ export const rules: Rules = {
   summons: summonsJson as Record<SummonKind, SummonDef>,
   monsters: monstersJson as unknown as Record<MonsterKind, MonsterDef>,
   horde: hordeJson as unknown as HordeConfig,
+  encounters: encountersJson as unknown as Rules['encounters'],
 };
 
 export function tierIndex(t: Tier): number {

@@ -1,4 +1,5 @@
 import { CLASSES, rules as defaultRules, type ActionDef, type Effect, type HeroClass, type Rules, type SummonKind } from '../rules';
+import { isGoblinKin, monsterName } from './encounter';
 import type { MonsterSpec } from './horde';
 import type { PoolBreakdown } from './rating';
 
@@ -106,6 +107,8 @@ export interface BattleState {
   waveIndex: number;
   waveCount: number;
   clearedWaves?: number[];
+  /** Encounter id (see rules/encounters.json); the default when absent. */
+  encounter?: string;
   pendingWaves: MonsterSpec[][];
   heroes: HeroState[];
   summons: SummonState[];
@@ -162,7 +165,7 @@ function makeEnemy(spec: MonsterSpec, arrivedRound: number, wave: number): Enemy
   };
 }
 
-export function createBattle(heroes: HeroSetup[], waves: MonsterSpec[][], rules: Rules = defaultRules): BattleState {
+export function createBattle(heroes: HeroSetup[], waves: MonsterSpec[][], rules: Rules = defaultRules, encounter?: string): BattleState {
   const ordered = [...heroes].sort((a, b) => CLASSES.indexOf(a.heroClass) - CLASSES.indexOf(b.heroClass));
   const state: BattleState = {
     round: 1,
@@ -198,6 +201,7 @@ export function createBattle(heroes: HeroSetup[], waves: MonsterSpec[][], rules:
     summons: [],
     enemies: waves[0].map((m) => makeEnemy(m, 0, 0)),
     clearedWaves: [],
+    encounter,
     log: [],
     nextSummonId: 1,
     stats: { wavesCleared: 0, warlordDefeated: false, anyHeroFell: false, signaturesUsed: 0 },
@@ -415,9 +419,16 @@ export function packBonus(state: BattleState, e: EnemyState, rules: Rules = defa
   return others * rules.combat.packTactics.bonusPerOtherGoblin;
 }
 
-/** What an enemy hits for this round, after enrage, War Drum, Pack Tactics and curses. */
+/** Chieftain's Command: bonus damage for every goblin while a Chieftain lives. */
+export function commandBonus(state: BattleState, e: EnemyState, rules: Rules = defaultRules): number {
+  if (!isGoblinKin(e.kind, state.encounter, rules)) return 0;
+  const chief = state.enemies.some((x) => x.alive && rules.monsters[x.kind].behavior === 'chieftain');
+  return chief ? rules.combat.chieftainCommand.bonus : 0;
+}
+
+/** What an enemy hits for this round, after enrage, War Drum, Pack Tactics, the Chieftain and curses. */
 export function enemyDamage(state: BattleState, e: EnemyState, rules: Rules = defaultRules): number {
-  const rage = (e.enraged ? rules.combat.warlordEnrage.damageBonus : 0) + packBonus(state, e, rules);
+  const rage = (e.enraged ? rules.combat.warlordEnrage.damageBonus : 0) + packBonus(state, e, rules) + commandBonus(state, e, rules);
   const drum = e.drum && e.drum.round === state.round ? e.drum.amount : 0;
   const weaken = e.weaken && e.weaken.rounds > 0 ? e.weaken.amount : 0;
   return Math.max(0, e.damage + rage + drum - weaken);
@@ -848,6 +859,27 @@ function doSpecial(state: BattleState, enemy: EnemyState, rules: Rules): boolean
         [target.unit.id],
         low ? `⚠ ${sp.assassin.short} → ${hit.short}` : `→ ${hit.short}`,
       );
+      return true;
+    }
+    case 'chieftain': {
+      const n = sp.chieftain.goblins;
+      const fresh: string[] = [];
+      for (let i = 0; i < n; i++) {
+        const spec: MonsterSpec = {
+          id: `${enemy.id}-r${state.round}-${i + 1}`,
+          kind: 'goblin',
+          name: monsterName('goblin', state.encounter, rules),
+          hp: rules.monsters.goblin.hp!,
+          damage: rules.horde.minions.damageByTeamFgPct[1].damage,
+          isWarlord: false,
+          extraActions: 0,
+          staggers: 0,
+        };
+        // They join now and fight from next round.
+        state.enemies.push(makeEnemy(spec, state.round, enemy.wave));
+        fresh.push(spec.id);
+      }
+      log(state, 'enemy', `${enemy.name} uses ${sp.chieftain.name}: ${n} goblins join the fight.`, enemy.id, fresh, `⚠ ${sp.chieftain.short}: +${n} goblins`);
       return true;
     }
     case 'shaman': {

@@ -239,6 +239,30 @@ Gear damage and armor use the player's season-average Rating, mapped to the same
 
 **Energy carries across waves.** There is no refill between waves beyond what basic attacks earn, so spending in wave 1 is a real decision.
 
+## Encounters
+
+**Each battle is an encounter: a themed horde that re-skins the monster roles and brings its own boss and twist.** The roles stay mechanical building blocks (Brute, Caster, Sniper, Stalker, Support, each mirroring a hero class), so new encounters are mostly configuration in `src/rules/encounters.json`. How a week's encounter is chosen (rotation, random, scaling through the season) is still open; for now every battle is the Goblin Horde.
+
+### Goblin Horde
+
+| Role (mirrors) | Mechanics | Goblin Horde |
+| --- | --- | --- |
+| Minion | Goblin | Goblin |
+| Support (Cleric) | Shaman | Goblin Shaman |
+| Sniper (Ranger) | Hunter | Goblin Sharpshooter |
+| Brute (Warrior) | Ogre | Ogre (hired muscle) |
+| Caster (Wizard) | Warlock | Goblin Hexer |
+| Stalker (Rogue) | Assassin | Goblin Cutthroat |
+| Boss | Chieftain | Goblin Chieftain |
+
+**Twist:** Pack Tactics (+1 damage per other goblin *minion*) and Guarded by the Pack (the Shaman can't be targeted while 2+ goblin minions live).
+
+**Goblin Chieftain (boss kit).** The week's best opposing performance leads the horde; its best tier as any Champion type sets its strength (HP 36–72, damage 10–19), and if that player was already mirrored they become the Chieftain instead. Two actions a round and the boss enrage (+5 below half HP).
+- **Passive · Chieftain's Command:** every goblin (minions and the goblin Champions, not the Ogre) deals +1 damage while the Chieftain lives.
+- **Special · Call the Pack** (every other round on the field, telegraphed): two fresh goblins join and fight from the next round.
+
+Encounters without their own boss fall back to the classic Warlord: a boosted copy of the top performer's Champion (double HP, +2 damage).
+
 ## Monster behaviors
 
 Monsters follow fixed behaviors; the opposing player's tier scales their HP and damage. Each Champion counters a different hero, so the horde's makeup changes which of your heroes is under pressure.
@@ -433,5 +457,6 @@ Gaps in the rules above, filled in for the first build. All live in `src/rules/`
 - [ ] Tune PP earn rates and upgrade costs in playtests
 - [ ] Horde scaling: tie horde strength to PP invested
 - [ ] Mid-week injury exception: needed, and what form?
-- [ ] Playtest horde difficulty: tuned to ~72% bot wins, ~7 rounds, ~1.9 heroes fallen per battle (the bot is a weak player; target ~85–90% for a thoughtful human)
+- [ ] Playtest horde difficulty: tuned to ~73% bot wins, ~7.3 rounds, ~1.9 heroes fallen per battle (the bot is a weak player; target ~85–90% for a thoughtful human)
+- [ ] Decide how encounters are deployed week to week (rotation, random, scaling through the season)
 - [ ] Explore class-specific energy gain in combat, e.g. Warrior +1 when hit, Cleric +1 per heal cast, Rogue +2 on a kill

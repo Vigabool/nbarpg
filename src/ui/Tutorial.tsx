@@ -4,7 +4,8 @@ import type { ActionDef } from '../rules';
 import { CLASSES, rules, type ChampionKind, type HeroClass, type MonsterKind } from '../rules';
 import type { JSX, ReactNode } from 'react';
 import { SampleTurn } from './SampleTurn';
-import { CLASS_ICON, MONSTER_ICON, money } from './common';
+import { encounterOf, monsterIcon, monsterName, monsterShort } from '../engine/encounter';
+import { CLASS_ICON, money } from './common';
 
 const SEEN_KEY = 'nbarpg.tutorialSeen';
 
@@ -351,15 +352,17 @@ function EnemiesTab({ initial }: { initial?: EnemyPage }) {
   const c = rules.combat;
   const w = rules.horde.warlord;
   const every = c.specialEveryNRounds === 2 ? 'every other round' : `every ${c.specialEveryNRounds} rounds`;
-  const label = (p: EnemyPage) => (p === 'warlord' ? 'Warlord' : rules.monsters[p].name);
-  const icon = (p: EnemyPage) => (p === 'warlord' ? '👑' : MONSTER_ICON[p]);
+  const enc = encounterOf();
+  // The boss page shows the encounter's own boss, or the classic Warlord.
+  const label = (p: EnemyPage) => (p === 'warlord' ? (enc.boss ? monsterShort(enc.boss) : 'Warlord') : monsterShort(p));
+  const icon = (p: EnemyPage) => (p === 'warlord' ? (enc.boss ? monsterIcon(enc.boss) : '👑') : monsterIcon(p));
 
   let body: JSX.Element;
   if (page === 'goblin') {
     const bands = rules.horde.minions.damageByTeamFgPct.map((b) => b.damage);
     body = (
       <>
-        <EnemyHead icon={icon(page)} name="Goblin" sub="Minion · from opposing team points" />
+        <EnemyHead icon={icon(page)} name={monsterName('goblin')} sub="Minion · from opposing team points" />
         <div className="row" style={{ gap: 6 }}>
           <span className="chip">❤ {rules.monsters.goblin.hp} HP</span>
           <span className="chip">⚔ {range(bands)} by team FG%</span>
@@ -373,6 +376,33 @@ function EnemiesTab({ initial }: { initial?: EnemyPage }) {
           title="Waves"
           text={`Goblins split ${rules.horde.minions.waveShare.map((x) => `${Math.round(x * 100)}%`).join(' / ')} across the three waves. Wave 1's pack guards the Shaman.`}
         />
+      </>
+    );
+  } else if (page === 'warlord' && enc.boss) {
+    const boss = rules.monsters[enc.boss];
+    const sp = (c.specials as Record<string, { name: string; description: string } | undefined>)[boss.behavior];
+    body = (
+      <>
+        <EnemyHead icon={icon(page)} name={monsterName(enc.boss)} sub="The boss · the week's best opposing performance" />
+        <div className="row" style={{ gap: 6 }}>
+          <span className="chip">❤ {range(boss.hpByTier)} HP</span>
+          <span className="chip">⚔ {range(boss.damageByTier)}</span>
+          <span className="chip">{w.extraActions + 1} actions a round</span>
+        </div>
+        <p className="small">
+          The single best opposing line (points + rebounds + assists) across your chosen games leads the horde. Its best tier as any
+          Champion type sets its strength, and if that player was already a Champion, they become the boss instead. It arrives in the last
+          wave.
+        </p>
+        {sp && <Feature title={`⚠ Special · ${sp.name}`} text={`${sp.description}. Fires ${every} on the field, starting its 2nd round; flagged ⚠ the round before.`} warn />}
+        {monsterPassives(enc.boss).map((p) => (
+          <Feature key={p.title} title={`Passive · ${p.title}`} text={p.text} />
+        ))}
+        <Feature
+          title={`Enrage · below ${Math.round(c.warlordEnrage.atHpFraction * 100)}% HP`}
+          text={`+${c.warlordEnrage.damageBonus} damage for the rest of the battle. Save burst for the finish.`}
+        />
+        <Feature title="Picking games" text="Your hero's best night against a team whose star also went off can build your own final boss." />
       </>
     );
   } else if (page === 'warlord') {
@@ -402,7 +432,11 @@ function EnemiesTab({ initial }: { initial?: EnemyPage }) {
     const passives = monsterPassives(page);
     body = (
       <>
-        <EnemyHead icon={icon(page)} name={m.name} sub={`Mirrors your ${rules.classes[m.mirrors!].name}`} />
+        <EnemyHead
+          icon={icon(page)}
+          name={monsterName(page)}
+          sub={`Mirrors your ${rules.classes[m.mirrors!].name}${enc.monsters[page]?.flavor ? ` · ${enc.monsters[page]!.flavor}` : ''}`}
+        />
         <div className="row" style={{ gap: 6 }}>
           <span className="chip">❤ {range(m.hpByTier)} HP</span>
           <span className="chip">⚔ {range(m.damageByTier)}</span>
@@ -419,6 +453,11 @@ function EnemiesTab({ initial }: { initial?: EnemyPage }) {
 
   return (
     <div className="stack" style={{ gap: 12 }}>
+      <div className="stack" style={{ gap: 2 }}>
+        <span className="section-label">Encounter</span>
+        <strong>{enc.name}</strong>
+        <span className="small muted">{enc.tagline}</span>
+      </div>
       <p className="small muted" style={{ margin: 0 }}>
         Waves arrive on a clock (rounds {c.waveArrivalRounds.join(' and ')}) or as soon as the field is clear. Each hero's game brings one
         mirrored Champion. Opposing turnovers stagger Champions (one lost action per {rules.horde.turnoversPerStagger}).
@@ -454,6 +493,7 @@ export function monsterPassives(kind: MonsterKind): { title: string; text: strin
   const m = rules.monsters[kind];
   const out: { title: string; text: string }[] = [];
   if (kind === 'goblin') out.push({ title: c.packTactics.name, text: `${c.packTactics.description}. Thin the pack and every goblin hits softer.` });
+  if (m.behavior === 'chieftain') out.push({ title: c.chieftainCommand.name, text: `${c.chieftainCommand.description}: minions and the goblin Champions, not the Ogre. Kill the Chieftain and the buff ends.` });
   const wave = rules.horde.championWave?.[kind as ChampionKind];
   if (wave) out.push({ title: `Arrives with wave ${wave}`, text: 'Always part of this wave, so its timing is predictable.' });
   if (m.ignoresTaunt) out.push({ title: 'Ignores taunts', text: "Provoke, Bulwark and the Bear don't work on it." });

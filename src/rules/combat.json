@@ -9,7 +9,7 @@
     "ogre": {
       "name": "Ground Slam",
       "short": "Slam",
-      "description": "Hits every hero for its damage \u22122 and knocks its target prone",
+      "description": "Hits every hero for its damage −2 and knocks its target prone",
       "splashPenalty": 2
     },
     "hunter": {
@@ -28,7 +28,7 @@
     "warlock": {
       "name": "Hex",
       "short": "Hex",
-      "description": "Curses the party (\u22122 damage for 2 turns) and deals 3 to every hero, ignoring armor",
+      "description": "Curses the party (−2 damage for 2 turns) and deals 3 to every hero, ignoring armor",
       "damage": 3
     },
     "shaman": {
@@ -36,6 +36,12 @@
       "short": "Drum",
       "description": "Beats the drum before the horde acts: every monster deals +2 damage this round",
       "bonus": 2
+    },
+    "chieftain": {
+      "name": "Call the Pack",
+      "short": "Call",
+      "description": "Two fresh goblins join the fight",
+      "goblins": 2
     }
   },
   "warlockCurse": {
@@ -60,7 +66,7 @@
   "summonsAppearInLowestHpTargeting": true,
   "packTactics": {
     "name": "Pack Tactics",
-    "description": "+1 damage for each other goblin on the field",
+    "description": "+1 damage for each other goblin minion on the field",
     "bonusPerOtherGoblin": 1
   },
   "packGuard": {
@@ -70,5 +76,10 @@
     "guarded": [
       "shaman"
     ]
+  },
+  "chieftainCommand": {
+    "name": "Chieftain's Command",
+    "description": "Every goblin deals +1 damage while the Chieftain lives",
+    "bonus": 1
   }
 }

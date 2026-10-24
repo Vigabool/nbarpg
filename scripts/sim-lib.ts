@@ -62,7 +62,8 @@ export function simulate(data: SeasonData, battles: number, seedIn = 1): SimResu
     r.waves[Math.min(3, end.stats.wavesCleared)]++;
     r.fallen += end.heroes.filter((h) => !h.alive).length;
     for (const l of end.log) {
-      if (l.side !== 'enemy' || !l.text.startsWith('Goblin') || !l.short?.startsWith('→')) continue;
+      const actor = end.enemies.find((e) => e.id === l.actorId);
+      if (l.side !== 'enemy' || actor?.kind !== 'goblin' || !l.short?.startsWith('→')) continue;
       r.gobAttacks++;
       r.gobDamage += Number(l.short.match(/(\d+)/)?.[1] ?? 0);
     }

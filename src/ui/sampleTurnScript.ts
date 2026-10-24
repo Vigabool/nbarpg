@@ -9,6 +9,7 @@ import {
   type HeroSetup,
   type LogEntry,
 } from '../engine/combat';
+import { monsterName } from '../engine/encounter';
 import type { MonsterSpec } from '../engine/horde';
 import type { PoolBreakdown } from '../engine/rating';
 import { rules, type HeroClass } from '../rules';
@@ -27,7 +28,7 @@ function monster(id: string, kind: MonsterSpec['kind'], hp: number, damage: numb
   return {
     id,
     kind,
-    name: kind === 'goblin' ? 'Goblin' : rules.monsters[kind].name,
+    name: monsterName(kind),
     hp,
     damage,
     tier: kind === 'goblin' ? undefined : 'good',

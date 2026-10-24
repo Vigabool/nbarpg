@@ -17,7 +17,7 @@ export interface PreparedBattle {
   battle: BattleState;
 }
 
-export function prepareBattle(picks: HeroGamePick[], data: SeasonData, rules: Rules = defaultRules): PreparedBattle {
+export function prepareBattle(picks: HeroGamePick[], data: SeasonData, rules: Rules = defaultRules, encounter?: string): PreparedBattle {
   const pools: Partial<Record<HeroClass, PoolBreakdown>> = {};
   const heroes: HeroSetup[] = picks.map((p) => {
     const line = playerLine(data, p.gameId, p.playerId);
@@ -27,6 +27,6 @@ export function prepareBattle(picks: HeroGamePick[], data: SeasonData, rules: Ru
     const player = data.players[p.playerId];
     return { heroClass: p.heroClass, playerId: p.playerId, playerName: player.name, gear: gearDamage(p.heroClass, player.avg, rules), pool };
   });
-  const horde = buildHorde(picks, data, rules);
-  return { picks, pools, heroes, horde, battle: createBattle(heroes, horde.waves, rules) };
+  const horde = buildHorde(picks, data, rules, encounter);
+  return { picks, pools, heroes, horde, battle: createBattle(heroes, horde.waves, rules, encounter ?? rules.encounters.default) };
 }

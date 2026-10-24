@@ -10,15 +10,6 @@ export const CLASS_ICON: Record<HeroClass, string> = {
   wizard: '🔮',
 };
 
-export const MONSTER_ICON: Record<string, string> = {
-  goblin: '👺',
-  ogre: '👹',
-  warlock: '🧙',
-  hunter: '🎯',
-  assassin: '🥷',
-  shaman: '🪬',
-};
-
 export const TIER_LABEL: Record<Tier, string> = {
   cold: 'Cold',
   average: 'Average',

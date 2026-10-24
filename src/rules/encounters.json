@@ -1,0 +1,20 @@
+{
+  "default": "goblin-horde",
+  "encounters": {
+    "goblin-horde": {
+      "name": "Goblin Horde",
+      "tagline": "A goblin warband led by its Chieftain, with a shaman, a sharpshooter, a hexer, a cutthroat and an ogre for hire.",
+      "boss": "chieftain",
+      "goblinKin": ["goblin", "warlock", "hunter", "assassin", "shaman"],
+      "monsters": {
+        "goblin": { "name": "Goblin", "short": "Goblin", "icon": "👺" },
+        "ogre": { "name": "Ogre", "short": "Ogre", "icon": "👹", "flavor": "Hired muscle" },
+        "warlock": { "name": "Goblin Hexer", "short": "Hexer", "icon": "🧙" },
+        "hunter": { "name": "Goblin Sharpshooter", "short": "Sharpshooter", "icon": "🎯" },
+        "assassin": { "name": "Goblin Cutthroat", "short": "Cutthroat", "icon": "🔪" },
+        "shaman": { "name": "Goblin Shaman", "short": "Shaman", "icon": "🪬" },
+        "chieftain": { "name": "Goblin Chieftain", "short": "Chieftain", "icon": "👑" }
+      }
+    }
+  }
+}
