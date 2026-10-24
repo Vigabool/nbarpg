@@ -165,7 +165,7 @@ select.input { appearance: auto; }
 .modal-backdrop {
   position: fixed; inset: 0; z-index: 50;
   background: rgb(8 6 14 / 0.72);
-  display: grid; place-items: center;
+  display: grid; place-items: center; grid-template-columns: minmax(0, 1fr);
   padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
 }
 .modal {
@@ -423,3 +423,13 @@ select.input { appearance: auto; }
 .sample-dots { display: flex; gap: 5px; }
 .sample-dots span { width: 7px; height: 7px; border-radius: 50%; background: var(--line); }
 .sample-dots span.on { background: var(--gold); }
+
+/* ---------- Battle: horde detail sheet ---------- */
+.foe-picker { display: flex; flex-shrink: 0; gap: 6px; overflow-x: auto; min-width: 0; max-width: 100%; padding-bottom: 2px; scrollbar-width: thin; }
+.foe-picker .class-pick { position: relative; flex: 0 0 auto; min-width: 72px; overflow: hidden; }
+.foe-hp { position: absolute; left: 0; bottom: 0; height: 3px; background: var(--good); }
+.now-chip.warn { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 60%, var(--line)); }
+.now-chip.shield { color: var(--info); border-color: color-mix(in srgb, var(--info) 50%, var(--line)); }
+.now-chip.taunt { color: var(--gold-2); border-color: var(--gold); }
+.now-chip.poison { color: var(--poison); border-color: var(--poison); }
+.now-chip.curse { color: #d59cf5; border-color: #9b5cc4; }

@@ -25,7 +25,7 @@ import {
   type SummonState,
 } from '../engine/combat';
 import { rules, type HeroClass, type Tier } from '../rules';
-import type { EnemyPage, TutorialTopic } from './Tutorial';
+import { EnemyHead, Feature, monsterBehavior, monsterPassives, type EnemyPage, type TutorialTopic } from './Tutorial';
 import { CLASS_ICON, ConfirmButton, MONSTER_ICON, TIER_LABEL, TierChip, statLine, weekLabel } from './common';
 
 interface Props {
@@ -349,7 +349,8 @@ export function BattleScreen({ data, game, onChange, onHelp, onQuit }: Props) {
       {logOpen && <LogDrawer log={state.log} onClose={() => setLogOpen(false)} />}
       {detail && (
         <EnemyDetail
-          enemies={detail.map((id) => state.enemies.find((e) => e.id === id)!).filter((e) => e && e.alive)}
+          groups={[...champions.map((e) => [e]), ...goblinGroups]}
+          initialId={detail[0]}
           state={state}
           intents={intents}
           onClose={() => setDetail(null)}
@@ -615,26 +616,30 @@ function GoblinStack({
   );
 }
 
-/** Full details for an enemy (or a goblin stack), opened by tapping its card. */
+/** Full details for the horde, opened by tapping a card. Tabs flip between every foe on the field. */
 function EnemyDetail({
-  enemies,
+  groups,
+  initialId,
   state,
   intents,
   onClose,
   onHelp,
 }: {
-  enemies: EnemyState[];
+  groups: EnemyState[][];
+  initialId: string;
   state: BattleState;
   intents: Record<string, Intent>;
   onClose: () => void;
   onHelp: (enemy: EnemyPage) => void;
 }) {
+  const [idx, setIdx] = useState(() => Math.max(0, groups.findIndex((g) => g.some((e) => e.id === initialId))));
   useEffect(() => {
     const onKey = (ev: KeyboardEvent) => ev.key === 'Escape' && onClose();
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
-  if (enemies.length === 0) return null;
+  if (groups.length === 0) return null;
+  const enemies = groups[Math.min(idx, groups.length - 1)];
   const e = enemies[0];
   const def = rules.monsters[e.kind];
   const special = specialOf(e);
@@ -643,73 +648,104 @@ function EnemyDetail({
   const n = rules.combat.specialEveryNRounds;
   let nextSpecial: number | null = null;
   if (special) for (let r = state.round; r < state.round + n + 1; r++) if (specialDue(e, r)) { nextSpecial = r; break; }
-  const statuses: string[] = [];
-  if (e.enraged) statuses.push(`Enraged: +${rage.damageBonus} damage for the rest of the battle`);
-  if (e.drum && e.drum.round >= state.round) statuses.push(`War Drum: +${e.drum.amount} damage ${e.drum.round === state.round ? 'this round' : 'next round'}`);
+  const when = nextSpecial === state.round ? 'this round' : nextSpecial === state.round + 1 ? 'next round' : `round ${nextSpecial}`;
+
+  const now: { text: string; tone: string }[] = [];
+  if (e.enraged) now.push({ text: `🔥 Enraged +${rage.damageBonus}`, tone: 'warn' });
+  if (e.drum && e.drum.round >= state.round) now.push({ text: `🥁 War Drum +${e.drum.amount} ${e.drum.round === state.round ? 'this round' : 'next round'}`, tone: 'warn' });
+  if (isGuarded(state, e)) now.push({ text: '🔒 Guarded now', tone: 'shield' });
+  if (packBonus(state, e) > 0) now.push({ text: `🐺 Pack +${packBonus(state, e)}`, tone: '' });
   if (e.tauntedBy) {
     const h = state.heroes.find((x) => x.id === e.tauntedBy);
-    statuses.push(`Taunted by ${h ? rules.classes[h.heroClass].name : state.summons.find((x) => x.id === e.tauntedBy)?.name ?? 'an ally'}`);
+    now.push({ text: `⚑ Taunted by ${h ? rules.classes[h.heroClass].name : state.summons.find((x) => x.id === e.tauntedBy)?.name ?? 'an ally'}`, tone: 'taunt' });
   }
-  if (e.poison) statuses.push(`Poisoned: ${e.poison.perRound} damage for ${e.poison.rounds} more rounds`);
-  if (e.weaken) statuses.push(`Cursed: deals ${e.weaken.amount} less damage for ${e.weaken.rounds} rounds`);
-  if (enemyArmor(e) > 0) statuses.push(`Shielded: +${enemyArmor(e)} armor`);
-  if (isGuarded(state, e))
-    statuses.push(`${rules.combat.packGuard.name}: can't be targeted while ${rules.combat.packGuard.minGoblins}+ goblins are alive. Attacks that hit every enemy still land.`);
-  if (packBonus(state, e) > 0)
-    statuses.push(`${rules.combat.packTactics.name}: +${packBonus(state, e)} damage from the other goblins on the field`);
-  if (e.staggers > 0) statuses.push(`Staggered: loses its next ${e.staggers > 1 ? `${e.staggers} actions` : 'action'}`);
-  const plan = enemies.flatMap((x) => intents[x.id]?.full ?? []);
+  if (e.poison) now.push({ text: `☣ Poison ${e.poison.perRound} × ${e.poison.rounds} rounds`, tone: 'poison' });
+  if (e.weaken) now.push({ text: `↓ Cursed −${e.weaken.amount} for ${e.weaken.rounds} rounds`, tone: 'curse' });
+  if (enemyArmor(e) > 0) now.push({ text: `⛨ Shielded +${enemyArmor(e)}`, tone: 'shield' });
+  if (e.staggers > 0) now.push({ text: `💫 Staggered: loses ${e.staggers > 1 ? `${e.staggers} actions` : 'its next action'}`, tone: '' });
+
+  const short = enemies.flatMap((x) => intents[x.id]?.short ?? []);
+  const full = enemies.flatMap((x) => intents[x.id]?.full ?? []);
+  const label = (g: EnemyState[]) => (g[0].isWarlord ? 'Warlord' : rules.monsters[g[0].kind].name);
   return (
     <div className="modal-backdrop drawer" onClick={onClose}>
-      <div className="modal" role="dialog" aria-modal="true" aria-label={e.name} onClick={(ev) => ev.stopPropagation()}>
+      <div className="modal" role="dialog" aria-modal="true" aria-label="The horde" onClick={(ev) => ev.stopPropagation()}>
         <div className="spread">
-          <h2>
-            {MONSTER_ICON[e.kind]} {e.isWarlord ? `Warlord ${def.name}` : def.name}
-            {enemies.length > 1 && ` ×${enemies.length}`}
-          </h2>
+          <h2>The horde</h2>
           <button className="btn ghost small" onClick={onClose} aria-label="Close">
             ✕
           </button>
         </div>
-        <div className="modal-body stack" style={{ gap: 10 }}>
-          <div className="row small">
-            {player && <span>{player}</span>}
-            {e.tier && <TierChip tier={e.tier} />}
-            <span className="chip">⚔ {enemyDamage(state, e)}{e.isWarlord ? ' ×2 actions' : ''}</span>
-            <span className="chip">
-              {enemies.length > 1 ? enemies.map((x) => x.hp).join(' / ') : `${e.hp}/${e.maxHp}`} HP
-            </span>
+        <div className="foe-picker" role="tablist" aria-label="Foes on the field">
+          {groups.map((g, i) => (
+            <button key={g[0].id} role="tab" aria-selected={i === idx} className={`class-pick${i === idx ? ' active' : ''}`} onClick={() => setIdx(i)}>
+              <span className="class-pick-icon" aria-hidden>
+                {g[0].isWarlord ? '👑' : MONSTER_ICON[g[0].kind]}
+              </span>
+              <span>
+                {label(g)}
+                {g.length > 1 ? ` ×${g.length}` : ''}
+              </span>
+              <span className="foe-hp" style={{ width: `${(g.reduce((t, x) => t + x.hp, 0) / g.reduce((t, x) => t + x.maxHp, 0)) * 100}%` }} />
+            </button>
+          ))}
+        </div>
+        <div className="modal-body class-panel">
+          <EnemyHead
+            icon={e.isWarlord ? '👑' : MONSTER_ICON[e.kind]}
+            name={`${e.isWarlord ? `Warlord ${def.name}` : def.name}${enemies.length > 1 ? ` ×${enemies.length}` : ''}`}
+            sub={
+              <span className="row" style={{ gap: 6 }}>
+                {player ? <span>{player}</span> : <span>{e.name}</span>}
+                {e.tier && <TierChip tier={e.tier} />}
+              </span>
+            }
+          />
+          <div className="row" style={{ gap: 6 }}>
+            <span className="chip">❤ {enemies.length > 1 ? enemies.map((x) => x.hp).join(' / ') : `${e.hp}/${e.maxHp}`} HP</span>
+            <span className="chip">⚔ {enemyDamage(state, e)}</span>
+            {e.isWarlord && <span className="chip">{e.extraActions + 1} actions a round</span>}
           </div>
           {e.spec.source && <div className="tiny muted">{statLine(e.spec.source.line)}</div>}
-          <p className="small" style={{ margin: 0 }}>{def.description.split('. Special:')[0]}.</p>
-          {e.isWarlord && (
-            <p className="small" style={{ margin: 0 }}>
-              Warlord: double HP, +{rules.horde.warlord.damageBonus} damage, two actions a round; enrages below half HP (+{rage.damageBonus}).
-            </p>
-          )}
-          {special && (
-            <div className="small">
-              <strong>⚠ {special.name}</strong>
-              <span className="muted">
-                {' '}
-                ({nextSpecial === state.round ? 'this round' : nextSpecial === state.round + 1 ? 'next round' : `round ${nextSpecial}`})
-              </span>
-              <div className="muted">{special.description}.</div>
-            </div>
-          )}
-          {statuses.length > 0 && (
-            <ul className="small detail-list">
-              {statuses.map((t) => (
-                <li key={t}>{t}</li>
+          <p className="small" style={{ margin: 0 }}>
+            {monsterBehavior(e.kind)}.
+          </p>
+          {now.length > 0 && (
+            <div className="row" style={{ gap: 6 }}>
+              {now.map((x) => (
+                <span key={x.text} className={`chip now-chip ${x.tone}`}>
+                  {x.text}
+                </span>
               ))}
-            </ul>
-          )}
-          <div className="small">
-            <strong>This round</strong>
-            <div className="muted">
-              {justArrived(state, e) ? 'Just arrived: acts next round.' : plan.length ? plan.join(' ') : 'Nothing planned.'}
             </div>
-          </div>
+          )}
+          <Feature
+            title="This round"
+            text={
+              justArrived(state, e) ? (
+                'Just arrived: acts next round.'
+              ) : short.length ? (
+                <>
+                  <span className="u-intent">{short.join(' · ')}</span>
+                  <span className="tiny muted" style={{ display: 'block' }}>
+                    {full.join(' ')}
+                  </span>
+                </>
+              ) : (
+                'Nothing planned.'
+              )
+            }
+          />
+          {special && <Feature title={`⚠ Special · ${special.name} (${when})`} text={`${special.description}.`} warn />}
+          {e.isWarlord && (
+            <Feature
+              title={`Warlord · enrages below ${Math.round(rage.atHpFraction * 100)}% HP`}
+              text={`Double HP, +${rules.horde.warlord.damageBonus} damage and two actions a round. Enraged, it hits +${rage.damageBonus} harder.`}
+            />
+          )}
+          {monsterPassives(e.kind).map((p) => (
+            <Feature key={p.title} title={`Passive · ${p.title}`} text={p.text} />
+          ))}
           <button className="btn small" style={{ alignSelf: 'flex-start' }} onClick={() => onHelp(e.isWarlord ? 'warlord' : e.kind)}>
             More in How to play →
           </button>

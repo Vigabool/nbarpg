@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { energyGain, isAttack } from '../engine/combat';
 import type { ActionDef } from '../rules';
-import { CLASSES, rules, type ChampionKind, type HeroClass } from '../rules';
-import type { JSX } from 'react';
+import { CLASSES, rules, type ChampionKind, type HeroClass, type MonsterKind } from '../rules';
+import type { JSX, ReactNode } from 'react';
 import { SampleTurn } from './SampleTurn';
 import { CLASS_ICON, MONSTER_ICON, money } from './common';
 
@@ -365,8 +365,10 @@ function EnemiesTab({ initial }: { initial?: EnemyPage }) {
           <span className="chip">⚔ {range(bands)} by team FG%</span>
           <span className="chip">1 per {rules.horde.minions.teamPointsPerGoblin} opposing points</span>
         </div>
-        <p className="small">{rules.monsters.goblin.description.split('. Passive:')[0]}.</p>
-        <Feature title={`Passive · ${c.packTactics.name}`} text={`${c.packTactics.description}. Thin the pack and every goblin hits softer.`} />
+        <p className="small">{monsterBehavior('goblin')}.</p>
+        {monsterPassives('goblin').map((p) => (
+          <Feature key={p.title} title={`Passive · ${p.title}`} text={p.text} />
+        ))}
         <Feature
           title="Waves"
           text={`Goblins split ${rules.horde.minions.waveShare.map((x) => `${Math.round(x * 100)}%`).join(' / ')} across the three waves. Wave 1's pack guards the Shaman.`}
@@ -396,19 +398,8 @@ function EnemiesTab({ initial }: { initial?: EnemyPage }) {
   } else {
     const m = rules.monsters[page];
     const sp = (c.specials as Record<string, { name: string; description: string } | undefined>)[m.behavior];
-    // The description holds behavior, then "Special: …". Wave and guard notes appear as their own lines below.
-    const behavior = m.description
-      .split('. Special:')[0]
-      .replace(/\s*Arrives with wave \d+\./, '')
-      .replace(/\s*Guarded by the Pack:[^)]*\)/, '')
-      .replace(/\.$/, '');
-    const passives: { title: string; text: string }[] = [];
-    const wave = rules.horde.championWave?.[page as ChampionKind];
-    if (wave) passives.push({ title: `Arrives with wave ${wave}`, text: 'Always part of this wave, so its timing is predictable.' });
-    if (m.ignoresTaunt) passives.push({ title: 'Ignores taunts', text: "Provoke, Bulwark and the Bear don't work on it." });
-    if (c.packGuard.guarded.includes(m.behavior))
-      passives.push({ title: c.packGuard.name, text: `${c.packGuard.description}.` });
-    if (m.behavior === 'assassin') passives.push({ title: 'Energy drain', text: `Each hit drains ${c.assassinDrain} energy from its target.` });
+    const behavior = monsterBehavior(page);
+    const passives = monsterPassives(page);
     body = (
       <>
         <EnemyHead icon={icon(page)} name={m.name} sub={`Mirrors your ${rules.classes[m.mirrors!].name}`} />
@@ -447,7 +438,31 @@ function EnemiesTab({ initial }: { initial?: EnemyPage }) {
   );
 }
 
-function EnemyHead({ icon, name, sub }: { icon: string; name: string; sub: string }) {
+/** What a monster does, without its special or passives (shown separately). */
+export function monsterBehavior(kind: MonsterKind): string {
+  return rules.monsters[kind].description
+    .split('. Special:')[0]
+    .split('. Passive:')[0]
+    .replace(/\s*Arrives with wave \d+\./, '')
+    .replace(/\s*Guarded by the Pack:[^)]*\)/, '')
+    .replace(/\.$/, '');
+}
+
+/** A monster's standing rules, as titled cards. */
+export function monsterPassives(kind: MonsterKind): { title: string; text: string }[] {
+  const c = rules.combat;
+  const m = rules.monsters[kind];
+  const out: { title: string; text: string }[] = [];
+  if (kind === 'goblin') out.push({ title: c.packTactics.name, text: `${c.packTactics.description}. Thin the pack and every goblin hits softer.` });
+  const wave = rules.horde.championWave?.[kind as ChampionKind];
+  if (wave) out.push({ title: `Arrives with wave ${wave}`, text: 'Always part of this wave, so its timing is predictable.' });
+  if (m.ignoresTaunt) out.push({ title: 'Ignores taunts', text: "Provoke, Bulwark and the Bear don't work on it." });
+  if (c.packGuard.guarded.includes(m.behavior)) out.push({ title: c.packGuard.name, text: `${c.packGuard.description}.` });
+  if (m.behavior === 'assassin') out.push({ title: 'Energy drain', text: `Each hit drains ${c.assassinDrain} energy from its target.` });
+  return out;
+}
+
+export function EnemyHead({ icon, name, sub }: { icon: string; name: string; sub: ReactNode }) {
   return (
     <div className="class-head">
       <span className="class-big-icon" aria-hidden>
@@ -461,7 +476,7 @@ function EnemyHead({ icon, name, sub }: { icon: string; name: string; sub: strin
   );
 }
 
-function Feature({ title, text, warn }: { title: string; text: string; warn?: boolean }) {
+export function Feature({ title, text, warn }: { title: ReactNode; text: ReactNode; warn?: boolean }) {
   return (
     <div className={`ability-detail${warn ? ' warn' : ''}`}>
       <strong className="small">{title}</strong>
