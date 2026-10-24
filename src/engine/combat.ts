@@ -72,7 +72,10 @@ export interface EnemyState {
   tier?: MonsterSpec['tier'];
   isWarlord: boolean;
   extraActions: number;
-  staggers: number;
+  /** Fumbles from its player's turnovers: the party can spend one to cancel its next action. */
+  fumbles: number;
+  /** A Fumble was spent: it loses its next action. */
+  fumbled?: boolean;
   alive: boolean;
   shield: { armor: number; rounds: number } | null;
   poison: { perRound: number; rounds: number } | null;
@@ -166,7 +169,7 @@ function makeEnemy(spec: MonsterSpec, arrivedRound: number, wave: number): Enemy
     tier: spec.tier,
     isWarlord: spec.isWarlord,
     extraActions: spec.extraActions,
-    staggers: spec.staggers,
+    fumbles: spec.fumbles,
     alive: true,
     shield: null,
     poison: null,
@@ -588,6 +591,22 @@ export function actionDamage(def: ActionDef, hero: HeroState): string | null {
 function heroHitAmount(hero: HeroState, base: number): number {
   const curse = hero.curse && hero.curse.rounds > 0 ? hero.curse.amount : 0;
   return Math.max(0, Math.floor(base * hero.nextAttackMultiplier) - curse);
+}
+
+/** The party can spend one of this enemy's Fumbles: it has one left and none is pending. */
+export function canFumble(state: BattleState, e: EnemyState): boolean {
+  return state.phase === 'party' && e.alive && (e.fumbles ?? 0) > 0 && !e.fumbled;
+}
+
+/** Spends a Fumble: the enemy loses its next action (a special due then doesn't fire). Free for the party. */
+export function spendFumble(prev: BattleState, enemyId: string): BattleState {
+  const state = clone(prev);
+  const e = state.enemies.find((x) => x.id === enemyId);
+  if (!e || !canFumble(state, e)) throw new Error(`Can't fumble ${enemyId}`);
+  e.fumbles--;
+  e.fumbled = true;
+  log(state, 'hero', `${e.name} fumbles: it will lose its next action.`, undefined, [e.id]);
+  return state;
 }
 
 export function performAction(prev: BattleState, action: HeroAction, rules: Rules = defaultRules): BattleState {
@@ -1027,7 +1046,7 @@ function doSpecial(state: BattleState, enemy: EnemyState, rules: Rules): boolean
           damage: rules.horde.minions.damageByTeamFgPct[1].damage,
           isWarlord: false,
           extraActions: 0,
-          staggers: 0,
+          fumbles: 0,
         };
         // They join now and fight from next round.
         state.enemies.push(makeEnemy(spec, state.round, enemy.wave));
@@ -1047,9 +1066,9 @@ function doSpecial(state: BattleState, enemy: EnemyState, rules: Rules): boolean
 
 function enemyAct(state: BattleState, enemy: EnemyState, actionNumber: number, rules: Rules) {
   if (!enemy.alive || behaviorFor(state, enemy, rules) === 'phylactery') return;
-  if (enemy.staggers > 0) {
-    enemy.staggers--;
-    log(state, 'enemy', `${enemy.name} is staggered and loses its action.`, enemy.id, undefined, '💫 Staggered');
+  if (enemy.fumbled) {
+    enemy.fumbled = false;
+    log(state, 'enemy', `${enemy.name} fumbles and loses its action.`, enemy.id, undefined, '💫 Fumbles');
     return;
   }
   const behavior = behaviorFor(state, enemy, rules);

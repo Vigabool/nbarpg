@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { endRound, livingEnemies, listActions, nextWaveRound, performAction, previewEnemyPhase, previewRound, actionDamage, commandBonus, enemyDamage, isGuarded, packBonus, type BattleState } from '../src/engine/combat';
+import { canFumble, endRound, livingEnemies, spendFumble, specialDue, listActions, nextWaveRound, performAction, previewEnemyPhase, previewRound, actionDamage, commandBonus, enemyDamage, isGuarded, packBonus, type BattleState } from '../src/engine/combat';
 import { rules } from '../src/rules';
 import { battle, heroSetup, monster, party } from './helpers';
 
@@ -280,11 +280,26 @@ describe('the horde', () => {
     expect(enemy(s, g.id).shield?.armor).toBe(2);
   });
 
-  it('staggered champions skip their first action', () => {
-    const o = monster({ kind: 'ogre', damage: 9, hp: 99, staggers: 1 });
-    const s = endRound(battle([[o]]));
+  it('Fumbles do nothing until the party spends one; then the enemy loses its next action', () => {
+    const o = monster({ kind: 'ogre', damage: 9, hp: 99, fumbles: 2 });
+    let s = battle([[o]]);
+    expect(hero(endRound(s), 'warrior').hp).toBeLessThan(40);
+    s = spendFumble(s, o.id);
+    expect(enemy(s, o.id).fumbles).toBe(1);
+    expect(canFumble(s, enemy(s, o.id))).toBe(false); // one per action
+    s = endRound(s);
     expect(hero(s, 'warrior').hp).toBe(40);
-    expect(s.log.some((l) => l.text.includes('staggered'))).toBe(true);
+    expect(s.log.some((l) => l.text.includes('fumbles and loses its action'))).toBe(true);
+    expect(canFumble(s, enemy(s, o.id))).toBe(true);
+  });
+
+  it('a Fumble on a special round cancels the special', () => {
+    const o = monster({ kind: 'ogre', damage: 9, hp: 99, fumbles: 1 });
+    let s = battle([[o]]);
+    while (!specialDue(enemy(s, o.id), s.round)) s = endRound(s);
+    s = { ...s, heroes: s.heroes.map((h) => ({ ...h, hp: h.maxHp })) };
+    s = endRound(spendFumble(s, o.id));
+    expect(s.heroes.every((h) => h.hp === h.maxHp)).toBe(true);
   });
 
   it('the Warlord acts twice', () => {

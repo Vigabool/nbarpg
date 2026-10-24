@@ -34,7 +34,7 @@ function monster(id: string, kind: MonsterSpec['kind'], hp: number, damage: numb
     tier: kind === 'goblin' ? undefined : 'good',
     isWarlord: false,
     extraActions: 0,
-    staggers: 0,
+    fumbles: 0,
   };
 }
 

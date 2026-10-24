@@ -303,7 +303,7 @@ Monsters follow fixed behaviors; the opposing player's tier scales their HP and 
 
 Specials are telegraphed: the Champion's card shows a ⚠ warning the round before. Champion damage is about 2.4× the first draft. Simulation showed the horde rarely threatened the party; the extra goblins later let Champion damage come back down a little.
 
-**Opponent turnovers.** Every 3 turnovers by a Champion's mirrored player gives that Champion one stagger (it skips one action during the battle). This mirrors the hero turnover penalty.
+**Opponent turnovers → Fumbles.** Every 3 turnovers by a Champion's player (the boss included) gives the party one 💫 Fumble on that Champion. The party spends it whenever it likes, for free (no energy, no hero action), by tapping the 💫 on the Champion's card: the Champion loses its next action, and a special due then doesn't fire. One can be pending per Champion at a time, and unspent Fumbles are lost when it dies. The card shows the count and the turnovers behind it ("💫 2 · 7 TOV"), and the pick-games screen shows the Fumbles each game would bring, so a sloppy opponent is a reason to pick a game. This mirrors the hero turnover penalty, but as a tool the player controls.
 
 **Targeting default.** Unless its behavior says otherwise, a monster attacks a hero who taunted it, then the Warrior, then the hero with the lowest HP.
 

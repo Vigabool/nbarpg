@@ -63,8 +63,8 @@ describe('horde generation', () => {
     expect(h.warlord.damage).toBe(noBoss.monsters.warlock.damageByTier![3] + 2);
   });
 
-  it('staggers champions for turnovers (1 per 3)', () => {
-    expect(horde.warlord.staggers).toBe(1);
+  it('fumbles champions for turnovers (1 per 3)', () => {
+    expect(horde.warlord.fumbles).toBe(1);
   });
 
   it('adds goblins per opposing points, half in wave 1', () => {

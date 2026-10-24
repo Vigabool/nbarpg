@@ -19,7 +19,7 @@ export interface MonsterSpec {
   isWarlord: boolean;
   extraActions: number;
   /** Actions skipped on arrival, from the mirrored player's turnovers. */
-  staggers: number;
+  fumbles: number;
   /** For champions: the real performance behind them. */
   source?: { playerId: number; gameId: string; team: string; line: BoxLine; mirrorOf?: HeroClass };
 }
@@ -71,7 +71,7 @@ function makeChampion(
     tier,
     isWarlord: false,
     extraActions: 0,
-    staggers: Math.floor(line.tov / rules.horde.turnoversPerStagger),
+    fumbles: Math.floor(line.tov / rules.horde.turnoversPerFumble),
     source: { playerId: line.playerId, gameId, team: line.team, line, mirrorOf },
   };
 }
@@ -175,7 +175,7 @@ export function buildHorde(picks: HeroGamePick[], data: SeasonData, rules: Rules
         damage,
         isWarlord: false,
         extraActions: 0,
-        staggers: 0,
+        fumbles: 0,
       });
     }
   }
@@ -208,7 +208,7 @@ export function buildHorde(picks: HeroGamePick[], data: SeasonData, rules: Rules
       damage: def.damageByTier![t],
       isWarlord: false,
       extraActions: 0,
-      staggers: 0,
+      fumbles: 0,
     });
   }
 

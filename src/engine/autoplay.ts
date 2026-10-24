@@ -1,5 +1,5 @@
 import { rules as defaultRules, type Rules } from '../rules';
-import { endRound, listActions, livingEnemies, pickableEnemies, performAction, type ActionOption, type BattleState, type HeroAction, type HeroState } from './combat';
+import { canFumble, endRound, justArrived, listActions, livingEnemies, pickableEnemies, performAction, spendFumble, type ActionOption, type BattleState, type HeroAction, type HeroState } from './combat';
 
 /**
  * A simple rule-based player used by the batch simulator and tests. It is not
@@ -107,6 +107,8 @@ export function autoplay(initial: BattleState, rules: Rules = defaultRules): Bat
     const ready = state.heroes.filter((h) => h.alive && !h.acted && !h.prone).sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
     const first = ready[0];
     if (!first) {
+      // Spend every Fumble on an enemy that acts this round; they're lost when it dies.
+      for (const e of state.enemies) if (canFumble(state, e) && !justArrived(state, e)) state = spendFumble(state, e.id);
       state = endRound(state, rules);
       continue;
     }

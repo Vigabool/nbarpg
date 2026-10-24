@@ -472,7 +472,7 @@ function EnemiesTab({ initial, initialEncounter }: { initial?: EnemyPage; initia
       </div>
       <p className="small muted" style={{ margin: 0 }}>
         Waves arrive on a clock (rounds {c.waveArrivalRounds.join(' and ')}) or as soon as the field is clear. Each hero's game brings one
-        mirrored Champion. Opposing turnovers stagger Champions (one lost action per {rules.horde.turnoversPerStagger}).
+        mirrored Champion. Every {rules.horde.turnoversPerFumble} turnovers by a Champion's player give you a 💫 Fumble: tap it in battle to cancel that Champion's next action, specials included.
       </p>
       <div className="class-picker enemy-picker" role="tablist" aria-label="Enemies">
         {ENEMY_PAGES.map((p) => (

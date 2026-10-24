@@ -21,7 +21,7 @@ export function heroSetup(heroClass: HeroClass, line: Partial<StatLine> = {}, ge
 
 let n = 0;
 export function monster(partial: Partial<MonsterSpec> = {}): MonsterSpec {
-  return { id: `t${++n}`, kind: 'goblin', name: `Goblin ${n}`, hp: 8, damage: 3, isWarlord: false, extraActions: 0, staggers: 0, ...partial };
+  return { id: `t${++n}`, kind: 'goblin', name: `Goblin ${n}`, hp: 8, damage: 3, isWarlord: false, extraActions: 0, fumbles: 0, ...partial };
 }
 
 /** A full party with average nights (pool 20) and 4 gear damage. */

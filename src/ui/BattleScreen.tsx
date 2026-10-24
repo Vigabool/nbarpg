@@ -10,6 +10,8 @@ import {
   previewRound,
   actionDamage,
   commandSources,
+  canFumble,
+  spendFumble,
   phylactery,
   energyGain,
   enemyDamage,
@@ -88,6 +90,12 @@ export function BattleScreen({ data, game, onChange, onHelp, onQuit }: Props) {
   const targetType = action?.def.target.type;
   const targeting = !!action && (targetType === 'enemy' || targetType === 'enemies' || targetType === 'ally' || targetType === 'fallenAlly');
   const enemyTargeting = targeting && (targetType === 'enemy' || targetType === 'enemies');
+
+  // Spending a Fumble is free and undoable, like any action.
+  const fumble = (enemyId: string) => {
+    setUndo((u) => [...u, state]);
+    setBattle(spendFumble(state, enemyId));
+  };
 
   const run = (opt: ActionOption, targetIds: string[]) => {
     try {
@@ -242,6 +250,7 @@ export function BattleScreen({ data, game, onChange, onHelp, onQuit }: Props) {
             targetable={isEnemyTarget(e.id)}
             targeted={multi.includes(e.id)}
             onClick={() => (isEnemyTarget(e.id) ? clickTarget(e.id) : setDetail([e.id]))}
+            onFumble={() => fumble(e.id)}
           />
         ))}
         {goblinGroups.map((g) => (
@@ -388,6 +397,7 @@ export function BattleScreen({ data, game, onChange, onHelp, onQuit }: Props) {
           initialId={detail[0]}
           state={state}
           intents={intents}
+          onFumble={fumble}
           onClose={() => setDetail(null)}
           onHelp={(enemy) => {
             setDetail(null);
@@ -516,7 +526,6 @@ function EnemyIcons({ e, state }: { e: EnemyState; state: BattleState }) {
   if (e.poison) icons.push({ icon: `☣${e.poison.perRound}`, tone: 'poison', label: 'Poisoned' });
   if (e.weaken) icons.push({ icon: `↓${e.weaken.amount}`, tone: 'curse', label: 'Cursed' });
   if (enemyArmor(e) > 0) icons.push({ icon: `⛨${enemyArmor(e)}`, tone: 'shield', label: 'Shielded' });
-  if (e.staggers > 0) icons.push({ icon: `💫${e.staggers}`, tone: '', label: 'Staggered' });
   return (
     <>
       {icons.map((i) => (
@@ -525,6 +534,27 @@ function EnemyIcons({ e, state }: { e: EnemyState; state: BattleState }) {
         </span>
       ))}
     </>
+  );
+}
+
+/** Fumbles from the opposing player's turnovers: tap to cancel this enemy's next action. */
+function FumbleChip({ e, state, onFumble }: { e: EnemyState; state: BattleState; onFumble: () => void }) {
+  if (e.fumbled) return <span className="tag static fumbled">💫 Fumbling</span>;
+  if (!canFumble(state, e)) return null;
+  const tov = e.spec.source?.line.tov;
+  return (
+    <button
+      type="button"
+      className="tag fumble"
+      aria-label={`Spend a Fumble: ${e.name} loses its next action (${e.fumbles} left${tov !== undefined ? `, from ${tov} turnovers` : ''})`}
+      onClick={(ev) => {
+        ev.stopPropagation();
+        onFumble();
+      }}
+    >
+      💫 {e.fumbles}
+      {tov !== undefined && <span className="fumble-tov"> · {tov} TOV</span>}
+    </button>
   );
 }
 
@@ -551,10 +581,12 @@ function EnemyCard({
   targetable,
   targeted,
   onClick,
+  onFumble,
 }: {
   e: EnemyState;
   state: BattleState;
   intent?: Intent;
+  onFumble: () => void;
   /** Damage this enemy deals to the hero whose fall is being inspected. */
   threat?: number;
   targetable: boolean;
@@ -587,6 +619,7 @@ function EnemyCard({
       <Meter kind="hp" value={e.hp} max={e.maxHp} />
       <IntentLine e={e} state={state} intent={intent} />
       <div className="u-foot">
+        <FumbleChip e={e} state={state} onFumble={onFumble} />
         <EnemyIcons e={e} state={state} />
       </div>
     </div>
@@ -687,6 +720,7 @@ function EnemyDetail({
   initialId,
   state,
   intents,
+  onFumble,
   onClose,
   onHelp,
 }: {
@@ -694,6 +728,7 @@ function EnemyDetail({
   initialId: string;
   state: BattleState;
   intents: Record<string, Intent>;
+  onFumble: (enemyId: string) => void;
   onClose: () => void;
   onHelp: (enemy: EnemyPage) => void;
 }) {
@@ -729,7 +764,6 @@ function EnemyDetail({
   if (e.weaken) now.push({ text: `↓ Cursed −${e.weaken.amount} for ${e.weaken.rounds} rounds`, tone: 'curse' });
   if (enemyArmor(e) > 0) now.push({ text: `⛨ Shielded +${enemyArmor(e)}`, tone: 'shield' });
   if (e.intangible) now.push({ text: '👻 Intangible: only spells and Cleric attacks can touch it', tone: 'curse' });
-  if (e.staggers > 0) now.push({ text: `💫 Staggered: loses ${e.staggers > 1 ? `${e.staggers} actions` : 'its next action'}`, tone: '' });
 
   const short = enemies.flatMap((x) => intents[x.id]?.short ?? []);
   const full = enemies.flatMap((x) => intents[x.id]?.full ?? []);
@@ -805,6 +839,29 @@ function EnemyDetail({
               )
             }
           />
+          {(e.fumbles > 0 || e.fumbled) && (
+            <Feature
+              title={`💫 Fumbles · ${e.fumbles} left`}
+              text={
+                <>
+                  {player ?? 'Its player'} turned it over {e.spec.source?.line.tov ?? 0} times that night: one Fumble per{' '}
+                  {rules.horde.turnoversPerFumble}. Spend one to cancel its next action, a special included. Free for your party, and lost when it
+                  dies.
+                  {e.fumbled ? (
+                    <span className="u-intent" style={{ display: 'block' }}>
+                      Fumbling: it loses its next action.
+                    </span>
+                  ) : (
+                    canFumble(state, e) && (
+                      <button className="btn small" style={{ display: 'block', marginTop: 6 }} onClick={() => onFumble(e.id)}>
+                        💫 Spend a Fumble
+                      </button>
+                    )
+                  )}
+                </>
+              }
+            />
+          )}
           {special && <Feature title={`⚠ Special · ${special.name} (${when})`} text={`${special.description}.`} warn />}
           {e.isWarlord && (
             <Feature

@@ -40,7 +40,8 @@ export function SelectGames({ data, game, onChange }: { data: SeasonData; game: 
           <h1>Choose this week's games</h1>
           <p className="muted small">
             Each hero's starting energy comes from one game this week. Every game also sends that night's opposing player into the horde as a mirrored
-            Champion, and the best opposing performance becomes the Warlord.
+            Champion, and the best opposing performance becomes the boss. Sloppy opponents help: every {rules.horde.turnoversPerFumble}{' '}
+            turnovers give you a 💫 Fumble to cancel that Champion's action in battle.
           </p>
         </div>
         <button className="btn small" onClick={pickBest}>
@@ -101,6 +102,7 @@ export function SelectGames({ data, game, onChange }: { data: SeasonData; game: 
                         Brings {monsterIcon(mirror.kind, game.encounter)} <strong>{mirror.name}</strong> · {statLine(mirror.source!.line)}
                         <br />
                         <TierChip tier={mirror.tier!} /> {mirror.hp} HP · {mirror.damage} dmg
+                        <FumbleNote m={mirror} />
                       </div>
                     )}
                   </button>
@@ -153,6 +155,7 @@ export function SelectGames({ data, game, onChange }: { data: SeasonData; game: 
                   {named.map((m) => (
                     <span key={m.id} className={`chip ${m.isWarlord ? 'warn' : ''}`}>
                       {monsterIcon(m.kind, game.encounter)} {m.name} · {m.hp} HP · {m.damage} dmg{m.isWarlord ? ' ×2 actions' : ''}
+                      {m.fumbles > 0 ? ` · 💫${m.fumbles}` : ''}
                     </span>
                   ))}
                 </div>
@@ -174,5 +177,18 @@ export function SelectGames({ data, game, onChange }: { data: SeasonData; game: 
         </div>
       </div>
     </div>
+  );
+}
+
+/** The Fumbles a Champion brings: one per few turnovers by its player. */
+function FumbleNote({ m }: { m: MonsterSpec }) {
+  const tov = m.source?.line.tov ?? 0;
+  const per = rules.horde.turnoversPerFumble;
+  return (
+    <span className={`fumble-note${m.fumbles > 0 ? ' on' : ''}`}>
+      {' '}
+      · 💫 {m.fumbles > 0 ? `${m.fumbles} Fumble${m.fumbles > 1 ? 's' : ''}` : `no Fumbles`} ({tov} TOV
+      {m.fumbles === 0 && tov > 0 ? `, ${per - (tov % per)} short` : ''})
+    </span>
   );
 }

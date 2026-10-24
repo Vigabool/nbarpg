@@ -150,7 +150,7 @@ export interface HordeConfig {
   warlord: { score: RatingFormula; hpMultiplier: number; damageBonus: number; extraActions: number };
   /** Champions that always join a specific wave (1-based), e.g. the Shaman in wave 1. */
   championWave?: Partial<Record<ChampionKind, number>>;
-  turnoversPerStagger: number;
+  turnoversPerFumble: number;
 }
 
 /** An encounter re-skins the monster roles and supplies its boss and twist. */
