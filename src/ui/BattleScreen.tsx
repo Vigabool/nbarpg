@@ -513,7 +513,7 @@ function EnemyIcons({ e, state }: { e: EnemyState; state: BattleState }) {
   const rage = rules.combat.warlordEnrage;
   const icons: { icon: string; tone: string; label: string }[] = [];
   // A Wraith that is already intangible has nothing to fade from.
-  if (special && specialDue(e, state.round + 1) && !(special.key === 'fade' && e.intangible)) icons.push({ icon: `⚠ ${special.short}`, tone: 'warn', label: `${special.name} next round` });
+  if (special && specialDue(e, state.round + 1) && !(special.key === 'fade' && e.intangible)) icons.push({ icon: `⏳ ${special.short} next round`, tone: 'soon', label: `${special.name} next round` });
   if (e.enraged) icons.push({ icon: `🔥+${rage.damageBonus}`, tone: 'warn', label: 'Enraged' });
   if (e.drum && e.drum.round >= state.round) icons.push({ icon: `🥁+${e.drum.amount}`, tone: 'warn', label: 'War Drum' });
   for (const c of commandSources(state, e)) icons.push({ icon: `${c.icon}+${c.bonus}`, tone: 'warn', label: c.name });
@@ -592,10 +592,24 @@ function FumbleChip({ e, state, onFumble }: { e: EnemyState; state: BattleState;
   );
 }
 
+/** A special fires this round when the preview of the enemy turn includes it (specials log with ⚠). */
+const specialNow = (intent?: Intent) => !!intent?.short.some((s) => s.startsWith('⚠'));
+
 function IntentLine({ e, state, intent }: { e: EnemyState; state: BattleState; intent?: Intent }) {
   if (justArrived(state, e)) return <div className="u-intent muted">Arrived · acts next round</div>;
   if (!intent?.short.length) return null;
-  return <div className="u-intent">{intent.short.join(' · ')}</div>;
+  const special = intent.short.filter((s) => s.startsWith('⚠'));
+  const rest = intent.short.filter((s) => !s.startsWith('⚠'));
+  return (
+    <>
+      {special.map((s) => (
+        <div key={s} className="special-now-pill">
+          ⚠ NOW · {s.replace(/^⚠\s*/, '')}
+        </div>
+      ))}
+      {rest.length > 0 && <div className="u-intent">{rest.join(' · ')}</div>}
+    </>
+  );
 }
 
 /** A classic Warlord is a boosted Champion; an encounter boss (e.g. the Chieftain, the Lich) is its own kind. */
@@ -631,7 +645,7 @@ function EnemyCard({
   const inert = behaviorOf(e.kind, state.encounter) === 'phylactery';
   return (
     <div
-      className={`unit-c${e.isWarlord ? ' warlord' : ' champion'}${e.intangible ? ' intangible' : ''}${threat ? ' threat' : ''}${targetable ? ' target' : ''}${targeted ? ' targeted' : ''}`}
+      className={`unit-c${e.isWarlord ? ' warlord' : ' champion'}${specialNow(intent) ? ' special-now' : ''}${e.intangible ? ' intangible' : ''}${threat ? ' threat' : ''}${targetable ? ' target' : ''}${targeted ? ' targeted' : ''}`}
       onClick={onClick}
       role="button"
       aria-label={targetable ? `Target ${e.name}` : `${e.name}: details`}

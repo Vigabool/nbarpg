@@ -48,7 +48,7 @@ export function SampleTurn() {
                 <span className="u-dmg">⚔{enemyDamage(s, e)}</span>
                 {e.tauntedBy && <span className="tag static taunt">⚑</span>}
                 {e.weaken && <span className="tag static curse">↓{e.weaken.amount}</span>}
-                {sp && specialDue(e, s.round + 1) && <span className="tag static warn">⚠ {sp.short}</span>}
+                {sp && specialDue(e, s.round + 1) && <span className="tag static soon">⏳ {sp.short} next round</span>}
                 <span className="sample-intent">{(intents[e.id] ?? []).join(' · ')}</span>
               </span>
             </div>

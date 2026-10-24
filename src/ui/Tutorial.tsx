@@ -413,7 +413,7 @@ function EnemiesTab({ initial, initialEncounter }: { initial?: EnemyPage; initia
           Champion type sets its strength, and its two biggest standout stats can each give it a trait. The boss is never a player who already
           mirrors one of your heroes. It arrives in the last wave.
         </p>
-        {sp && <Feature title={`⚠ Special · ${sp.name}`} text={`${sp.description}. Fires ${every} on the field, starting its 2nd round; flagged ⚠ the round before.`} warn />}
+        {sp && <Feature title={`⚠ Special · ${sp.name}`} text={`${sp.description}. Fires ${every} on the field, starting its 2nd round. Its card shows ⏳ the round before, then a red ⚠ NOW banner when it's about to fire.`} warn />}
         {monsterPassives(enc.boss, encId).map((p) => (
           <Feature key={p.title} title={`Passive · ${p.title}`} text={p.text} />
         ))}
@@ -466,7 +466,7 @@ function EnemiesTab({ initial, initialEncounter }: { initial?: EnemyPage; initia
           <span className="chip">Scaled by the opposing player's night</span>
         </div>
         <p className="small">{behavior}.</p>
-        {sp && <Feature title={`⚠ Special · ${sp.name}`} text={`${sp.description}. Fires ${every} on the field, starting its 2nd round; flagged ⚠ the round before.`} warn />}
+        {sp && <Feature title={`⚠ Special · ${sp.name}`} text={`${sp.description}. Fires ${every} on the field, starting its 2nd round. Its card shows ⏳ the round before, then a red ⚠ NOW banner when it's about to fire.`} warn />}
         {passives.map((p) => (
           <Feature key={p.title} title={`Passive · ${p.title}`} text={p.text} />
         ))}

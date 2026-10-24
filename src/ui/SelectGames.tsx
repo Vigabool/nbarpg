@@ -40,7 +40,7 @@ export function SelectGames({ data, game, onChange }: { data: SeasonData; game: 
           <h1>Choose this week's games</h1>
           <p className="muted small">
             Each hero's starting energy comes from one game this week. Every game also sends that night's opposing player into the horde as a mirrored
-            Champion; a big night gives it a trait (✋ Swat for 3+ blocks, 📣 Floor General for 10+ assists…). The best opposing line by anyone else
+            Champion; a big night gives it a trait (✋ Swat for 4+ blocks, 📣 Floor General for 10+ assists…). The best opposing line by anyone else
             becomes the boss. Sloppy opponents help: every {rules.horde.turnoversPerFumble}{' '}
             turnovers give you a 💫 Fumble to cancel that Champion's action in battle.
           </p>

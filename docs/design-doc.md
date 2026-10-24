@@ -231,9 +231,9 @@ Gear damage and armor use the player's season-average Rating, mapped to the same
 
 | Standout stat | Trait | Effect | Counter |
 | --- | --- | --- | --- |
-| 3+ blocks | ✋ Swat | Negates the first hit it takes each round | Open with a cheap hit |
+| 4+ blocks | ✋ Swat | Negates the first hit it takes each round | Open with a cheap hit |
 | 4+ steals | 🫳 Pickpocket | Each hit steals 2 energy | Kill or taunt it before big spenders act |
-| 12+ rebounds | 🔁 Second Chance | Once per battle, gets back up at 25% HP | Save burst for the second life |
+| 12+ rebounds | 🔁 Second Chance | Once per battle, gets back up at 15% HP | Save burst for the second life |
 | 10+ assists | 📣 Floor General | Every other monster +2 damage while it lives | Focus it first |
 | 6+ threes | 🎯 Deep Range | Ignores taunts and armor | Heal or shield its target |
 | 35+ points | ⚡ Takeover | Acts twice once below half HP | Burst it from high HP to dead |
@@ -241,7 +241,7 @@ Gear damage and armor use the player's season-average Rating, mapped to the same
 
 Turnovers work separately, as Fumbles the party spends (see Monster behaviors).
 
-**Minions.** Each opposing team adds 1 goblin per 50 team points scored (roughly 2 per game), with fixed stats. Opposing team FG% sets minion accuracy tier. *(Tuned by simulation: 1 per 25 originally, then 50, then 35; back to 50 once every Champion appeared every week and traits arrived, which put the bots back at about 70% wins in both encounters.)*
+**Minions.** Each opposing team adds 1 goblin per 40 team points scored (roughly 3 per game), with fixed stats. Opposing team FG% sets minion accuracy tier. *(Tuned by simulation: 1 per 25 originally, then 50, then 35; then 50 once every Champion appeared every week and traits arrived; now 40 for a fuller field, with Second Chance at 15% HP and Swat at 4+ blocks. Bots win about 65% in both encounters; they ignore traits and Fumbles, so players should do better.)*
 
 ### Wave structure (blended horde)
 
@@ -319,7 +319,7 @@ Monsters follow fixed behaviors; the opposing player's tier scales their HP and 
 | Shaman | Arrives with wave 1. **Guarded by the Pack:** can't be targeted while 2+ goblins live (hits on every enemy still land). Heals the most injured monster and shields the horde | **War Drum:** drums first, then every monster deals +2 damage that round (lines up with wave 2's goblins in round 2) | Your damage dealers | 18 → 36 | 5 → 10 |
 | Warlord | Its Champion's behavior and special, double HP, two actions | — | The whole party | 2 × Champion | Champion + 2; +5 when enraged |
 
-Specials are telegraphed: the Champion's card shows a ⚠ warning the round before. Champion damage is about 2.4× the first draft. Simulation showed the horde rarely threatened the party; the extra goblins later let Champion damage come back down a little.
+Specials are telegraphed: the Champion's card shows a dashed amber ⏳ "Slam next round" tag the round before, then glows red with a filled "⚠ NOW · Slam…" banner in the round it will fire, so the two states never look alike. Champion damage is about 2.4× the first draft. Simulation showed the horde rarely threatened the party; the extra goblins later let Champion damage come back down a little.
 
 **Opponent turnovers → Fumbles.** Every 3 turnovers by a Champion's player (the boss included) gives the party one 💫 Fumble on that Champion. The party spends it whenever it likes, for free (no energy, no hero action), by tapping the 💫 on the Champion's card: the Champion loses its next action, and a special due then doesn't fire. One can be pending per Champion at a time, and unspent Fumbles are lost when it dies. The card shows the count and the turnovers behind it ("💫 2 · 7 TOV"), and the pick-games screen shows the Fumbles each game would bring, so a sloppy opponent is a reason to pick a game. This mirrors the hero turnover penalty, but as a tool the player controls.
 
@@ -475,7 +475,7 @@ Gaps in the rules above, filled in for the first build. All live in `src/rules/`
 | Warlord not a mirror | If the best opposing performance isn't one of the five mirrors, it still becomes the Warlord, using the Champion type it rates highest in |
 | Champion tiers | Warlock: PTS (Ranger thresholds). Hunter: PTS, ±1 tier for FG% ≥ 55% / < 40% (10+ FGA). Ogre: Warrior Rating. Assassin: 3 × STL (Rogue thresholds). Shaman: AST (Cleric thresholds) |
 | Champion HP / damage | Linear steps from Cold to Elite across the doc's ranges (`monsters.json`) |
-| Special timing | Each Champion's own clock: its 2nd round on the field, then every 2 rounds, so the ⚠ warning always shows a round ahead. A Warlord uses its special on its first action of those rounds |
+| Special timing | Each Champion's own clock: its 2nd round on the field, then every 2 rounds, so the ⏳ warning always shows a round ahead. A Warlord uses its special on its first action of those rounds |
 | Warlock | Taunt still applies; otherwise targets the lower-HP of Wizard and Cleric. Special: Hex |
 | Ogre | Special: Ground Slam; the knocked-down hero loses its next turn |
 | Hunter | Only monster that ignores taunt; lowest armor, ties to lowest HP |

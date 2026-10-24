@@ -29,13 +29,13 @@ describe('box-score traits', () => {
     expect(hero(s, 'warrior').pool).toBe(hero(s0, 'warrior').pool - rules.traits.pickpocket.energy!);
   });
 
-  it('Second Chance gets back up once at 25% HP', () => {
+  it('Second Chance gets back up once at 15% HP', () => {
     const o = monster({ kind: 'ogre', hp: 20, damage: 0, traits: ['secondChance'] });
     let s = battle([[o], [monster({ hp: 99 })]]);
     s = { ...s, enemies: s.enemies.map((e) => (e.id === o.id ? { ...e, hp: 1 } : e)) };
     s = act(s, 'warrior', 'axe', [o.id]);
     expect(enemy(s, o.id).alive).toBe(true);
-    expect(enemy(s, o.id).hp).toBe(5);
+    expect(enemy(s, o.id).hp).toBe(Math.round(20 * rules.traits.secondChance.hpFraction!));
     s = { ...s, enemies: s.enemies.map((e) => (e.id === o.id ? { ...e, hp: 1 } : e)) };
     s = act(s, 'rogue', 'dagger', [o.id]);
     expect(enemy(s, o.id).alive).toBe(false);
