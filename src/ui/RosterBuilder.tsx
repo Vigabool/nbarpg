@@ -1,6 +1,6 @@
-import { useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { SeasonData, StatKey, StatLine } from '../data/types';
-import { autoDraft } from '../app/autoDraft';
+import { DRAFT_MODES, autoDraft } from '../app/autoDraft';
 import { MOVES_PER_CHAPTER, currentWeek, rosterCost, rosterMoves, type SaveGame } from '../app/game';
 import { eligiblePlayers } from '../engine/calibration';
 import { computeSalary, gearDamage, seasonTier, type SalaryBreakdown } from '../engine/rating';
@@ -84,6 +84,14 @@ export function RosterBuilder({ data, game, onChange }: { data: SeasonData; game
   const [reserves, setReserves] = useState<number[]>(init.reserves);
   const [query, setQuery] = useState('');
   const [team, setTeam] = useState('');
+  const [draftMenu, setDraftMenu] = useState(false);
+  // Close the auto-draft menu on a tap outside it.
+  useEffect(() => {
+    if (!draftMenu) return;
+    const close = (ev: PointerEvent) => !(ev.target as Element).closest?.('.draft-menu-wrap') && setDraftMenu(false);
+    window.addEventListener('pointerdown', close);
+    return () => window.removeEventListener('pointerdown', close);
+  }, [draftMenu]);
   const [sort, setSort] = useState<Sort>('salary');
   const [onlyFits, setOnlyFits] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
@@ -187,18 +195,39 @@ export function RosterBuilder({ data, game, onChange }: { data: SeasonData; game
         <div className="spread">
           <h1>{isChapterMove ? 'New chapter: roster moves' : 'Build your roster'}</h1>
           {!isChapterMove && (
-            <button
-              className="btn small"
-              onClick={() => {
-                const d = autoDraft(data, week);
-                if (!d) return;
-                setSlots(d.slots);
-                setReserves(d.reserves);
-              }}
-              title="Fill the roster automatically: strong starters, cheap reserves"
-            >
-              Auto-draft
-            </button>
+            <div className="draft-menu-wrap">
+              <button
+                className="btn small"
+                aria-expanded={draftMenu}
+                onClick={() => setDraftMenu((v) => !v)}
+                title="Fill the roster automatically: starters for a style, cheap reserves"
+              >
+                Auto-draft ▾
+              </button>
+              {draftMenu && (
+                <div className="draft-menu" role="menu">
+                  {DRAFT_MODES.map((m) => (
+                    <button
+                      key={m.id}
+                      role="menuitem"
+                      className="draft-mode"
+                      onClick={() => {
+                        setDraftMenu(false);
+                        const d = autoDraft(data, week, m.id);
+                        if (!d) return;
+                        setSlots(d.slots);
+                        setReserves(d.reserves);
+                      }}
+                    >
+                      <strong>
+                        {m.icon} {m.label}
+                      </strong>
+                      <span className="tiny muted">{m.blurb}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
         </div>
         <p className="muted small">

@@ -470,3 +470,7 @@ select.input { appearance: auto; }
 .now-chip.curse { color: #d59cf5; border-color: #9b5cc4; }
 .enc-chip { cursor: pointer; font-size: 0.8rem; padding: 4px 12px; }
 .enc-chip.on { color: var(--gold-2); border-color: var(--gold); background: var(--card-2); }
+.draft-menu-wrap { position: relative; }
+.draft-menu { position: absolute; right: 0; top: calc(100% + 4px); z-index: 20; display: grid; gap: 2px; width: min(260px, calc(100vw - 32px)); padding: 4px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4); }
+.draft-mode { display: grid; gap: 2px; text-align: left; padding: 8px 10px; border: 0; border-radius: 8px; background: transparent; color: inherit; cursor: pointer; font: inherit; }
+.draft-mode:hover, .draft-mode:focus-visible { background: var(--bg-2); }
