@@ -3,6 +3,7 @@ import { energyGain, isAttack } from '../engine/combat';
 import type { ActionDef } from '../rules';
 import { CLASSES, rules, type ChampionKind, type HeroClass } from '../rules';
 import type { JSX } from 'react';
+import { SampleTurn } from './SampleTurn';
 import { CLASS_ICON, MONSTER_ICON, money } from './common';
 
 const SEEN_KEY = 'nbarpg.tutorialSeen';
@@ -31,12 +32,19 @@ const PLAYSTYLE: Record<HeroClass, { draft: string; play: string }> = {
   wizard: { draft: 'Volume three-point shooters', play: 'Burst damage: area spells for crowds, big bolts for Champions.' },
 };
 
-type Tab = 'basics' | 'classes' | 'enemies';
+type Tab = 'basics' | 'sample' | 'classes' | 'enemies';
+const TABS: { id: Tab; label: string }[] = [
+  { id: 'basics', label: 'Basics' },
+  { id: 'sample', label: 'Sample turn' },
+  { id: 'classes', label: 'Classes' },
+  { id: 'enemies', label: 'Enemies' },
+];
 export type EnemyPage = 'goblin' | ChampionKind | 'warlord';
 
 /** Where to open How to play, e.g. from a "?" in battle. */
 export type TutorialTopic =
   | { tab: 'basics' }
+  | { tab: 'sample' }
   | { tab: 'classes'; heroClass?: HeroClass; abilityId?: string }
   | { tab: 'enemies'; enemy?: EnemyPage };
 
@@ -66,9 +74,9 @@ export function Tutorial({ onClose, topic }: { onClose: () => void; topic?: Tuto
           </button>
         </div>
         <div className="tabs" role="tablist">
-          {(['basics', 'classes', 'enemies'] as Tab[]).map((t) => (
-            <button key={t} role="tab" aria-selected={tab === t} className={`tab${tab === t ? ' active' : ''}`} onClick={() => setTab(t)}>
-              {t === 'basics' ? 'Basics' : t === 'classes' ? 'Classes' : 'Enemies'}
+          {TABS.map((t) => (
+            <button key={t.id} role="tab" aria-selected={tab === t.id} className={`tab${tab === t.id ? ' active' : ''}`} onClick={() => setTab(t.id)}>
+              {t.label}
             </button>
           ))}
         </div>
@@ -107,6 +115,7 @@ export function Tutorial({ onClose, topic }: { onClose: () => void; topic?: Tuto
             </ol>
           )}
 
+          {tab === 'sample' && <SampleTurn />}
           {tab === 'classes' && (
             <ClassesTab
               initialClass={topic?.tab === 'classes' ? topic.heroClass : undefined}
@@ -120,8 +129,8 @@ export function Tutorial({ onClose, topic }: { onClose: () => void; topic?: Tuto
         <div className="spread">
           <span className="tiny faint">Reopen anytime from "How to play".</span>
           {tab !== 'enemies' ? (
-            <button className="btn primary small" onClick={() => setTab(tab === 'basics' ? 'classes' : 'enemies')}>
-              Next →
+            <button className="btn primary small" onClick={() => setTab(TABS[TABS.findIndex((t) => t.id === tab) + 1].id)}>
+              {TABS[TABS.findIndex((t) => t.id === tab) + 1].label} →
             </button>
           ) : (
             <button className="btn primary small" onClick={close}>

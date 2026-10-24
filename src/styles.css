@@ -174,7 +174,8 @@ select.input { appearance: auto; }
   display: flex; flex-direction: column; gap: 12px; padding: 16px;
 }
 .modal-body { overflow: auto; min-height: 0; padding-right: 4px; }
-.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); }
+.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
+.tab { white-space: nowrap; }
 .tab { background: none; border: 0; border-bottom: 2px solid transparent; padding: 8px 12px; cursor: pointer; color: var(--muted); }
 .tab.active { color: var(--gold-2); border-bottom-color: var(--gold); }
 .steps { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 10px; }
@@ -405,3 +406,20 @@ select.input { appearance: auto; }
 @media (max-width: 480px) {
   .enemy-picker { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
+
+/* ---------- How to play: sample turn ---------- */
+.sample-board { display: flex; flex-direction: column; gap: 4px; background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 8px 10px; }
+.sample-row { display: grid; grid-template-columns: 7.5rem minmax(0, 1fr); grid-template-areas: "name meter" "note note"; gap: 2px 8px; align-items: center; padding: 4px 6px; border-radius: 8px; border: 1px solid transparent; }
+.sample-row > .meter { grid-area: meter; }
+.sample-name { grid-area: name; font-size: 0.82rem; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sample-note { grid-area: note; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; font-size: 0.72rem; }
+.sample-note .meter { flex: 0 0 110px; }
+.sample-intent { color: #ffb3a3; }
+.sample-row.acted { border-color: var(--gold); background: color-mix(in srgb, var(--gold) 8%, transparent); }
+.sample-row.hit { border-color: var(--danger); background: color-mix(in srgb, var(--danger) 10%, transparent); }
+.sample-events { font-size: 0.8rem; display: flex; flex-direction: column; gap: 3px; border-left: 3px solid var(--info); padding-left: 10px; }
+.sample-events .enemy { color: #f0a9a0; }
+.sample-events .system { color: var(--gold-2); }
+.sample-dots { display: flex; gap: 5px; }
+.sample-dots span { width: 7px; height: 7px; border-radius: 50%; background: var(--line); }
+.sample-dots span.on { background: var(--gold); }
