@@ -58,19 +58,22 @@ describe('The Crypt: Wraith', () => {
 });
 
 describe('The Crypt: Restless Dead', () => {
-  const skeleton = () => monster({ hp: 4, damage: 0 });
+  const skeleton = () => monster({ hp: 8, damage: 0 });
   const tank = () => monster({ kind: 'ogre', hp: 999, damage: 0 });
+  /** Drops a skeleton to 1 HP, then finishes it with a weapon (not fire or holy). */
+  const smash = (s: BattleState, id: string) =>
+    act({ ...s, enemies: s.enemies.map((e) => (e.id === id ? { ...e, hp: 1 } : e)) }, 'warrior', 'axe', [id]);
 
   it('weapon kills leave a bone pile that reassembles next round at half HP, once', () => {
     const sk = skeleton();
     let s = battle([[sk, tank()]], party(), CRYPT);
-    s = act(s, 'warrior', 'axe', [sk.id]);
+    s = smash(s, sk.id);
     expect(enemy(s, sk.id).alive).toBe(false);
     expect(enemy(s, sk.id).pile).toBe(true);
     s = endRound(s);
     expect(enemy(s, sk.id).alive).toBe(true);
     expect(enemy(s, sk.id).hp).toBe(4);
-    s = act(s, 'warrior', 'axe', [sk.id]);
+    s = smash(s, sk.id);
     expect(enemy(s, sk.id).pile).toBeFalsy();
   });
 
@@ -84,20 +87,24 @@ describe('The Crypt: Restless Dead', () => {
     expect(enemy(s, b.id).pile).toBeFalsy();
   });
 
-  it('while the Lich lives, skeletons keep reassembling', () => {
+  it('while the Lich lives, skeletons keep reassembling at half HP each time, until 2 HP', () => {
     const sk = skeleton();
     const lich = monster({ kind: 'lich', hp: 999, damage: 0, isWarlord: true, extraActions: 1 });
     let s = battle([[sk, lich]], party(), CRYPT);
-    for (let i = 0; i < 3; i++) {
-      s = act(s, 'warrior', 'axe', [sk.id]);
+    for (const hp of [4, 2]) {
+      s = smash(s, sk.id);
       expect(enemy(s, sk.id).pile).toBe(true);
       s = endRound(s);
+      expect(enemy(s, sk.id).hp).toBe(hp);
     }
+    s = smash(s, sk.id);
+    expect(enemy(s, sk.id).alive).toBe(false);
+    expect(enemy(s, sk.id).pile).toBeFalsy();
   });
 
   it('a wave with bone piles is not cleared, and victory waits for them', () => {
     const sk = skeleton();
-    let s = act(battle([[sk]], party(), CRYPT), 'warrior', 'axe', [sk.id]);
+    let s = smash(battle([[sk]], party(), CRYPT), sk.id);
     expect(s.phase).toBe('party');
     expect(s.stats.wavesCleared).toBe(0);
     s = endRound(s);
@@ -114,10 +121,11 @@ describe('The Crypt: Restless Dead', () => {
 
 describe('The Crypt: Wight and Lich specials', () => {
   it('Raise Dead brings back every destroyed skeleton, even holy kills', () => {
-    const a = monster({ hp: 4, damage: 0 });
-    const b = monster({ hp: 4, damage: 0 });
+    const a = monster({ hp: 8, damage: 0 });
+    const b = monster({ hp: 8, damage: 0 });
     const wight = monster({ kind: 'shaman', hp: 999, damage: 0, tier: 'good' });
     let s = battle([[a, b, wight]], party(), CRYPT);
+    s = { ...s, enemies: s.enemies.map((e) => (e.id === wight.id ? e : { ...e, hp: 1 })) };
     s = act(s, 'cleric', 'mace', [a.id]);
     s = act(s, 'wizard', 'fireball', [b.id]);
     expect(livingEnemies(s).length).toBe(1);
@@ -125,6 +133,7 @@ describe('The Crypt: Wight and Lich specials', () => {
     s = endRound(s);
     expect(enemy(s, a.id).alive).toBe(true);
     expect(enemy(s, b.id).alive).toBe(true);
+    expect(enemy(s, a.id).hp).toBe(4);
   });
 
   it('Death Bolt hits the lowest-HP hero for 1.5x, ignoring armor', () => {

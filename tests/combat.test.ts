@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { endRound, livingEnemies, listActions, nextWaveRound, performAction, previewEnemyPhase, actionDamage, commandBonus, enemyDamage, isGuarded, packBonus, type BattleState } from '../src/engine/combat';
+import { endRound, livingEnemies, listActions, nextWaveRound, performAction, previewEnemyPhase, previewRound, actionDamage, commandBonus, enemyDamage, isGuarded, packBonus, type BattleState } from '../src/engine/combat';
 import { rules } from '../src/rules';
 import { battle, heroSetup, monster, party } from './helpers';
 
@@ -628,5 +628,22 @@ describe('Goblin Chieftain', () => {
     s = endRound(s);
     expect(livingEnemies(s).length).toBe(before + 2);
     expect(livingEnemies(s).filter((e) => e.kind === 'goblin').every((e) => e.arrivedRound === 3)).toBe(true);
+  });
+});
+
+describe('fall prediction', () => {
+  it('the preview shows who falls and how much each enemy deals them', () => {
+    const a = monster({ kind: 'ogre', hp: 99, damage: 12 });
+    const b = monster({ hp: 99, damage: 5 });
+    let s = battle([[a, b]]);
+    s = { ...s, heroes: s.heroes.map((h) => (h.id === 'warrior' ? { ...h, hp: 15, armor: 0 } : h)) };
+    const { log, after } = previewRound(s);
+    const toWarrior = log.filter((l) => l.hits?.warrior).map((l) => [l.actorId, l.hits!.warrior]);
+    expect(toWarrior).toEqual([
+      [a.id, 12],
+      [b.id, 5],
+    ]);
+    expect(after.heroes.find((h) => h.id === 'warrior')!.alive).toBe(false);
+    expect(s.pendingHits).toBeUndefined();
   });
 });

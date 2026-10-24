@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { SeasonData } from '../data/types';
 import { finishBattle, type SaveGame } from '../app/game';
 import {
@@ -7,7 +7,7 @@ import {
   justArrived,
   listActions,
   performAction,
-  previewEnemyPhase,
+  previewRound,
   actionDamage,
   commandBonus,
   energyGain,
@@ -51,10 +51,19 @@ export function BattleScreen({ data, game, onChange, onHelp, onQuit }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   const setBattle = (b: BattleState) => onChange({ ...game, battle: b });
-  const { intents, summonIntents } = useMemo(() => {
+  const { intents, summonIntents, doomed, incoming } = useMemo(() => {
     const map: Record<string, Intent> = {};
     const summon: Record<string, string[]> = {};
-    for (const l of previewEnemyPhase(state)) {
+    const preview = previewRound(state);
+    // Heroes who fall if the round ends now, and who hits each hero for how much.
+    const doomed = new Set<string>(state.heroes.filter((h) => h.alive && !preview.after.heroes.find((x) => x.id === h.id)?.alive).map((h) => h.id));
+    const incoming: Record<string, Record<string, number>> = {};
+    for (const l of preview.log)
+      for (const [heroId, n] of Object.entries(l.hits ?? {})) {
+        const by = (incoming[heroId] ??= {});
+        if (l.actorId) by[l.actorId] = (by[l.actorId] ?? 0) + n;
+      }
+    for (const l of preview.log) {
       if (l.side === 'summon' && l.actorId) {
         (summon[l.actorId] ??= []).push(l.short ?? l.text);
         continue;
@@ -65,8 +74,12 @@ export function BattleScreen({ data, game, onChange, onHelp, onQuit }: Props) {
       i.short.push(l.short ?? l.text);
       i.full.push(l.text);
     }
-    return { intents: map, summonIntents: summon };
+    return { intents: map, summonIntents: summon, doomed, incoming };
   }, [state]);
+  // The hero whose fall the player is inspecting (tap their ☠).
+  const [threatPick, setThreatPick] = useState<string | null>(null);
+  const threat = threatPick && doomed.has(threatPick) ? threatPick : null;
+  const threatFrom = threat ? incoming[threat] ?? {} : {};
   const [detail, setDetail] = useState<string[] | null>(null);
 
   const hero = selected ? state.heroes.find((h) => h.id === selected) : undefined;
@@ -217,13 +230,14 @@ export function BattleScreen({ data, game, onChange, onHelp, onQuit }: Props) {
           </span>
         )}
       </div>
-      <div className="enemy-grid">
+      <div className={`enemy-grid${threat ? ' threat-mode' : ''}`}>
         {champions.map((e) => (
           <EnemyCard
             key={e.id}
             e={e}
             state={state}
             intent={intents[e.id]}
+            threat={threatFrom[e.id]}
             targetable={isEnemyTarget(e.id)}
             targeted={multi.includes(e.id)}
             onClick={() => (isEnemyTarget(e.id) ? clickTarget(e.id) : setDetail([e.id]))}
@@ -235,6 +249,7 @@ export function BattleScreen({ data, game, onChange, onHelp, onQuit }: Props) {
             goblins={g}
             state={state}
             intents={intents}
+            threat={g.reduce((t, x) => t + (threatFrom[x.id] ?? 0), 0)}
             isTarget={isEnemyTarget}
             targeted={multi}
             onPick={clickTarget}
@@ -248,20 +263,25 @@ export function BattleScreen({ data, game, onChange, onHelp, onQuit }: Props) {
         {state.heroes.map((h) => {
           const allyTarget = targeting && (targetType === 'ally' || targetType === 'fallenAlly') && action!.validTargets.includes(h.id);
           return (
-            <HeroRow
-              key={h.id}
-              h={h}
-              selected={selected === h.id && !allyTarget}
-              targetable={allyTarget}
-              onClick={() => {
-                if (allyTarget) return run(action!, [h.id]);
-                if (!over && h.alive) {
-                  setSelected(h.id);
-                  setAction(null);
-                  setMulti([]);
-                }
-              }}
-            />
+            <Fragment key={h.id}>
+              <HeroRow
+                h={h}
+                doomed={doomed.has(h.id)}
+                threatOn={threat === h.id}
+                onThreat={() => setThreatPick(threat === h.id ? null : h.id)}
+                selected={selected === h.id && !allyTarget}
+                targetable={allyTarget}
+                onClick={() => {
+                  if (allyTarget) return run(action!, [h.id]);
+                  if (!over && h.alive) {
+                    setSelected(h.id);
+                    setAction(null);
+                    setMulti([]);
+                  }
+                }}
+              />
+              {threat === h.id && <ThreatCallout h={h} from={threatFrom} state={state} onClose={() => setThreatPick(null)} />}
+            </Fragment>
           );
         })}
         {state.summons
@@ -524,6 +544,7 @@ function EnemyCard({
   e,
   state,
   intent,
+  threat,
   targetable,
   targeted,
   onClick,
@@ -531,6 +552,8 @@ function EnemyCard({
   e: EnemyState;
   state: BattleState;
   intent?: Intent;
+  /** Damage this enemy deals to the hero whose fall is being inspected. */
+  threat?: number;
   targetable: boolean;
   targeted: boolean;
   onClick: () => void;
@@ -538,11 +561,12 @@ function EnemyCard({
   const dmg = enemyDamage(state, e);
   return (
     <div
-      className={`unit-c${e.isWarlord ? ' warlord' : ' champion'}${e.intangible ? ' intangible' : ''}${targetable ? ' target' : ''}${targeted ? ' targeted' : ''}`}
+      className={`unit-c${e.isWarlord ? ' warlord' : ' champion'}${e.intangible ? ' intangible' : ''}${threat ? ' threat' : ''}${targetable ? ' target' : ''}${targeted ? ' targeted' : ''}`}
       onClick={onClick}
       role="button"
       aria-label={targetable ? `Target ${e.name}` : `${e.name}: details`}
     >
+      {!!threat && <span className="threat-badge num">☠ {threat}</span>}
       <div className="u-top">
         <span className="u-name">
           {foeIcon(e, state.encounter)} {foeShort(e, state.encounter)}
@@ -567,6 +591,7 @@ function GoblinStack({
   goblins,
   state,
   intents,
+  threat,
   isTarget,
   targeted,
   onPick,
@@ -575,6 +600,7 @@ function GoblinStack({
   goblins: EnemyState[];
   state: BattleState;
   intents: Record<string, Intent>;
+  threat: number;
   isTarget: (id: string) => boolean;
   targeted: string[];
   onPick: (id: string) => void;
@@ -594,10 +620,11 @@ function GoblinStack({
   const pack = packBonus(state, first);
   return (
     <div
-      className={`unit-c minion${targetable ? ' target' : ''}${goblins.some((g) => targeted.includes(g.id)) ? ' targeted' : ''}`}
+      className={`unit-c minion${threat ? ' threat' : ''}${targetable ? ' target' : ''}${goblins.some((g) => targeted.includes(g.id)) ? ' targeted' : ''}`}
       onClick={targetable ? pickWeakest : onDetail}
       role="button"
     >
+      {threat > 0 && <span className="threat-badge num">☠ {threat}</span>}
       <div className="u-top">
         <span className="u-name">
           {monsterIcon('goblin', state.encounter)} {first.name}
@@ -794,12 +821,28 @@ function EnemyDetail({
   );
 }
 
-function HeroRow({ h, selected, targetable, onClick }: { h: HeroState; selected: boolean; targetable: boolean; onClick: () => void }) {
+function HeroRow({
+  h,
+  doomed,
+  threatOn,
+  onThreat,
+  selected,
+  targetable,
+  onClick,
+}: {
+  h: HeroState;
+  doomed: boolean;
+  threatOn: boolean;
+  onThreat: () => void;
+  selected: boolean;
+  targetable: boolean;
+  onClick: () => void;
+}) {
   const cls = rules.classes[h.heroClass];
   const state = !h.alive ? 'fallen' : h.prone ? 'done prone' : h.acted ? 'done' : 'ready';
   return (
     <div
-      className={`hero-row ${state}${selected ? ' selected' : ''}${targetable ? ' target' : ''}`}
+      className={`hero-row ${state}${selected ? ' selected' : ''}${targetable ? ' target' : ''}${threatOn ? ' threat' : ''}`}
       onClick={onClick}
       role="button"
       aria-pressed={selected}
@@ -809,6 +852,20 @@ function HeroRow({ h, selected, targetable, onClick }: { h: HeroState; selected:
           {CLASS_ICON[h.heroClass]} {cls.name}
           {state === 'done' && <span className="h-state" aria-label="Done">✓</span>}
           {state === 'fallen' && <span className="h-state" aria-label="Fallen">💀</span>}
+          {doomed && (
+            <button
+              type="button"
+              className={`doom${threatOn ? ' on' : ''}`}
+              aria-label={`${cls.name} falls if the round ends now: show where the damage comes from`}
+              aria-pressed={threatOn}
+              onClick={(ev) => {
+                ev.stopPropagation();
+                onThreat();
+              }}
+            >
+              ☠
+            </button>
+          )}
         </span>
         <span className="h-player">{h.name}</span>
       </div>
@@ -830,6 +887,45 @@ function HeroRow({ h, selected, targetable, onClick }: { h: HeroState; selected:
         {h.signatureReady && <Tag passThrough icon="★" text="Signature ability ready (double-double)" tone="taunt" />}
         {h.legendaryReady && <Tag passThrough icon="✪" text="Legendary ability ready (triple-double)" tone="taunt" />}
       </div>
+    </div>
+  );
+}
+
+/** Where the damage that drops a hero this round comes from. */
+function ThreatCallout({ h, from, state, onClose }: { h: HeroState; from: Record<string, number>; state: BattleState; onClose: () => void }) {
+  const total = Object.values(from).reduce((t, n) => t + n, 0);
+  // Minions of one team hit as a group, like their card.
+  const rows = new Map<string, { icon: string; label: string; count: number; dmg: number }>();
+  for (const [id, dmg] of Object.entries(from)) {
+    const e = state.enemies.find((x) => x.id === id);
+    if (!e) continue;
+    const key = e.kind === 'goblin' ? `g:${e.name}` : id;
+    const row = rows.get(key) ?? { icon: foeIcon(e, state.encounter), label: e.kind === 'goblin' ? e.name : foeShort(e, state.encounter), count: 0, dmg: 0 };
+    row.count++;
+    row.dmg += dmg;
+    rows.set(key, row);
+  }
+  return (
+    <div className="threat-callout" role="status">
+      <div className="spread">
+        <strong className="small">
+          ☠ {rules.classes[h.heroClass].name} falls: {total} incoming, {h.hp} HP
+        </strong>
+        <button className="btn ghost small" onClick={onClose} aria-label="Close">
+          ✕
+        </button>
+      </div>
+      <div className="row" style={{ gap: 6 }}>
+        {[...rows.values()]
+          .sort((a, b) => b.dmg - a.dmg)
+          .map((r) => (
+            <span key={r.label} className="tag static threat-src num">
+              {r.icon} {r.label}
+              {r.count > 1 ? ` ×${r.count}` : ''} <b>{r.dmg}</b>
+            </span>
+          ))}
+      </div>
+      <span className="tiny muted">Heal, shield, taunt or kill these before ending the round.</span>
     </div>
   );
 }

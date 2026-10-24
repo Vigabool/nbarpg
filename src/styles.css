@@ -255,6 +255,10 @@ select.input { appearance: auto; }
 }
 .unit-c.champion { background: linear-gradient(180deg, #2f2540, var(--card)); }
 .unit-c.warlord { border-color: #a0462f; background: linear-gradient(180deg, #3a2027, var(--card)); }
+.unit-c { position: relative; }
+.unit-c.threat { border-color: var(--danger); box-shadow: 0 0 0 2px var(--danger); }
+.enemy-grid.threat-mode .unit-c:not(.threat) { opacity: 0.35; }
+.threat-badge { position: absolute; top: -8px; right: 6px; padding: 1px 6px; border-radius: 999px; background: var(--danger); color: #fff; font-size: 0.7rem; font-weight: 700; }
 .unit-c.intangible { border-style: dashed; border-color: #8fa6cf; background: linear-gradient(180deg, rgba(143, 166, 207, 0.16), var(--card)); }
 .unit-c.intangible .meter { opacity: 0.45; }
 .tag.ghost { color: #c9d6f0; border-color: #8fa6cf; background: rgba(143, 166, 207, 0.15); }
@@ -318,6 +322,13 @@ select.input { appearance: auto; }
 .hero-row.target { border-color: var(--info); box-shadow: 0 0 0 2px var(--info); }
 .hero-row.done:not(.selected) { opacity: 0.7; }
 .hero-row.fallen { opacity: 0.4; }
+.hero-row.threat { border-color: var(--danger); box-shadow: 0 0 0 2px var(--danger); }
+.doom { margin-left: 6px; padding: 0 6px; border-radius: 999px; border: 1px solid var(--danger); background: rgba(220, 70, 70, 0.15); color: #ff9c9c; font-size: 0.8rem; line-height: 1.3; cursor: pointer; animation: doom-pulse 1.6s ease-in-out infinite; }
+.doom.on { background: var(--danger); color: #fff; animation: none; }
+@keyframes doom-pulse { 50% { box-shadow: 0 0 0 3px rgba(220, 70, 70, 0.25); } }
+@media (prefers-reduced-motion: reduce) { .doom { animation: none; } }
+.threat-callout { grid-column: 1 / -1; display: grid; gap: 6px; padding: 8px 10px; border: 1px solid var(--danger); border-radius: 10px; background: rgba(220, 70, 70, 0.08); }
+.threat-src b { color: #ff9c9c; margin-left: 2px; }
 .hero-row.fallen.target { opacity: 1; }
 .hero-row.summon { cursor: default; background: var(--bg-2); grid-template-areas: "name name" "hp hp" "tags tags"; }
 .h-name { grid-area: name; display: flex; align-items: baseline; gap: 6px; min-width: 0; }

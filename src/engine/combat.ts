@@ -102,6 +102,8 @@ export interface LogEntry {
   targetIds?: string[];
   /** A compact version for the enemy card, e.g. "→ Warrior 20" or "⚠ Slam: all heroes". */
   short?: string;
+  /** Damage each hero took from this action (after armor), by hero id. */
+  hits?: Record<string, number>;
 }
 
 export interface BattleState {
@@ -119,6 +121,8 @@ export interface BattleState {
   summons: SummonState[];
   enemies: EnemyState[];
   log: LogEntry[];
+  /** Hero damage dealt since the last log entry; the next entry takes it as `hits`. */
+  pendingHits?: Record<string, number>;
   nextSummonId: number;
   stats: {
     wavesCleared: number;
@@ -225,7 +229,9 @@ function describeWave(enemies: EnemyState[], encounter: string | undefined, rule
 }
 
 function log(state: BattleState, side: LogEntry['side'], text: string, actorId?: string, targetIds?: string[], short?: string) {
-  state.log.push({ round: state.round, side, text, actorId, targetIds, short });
+  const hits = state.pendingHits;
+  delete state.pendingHits;
+  state.log.push({ round: state.round, side, text, actorId, targetIds, short, ...(hits && { hits }) });
 }
 
 /** The behavior an enemy uses in this battle's encounter. */
@@ -286,6 +292,11 @@ function spawnNextWave(state: BattleState, arrivedRound: number, rules: Rules) {
   log(state, 'system', `${label} arrives: ${describeWave(fresh, state.encounter, rules)}.`);
 }
 
+/** Each time a skeleton reassembles it comes back with half its last HP: 8, 4, 2. */
+function riseHp(e: EnemyState): number {
+  return Math.floor(e.maxHp / 2 ** ((e.rises ?? 0) + 1));
+}
+
 function startRound(state: BattleState, rules: Rules) {
   if (state.round > 1) log(state, 'system', `Round ${state.round} begins. Every hero can act again.`);
   // Restless Dead: bone piles reassemble at half HP and fight this round.
@@ -293,7 +304,7 @@ function startRound(state: BattleState, rules: Rules) {
   for (const e of rising) {
     e.pile = false;
     e.alive = true;
-    e.hp = Math.min(e.maxHp, rules.combat.restlessDead.riseHp);
+    e.hp = riseHp(e);
     e.rises = (e.rises ?? 0) + 1;
     e.arrivedRound = state.round - 1;
     e.poison = null;
@@ -467,7 +478,8 @@ function damageEnemy(
     // Restless Dead: skeletons leave a bone pile unless fire or holy damage ended them.
     if (enemy.kind === 'goblin' && hasTwist('restlessDead', state.encounter, rules) && !source.fire && !source.holy) {
       const lich = state.enemies.some((x) => x.alive && behaviorFor(state, x, rules) === 'lich');
-      if (lich || (enemy.rises ?? 0) < rules.combat.restlessDead.rises) enemy.pile = true;
+      const again = lich || (enemy.rises ?? 0) < rules.combat.restlessDead.rises;
+      if (again && riseHp(enemy) >= rules.combat.restlessDead.minHp) enemy.pile = true;
     }
   }
   const rage = rules.combat.warlordEnrage;
@@ -850,6 +862,7 @@ interface Hit {
 function hitHero(state: BattleState, enemy: EnemyState, h: HeroState, raw: number, rules: Rules, ignoreArmor = false): Hit {
   const dealt = Math.max(0, raw - (ignoreArmor ? 0 : h.armor));
   h.hp -= dealt;
+  if (dealt > 0) (state.pendingHits ??= {})[h.id] = (state.pendingHits[h.id] ?? 0) + dealt;
   if (h.lastStand && h.hp < 1) h.hp = 1;
   if (!h.attackedByThisRound.includes(enemy.id)) h.attackedByThisRound.push(enemy.id);
   let text = `${dealt} to ${rules.classes[h.heroClass].name}`;
@@ -946,12 +959,13 @@ function doSpecial(state: BattleState, enemy: EnemyState, rules: Rules): boolean
       return true;
     }
     case 'raiseDead': {
-      const dead = state.enemies.filter((e) => e.kind === 'goblin' && !e.alive);
+      const dead = state.enemies.filter((e) => e.kind === 'goblin' && !e.alive && riseHp(e) >= rules.combat.restlessDead.minHp);
       if (!dead.length) return false;
       for (const e of dead) {
         e.alive = true;
         e.pile = false;
-        e.hp = Math.min(e.maxHp, rules.combat.restlessDead.riseHp);
+        e.hp = riseHp(e);
+        e.rises = (e.rises ?? 0) + 1;
         e.arrivedRound = state.round;
         e.poison = null;
         e.weaken = null;
@@ -1136,9 +1150,14 @@ export function endRound(prev: BattleState, rules: Rules = defaultRules): Battle
 
 /** What the horde would do if the party phase ended right now. */
 export function previewEnemyPhase(state: BattleState, rules: Rules = defaultRules): LogEntry[] {
-  if (state.phase !== 'party') return [];
+  return previewRound(state, rules).log;
+}
+
+/** What ending the round now would do: this round's summon and enemy actions, and the state after. */
+export function previewRound(state: BattleState, rules: Rules = defaultRules): { log: LogEntry[]; after: BattleState } {
+  if (state.phase !== 'party') return { log: [], after: state };
   const after = endRound(state, rules);
-  return after.log.slice(state.log.length).filter((l) => l.round === state.round && l.side !== 'system');
+  return { log: after.log.slice(state.log.length).filter((l) => l.round === state.round && l.side !== 'system'), after };
 }
 
 export function heroesReadyToAct(state: BattleState): HeroState[] {
