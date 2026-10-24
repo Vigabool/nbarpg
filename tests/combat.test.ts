@@ -194,7 +194,7 @@ describe('weapon attacks and energy', () => {
   it('advanced attacks cost energy and add an effect', () => {
     const g = monster({ hp: 99 });
     let s = battle([[g]]);
-    s = act(s, 'wizard', 'arcane-bolt', [g.id]);
+    s = act(s, 'wizard', 'magic-missile', [g.id]);
     expect(hero(s, 'wizard').pool).toBe(19);
     expect(enemy(s, g.id).hp).toBe(99 - 6);
     s = act(s, 'warrior', 'shield-bash', [g.id]);
@@ -322,6 +322,20 @@ describe('the horde', () => {
     s = endRound(s);
     expect(hero(s, 'warrior').hp).toBe(1);
     expect(s.phase).toBe('party');
+  });
+});
+
+describe('Wizard Shield', () => {
+  it('gives the Wizard +5 armor for the round, once', () => {
+    const h = monster({ kind: 'hunter', hp: 99, damage: 9 });
+    let s = battle([[h]]);
+    s = act(s, 'wizard', 'shield');
+    expect(hero(s, 'wizard').armor).toBe(5);
+    expect(hero(s, 'wizard').pool).toBe(17);
+    expect(listActions(s, 'wizard').find((o) => o.def.id === 'shield')!.reason).toBe('Already active this round');
+    // The Hunter picks the lowest-armor hero, which is no longer the Wizard.
+    s = endRound(s);
+    expect(hero(s, 'wizard').hp).toBe(22);
   });
 });
 

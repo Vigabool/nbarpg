@@ -153,13 +153,13 @@ Gear damage and armor use the player's season-average Rating, mapped to the same
 | Ranger | 30 | Longbow: G damage to any enemy | Longsword (1): G + 3 to an enemy that attacked the Ranger last round | — |
 | Cleric | 28 | Mace: G damage | Holy Strike (2): G damage and heals the most injured ally 3 | — |
 | Rogue | 25 | Dagger: G damage | Poisoned Blade (2): G damage plus 2 poison for 2 rounds | — |
-| Wizard | 22 | Staff: G damage | Arcane Bolt (1): G + 2 damage, ignores armor | — |
+| Wizard | 22 | Staff: G damage | Magic Missile (1): G + 2 damage, never misses, ignores armor | — |
 
 ### Wizard abilities
 
 | Ability | Cost | Effect |
 | --- | --- | --- |
-| Magic Missile | 3 | 6 damage to 1 target, never misses and is not reduced by armor |
+| Shield | 3 | +5 armor this round (utility; doesn't stack with itself) |
 | Lightning Bolt | 7 | 14 damage to 1 target |
 | Fireball | 10 | 8 damage to up to 3 targets |
 | Signature (DD): Chain Lightning | Free, once | 10 damage to every enemy in the wave |

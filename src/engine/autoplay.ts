@@ -65,8 +65,9 @@ export function chooseAction(
       if (has('fireball') && enemies.length >= 3) return act(has('fireball'), byHpAsc.slice(0, 3).map((e) => e.id));
       const big = byThreat.find((e) => e.hp >= 12);
       if (has('lightning-bolt') && big) return act(has('lightning-bolt'), [big.id]);
-      const finish = byHpAsc.find((e) => e.hp > hero.gear && e.hp <= 6);
-      if (has('magic-missile') && finish) return act(has('magic-missile'), [finish.id]);
+      const lowestArmor = Math.min(...state.heroes.filter((h) => h.alive).map((h) => h.armor));
+      const hunterOut = enemies.some((e) => e.kind === 'hunter');
+      if (has('shield') && hunterOut && hero.armor <= lowestArmor && hero.pool >= 12) return act(has('shield'));
       return gear();
     }
     case 'rogue': {
