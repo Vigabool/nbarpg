@@ -10,6 +10,8 @@ import {
   previewRound,
   actionDamage,
   commandSources,
+  actionsThisRound,
+  hoardBonus,
   canFumble,
   spendFumble,
   phylactery,
@@ -30,7 +32,7 @@ import {
 } from '../engine/combat';
 import { rules, type HeroClass, type Tier, type TraitId } from '../rules';
 import { EnemyHead, Feature, monsterBehavior, monsterPassives, type EnemyPage, type TutorialTopic } from './Tutorial';
-import { behaviorOf, encounterIds, encounterOf, monsterIcon, monsterName, monsterShort } from '../engine/encounter';
+import { behaviorOf, encounterIds, encounterOf, hasTwist, monsterIcon, monsterName, monsterShort } from '../engine/encounter';
 import { CLASS_ICON, ConfirmButton, TIER_LABEL, TierChip, statLine, weekLabel } from './common';
 
 interface Props {
@@ -238,6 +240,7 @@ export function BattleScreen({ data, game, onChange, onHelp, onQuit }: Props) {
             🦴 {state.enemies.filter((e) => e.pile).length} reassemble next round
           </span>
         )}
+        {state.hoard && <HoardTag state={state} />}
       </div>
       <div className={`enemy-grid${threat ? ' threat-mode' : ''}`}>
         {champions.map((e) => (
@@ -276,6 +279,7 @@ export function BattleScreen({ data, game, onChange, onHelp, onQuit }: Props) {
             <Fragment key={h.id}>
               <HeroRow
                 h={h}
+                netted={h.nettedRound === state.round}
                 doomed={doomed.has(h.id)}
                 threatOn={threat === h.id}
                 onThreat={() => setThreatPick(threat === h.id ? null : h.id)}
@@ -513,7 +517,7 @@ function EnemyIcons({ e, state }: { e: EnemyState; state: BattleState }) {
   const rage = rules.combat.warlordEnrage;
   const icons: { icon: string; tone: string; label: string }[] = [];
   // A Wraith that is already intangible has nothing to fade from.
-  if (special && specialDue(e, state.round + 1) && !(special.key === 'fade' && e.intangible)) icons.push({ icon: `⏳ ${special.short} next round`, tone: 'soon', label: `${special.name} next round` });
+  if (special && !e.asleep && specialDue(e, state.round + 1) && !(special.key === 'fade' && e.intangible)) icons.push({ icon: `⏳ ${special.short} next round`, tone: 'soon', label: `${special.name} next round` });
   if (e.enraged) icons.push({ icon: `🔥+${rage.damageBonus}`, tone: 'warn', label: 'Enraged' });
   if (e.drum && e.drum.round >= state.round) icons.push({ icon: `🥁+${e.drum.amount}`, tone: 'warn', label: 'War Drum' });
   for (const c of commandSources(state, e)) icons.push({ icon: `${c.icon}+${c.bonus}`, tone: 'warn', label: c.name });
@@ -521,6 +525,10 @@ function EnemyIcons({ e, state }: { e: EnemyState; state: BattleState }) {
     icons.push({ icon: '⚱️ ½', tone: 'shield', label: 'Takes half damage while its Phylactery stands' });
   if (isGuarded(state, e)) icons.push({ icon: '🔒', tone: 'shield', label: 'Guarded by the pack' });
   if (e.intangible) icons.push({ icon: '👻 Intangible', tone: 'ghost', label: 'Intangible: only spells and Cleric attacks can touch it' });
+  if (e.groggy) icons.push({ icon: '😵 Groggy', tone: '', label: 'Groggy: one action a round until the final wave arrives' });
+  const ov = encounterOf(state.encounter).monsters[e.kind];
+  if (ov?.dragonkin && hasTwist('dragonscale', state.encounter)) icons.push({ icon: '🔥½', tone: 'shield', label: 'Dragonscale: half damage from fire' });
+  if (ov?.moltenHide) icons.push({ icon: `🌋${ov.moltenHide.damage}`, tone: 'warn', label: `${ov.moltenHide.name}: weapon hits burn the attacker for ${ov.moltenHide.damage}` });
   if (ignoresTaunt(e)) icons.push({ icon: '⊘⚑', tone: '', label: 'Ignores taunts' });
   if (e.tauntedBy) icons.push({ icon: '⚑', tone: 'taunt', label: 'Taunted' });
   if (e.poison) icons.push({ icon: `☣${e.poison.perRound}`, tone: 'poison', label: 'Poisoned' });
@@ -534,6 +542,23 @@ function EnemyIcons({ e, state }: { e: EnemyState; state: BattleState }) {
         </span>
       ))}
     </>
+  );
+}
+
+/** Hoard Tithe: coins on the sleeping Dragon's hoard and what they're worth. */
+function HoardTag({ state }: { state: BattleState }) {
+  const h = state.hoard!;
+  const dragon = state.enemies.find((e) => behaviorOf(e.kind, state.encounter) === 'dragon');
+  const bonus = dragon ? hoardBonus(state, dragon) : 0;
+  return (
+    <span
+      className={`tag static hoard${h.sealed ? ' sealed' : ''}`}
+      aria-label={`Hoard: ${h.coins} coins, Dragon +${bonus} damage${h.sealed ? ', sealed' : ''}`}
+      title={rules.combat.hoardTithe.description}
+    >
+      💰 {h.coins} · Dragon +{bonus}
+      {h.sealed ? ' · sealed' : ''}
+    </span>
   );
 }
 
@@ -592,10 +617,14 @@ function FumbleChip({ e, state, onFumble }: { e: EnemyState; state: BattleState;
   );
 }
 
+const sleepText = (e: EnemyState) =>
+  e.waking ? '💢 Stirring: wakes at the end of this round' : `💤 Asleep · hits deal ×${rules.combat.dragonSleep.damageMultiplier} and wake it`;
+
 /** A special fires this round when the preview of the enemy turn includes it (specials log with ⚠). */
 const specialNow = (intent?: Intent) => !!intent?.short.some((s) => s.startsWith('⚠'));
 
 function IntentLine({ e, state, intent }: { e: EnemyState; state: BattleState; intent?: Intent }) {
+  if (e.asleep) return <div className="u-intent sleep">{sleepText(e)}</div>;
   if (justArrived(state, e)) return <div className="u-intent muted">Arrived · acts next round</div>;
   if (!intent?.short.length) return null;
   const special = intent.short.filter((s) => s.startsWith('⚠'));
@@ -645,7 +674,7 @@ function EnemyCard({
   const inert = behaviorOf(e.kind, state.encounter) === 'phylactery';
   return (
     <div
-      className={`unit-c${e.isWarlord ? ' warlord' : ' champion'}${specialNow(intent) ? ' special-now' : ''}${e.intangible ? ' intangible' : ''}${threat ? ' threat' : ''}${targetable ? ' target' : ''}${targeted ? ' targeted' : ''}`}
+      className={`unit-c${e.isWarlord ? ' warlord' : ' champion'}${e.asleep ? ' asleep' : ''}${specialNow(intent) ? ' special-now' : ''}${e.intangible ? ' intangible' : ''}${threat ? ' threat' : ''}${targetable ? ' target' : ''}${targeted ? ' targeted' : ''}`}
       onClick={onClick}
       role="button"
       aria-label={targetable ? `Target ${e.name}` : `${e.name}: details`}
@@ -660,7 +689,7 @@ function EnemyCard({
           <span className="u-dmg num">
             {dmgMark(e, state.encounter)}
             {dmg}
-            {e.isWarlord ? '×2' : ''}
+            {actionsThisRound(e) > 1 ? `×${actionsThisRound(e)}` : ''}
           </span>
         )}
       </div>
@@ -874,7 +903,9 @@ function EnemyDetail({
           <Feature
             title="This round"
             text={
-              justArrived(state, e) ? (
+              e.asleep ? (
+                `${sleepText(e)}. ${rules.combat.dragonSleep.description}.`
+              ) : justArrived(state, e) ? (
                 'Just arrived: acts next round.'
               ) : short.length ? (
                 <>
@@ -954,6 +985,7 @@ function EnemyDetail({
 
 function HeroRow({
   h,
+  netted,
   doomed,
   threatOn,
   onThreat,
@@ -962,6 +994,7 @@ function HeroRow({
   onClick,
 }: {
   h: HeroState;
+  netted: boolean;
   doomed: boolean;
   threatOn: boolean;
   onThreat: () => void;
@@ -1015,6 +1048,7 @@ function HeroRow({
           <Tag passThrough icon={`☣${h.poison.perRound}`} text={`Poisoned: ${h.poison.perRound} damage after the horde acts, ${h.poison.rounds} more time${h.poison.rounds > 1 ? 's' : ''}`} tone="poison" />
         )}
         {h.prone && <Tag passThrough icon="⤵" text="Prone: can't act this round" tone="warn" />}
+        {netted && <Tag passThrough icon="🪤" text="Netted: no attack this round (utilities still work)" tone="warn" />}
         {h.skipNextTurn && <Tag passThrough icon="⤵" text="Knocked prone: skips next round" tone="warn" />}
         {h.untargetableRounds > 0 && <Tag passThrough icon="👻" text="Untargetable this round" tone="good" />}
         {h.lastStand && <Tag passThrough icon="⚑" text="Last Stand: can't drop below 1 HP" tone="taunt" />}

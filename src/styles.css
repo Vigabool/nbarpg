@@ -263,6 +263,11 @@ select.input { appearance: auto; }
 .fumble-note.on { color: #ffd36b; font-weight: 600; }
 .tag.trait { color: #f2b8ff; border-color: #8a4fa0; background: rgba(200, 120, 230, 0.12); font-weight: 600; }
 .tag.trait.spent { opacity: 0.45; text-decoration: line-through; }
+.tag.hoard { color: #ffd36b; border-color: #a8842d; font-weight: 650; }
+.tag.hoard.sealed { opacity: 0.7; }
+.unit-c.asleep { opacity: 0.65; border-style: dashed; filter: saturate(0.6); }
+.unit-c.asleep.target, .unit-c.asleep.targeted { opacity: 1; filter: none; }
+.u-intent.sleep { color: #b9c4e8; }
 .tag.fumbled { color: #ffd36b; border-color: #a8842d; }
 .unit-c.threat { border-color: var(--danger); box-shadow: 0 0 0 2px var(--danger); }
 .enemy-grid.threat-mode .unit-c:not(.threat) { opacity: 0.35; }

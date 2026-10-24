@@ -411,7 +411,7 @@ function EnemiesTab({ initial, initialEncounter }: { initial?: EnemyPage; initia
         <p className="small">
           The single best opposing line (points + rebounds + assists) across your chosen games leads the horde. Its best tier as any
           Champion type sets its strength, and its two biggest standout stats can each give it a trait. The boss is never a player who already
-          mirrors one of your heroes. It arrives in the last wave.
+          mirrors one of your heroes. {enc.bossSleeps ? 'It lies asleep on the field from the first round (see Asleep below).' : 'It arrives in the last wave.'}
         </p>
         {sp && <Feature title={`⚠ Special · ${sp.name}`} text={`${sp.description}. Fires ${every} on the field, starting its 2nd round. Its card shows ⏳ the round before, then a red ⚠ NOW banner when it's about to fire.`} warn />}
         {monsterPassives(enc.boss, encId).map((p) => (
@@ -538,7 +538,13 @@ export function monsterPassives(kind: MonsterKind, encounter?: string): { title:
       text: `${c.phylactery.description}. When the Lich falls, the Phylactery shatters.`,
     });
   const ov = encounterOf(encounter).monsters[kind];
-  for (const p of [ov?.aura, ov?.poisonOnHit, ov?.boneHarvest, ov?.restless]) if (p) out.push({ title: p.name, text: `${p.description}.` });
+  for (const p of [ov?.aura, ov?.poisonOnHit, ov?.boneHarvest, ov?.restless, ov?.moltenHide, ov?.shinyThief]) if (p) out.push({ title: p.name, text: `${p.description}.` });
+  if (kind === 'goblin' && hasTwist('hoardTithe', encounter)) out.push({ title: c.hoardTithe.name, text: `${c.hoardTithe.description}.` });
+  if (behavior === 'dragon') {
+    out.push({ title: c.dragonSleep.name, text: `${c.dragonSleep.description}.` });
+    out.push({ title: 'Hoard', text: `+1 damage per ${c.hoardTithe.coinsPerDamage} coins in its hoard (up to +${c.hoardTithe.maxBonus}).` });
+  }
+  if (ov?.dragonkin && hasTwist('dragonscale', encounter)) out.push({ title: c.dragonscale.name, text: `${c.dragonscale.description}. Lightning hits it at full strength.` });
   if (behavior === 'chieftain') out.push({ title: c.chieftainCommand.name, text: `${c.chieftainCommand.description}: minions and the goblin Champions, not the Ogre. Kill the Chieftain and the buff ends.` });
   if (m.ignoresTaunt) out.push({ title: 'Ignores taunts', text: "Provoke, Bulwark and the Bear don't work on it." });
   if (hasTwist('packGuard', encounter) && c.packGuard.guarded.includes(behavior)) out.push({ title: c.packGuard.name, text: `${c.packGuard.description}.` });

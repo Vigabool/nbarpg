@@ -313,6 +313,35 @@ A necromancer's tomb where the dead won't stay down.
 
 **Balance (bot simulator, 1,000 battles):** target 60–65% bot wins (the bot ignores traits, Fumbles and the fire/holy puzzle, so players should land higher). Crypt 61%, 7.2 rounds; Goblin Horde 65%, 7.6 rounds.
 
+### The Dragon's Lair
+
+A red dragon's mountain lair, guarded by kobold zealots and drakes. Its puzzle is tempo: every round you wait makes the boss stronger.
+
+| Role (mirrors) | Mechanics | The Dragon's Lair |
+| --- | --- | --- |
+| Minion | Goblin (6 HP, 1 per 35 points) | Kobold |
+| Brute (Warrior) | Ogre + Molten Hide | Magma Drake |
+| Caster (Wizard) | Warlock (Choking Smoke = Hex) | Kobold Firecaller |
+| Sniper (Ranger) | Hunter with Net Shot | Kobold Trapper |
+| Stalker (Rogue) | Assassin + Shiny Thief | Wyrmling |
+| Support (Cleric) | Shaman with Tithe Blessing | Scale Priest |
+| Boss | Dragon (sleeps from round 1) | Dragon |
+
+**Twist · Hoard Tithe:** while the Dragon sleeps, each kobold still standing at the end of a round adds a coin to its hoard; every 3 coins give the Dragon +1 damage (up to +5). Waking the Dragon seals the hoard. The counter sits beside the encounter name ("💰 7 · Dragon +2").
+
+**Twist · Dragonscale:** dragonkin (Drake, Wyrmling, Dragon) take half damage from fire. Fireball is for kobolds; Lightning is for dragons. The inverse of the Crypt.
+
+**The sleeping Dragon.** It lies on the field from round 1, asleep (dimmed, 💤), and doesn't act or hold waves back. Attacks that hit every enemy pass it by, so waking it is always deliberate. A hit while it sleeps deals double damage (an ambush), and it wakes at the end of that round, sealing the hoard, groggy: one action a round until the final wave arrives. Otherwise the final wave wakes it at full strength. The choice: ambush early for a weaker, groggy Dragon you fight all battle, or let it sleep and face it last with a fat hoard.
+
+**Role tweaks:**
+- **Magma Drake · Molten Hide:** heroes who hit it with a weapon take 2 burn damage (spells don't). Ground Slam is reskinned Tail Sweep.
+- **Kobold Trapper · Net Shot** (replaces Volley): hits the lowest-armor hero, who can't use an attack next round (utilities still work).
+- **Wyrmling · Shiny Thief:** while the Dragon sleeps, each energy-draining hit adds a coin to the hoard.
+- **Scale Priest · Tithe Blessing** (replaces War Drum): +3 coins; no special once the hoard is sealed.
+- **Dragon:** Fire Breath (every hero takes its full damage, armor applies), Hoard, Dragonscale, Asleep. HP 62–124, damage 8–13.
+
+**Balance (bot simulator, 1,000 battles):** letting it sleep 60% bot wins (7.1 rounds); opening with a full ambush (`--ambush`) 55% (6.2 rounds). Neither choice dominates. The groggy rule matters: without it, an ambush that didn't kill the Dragon outright was a near-certain loss.
+
 Encounters without their own boss fall back to the classic Warlord: a boosted copy of the top performer's Champion (double HP, +2 damage).
 
 ## Monster behaviors

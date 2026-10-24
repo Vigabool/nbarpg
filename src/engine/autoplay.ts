@@ -1,5 +1,5 @@
 import { rules as defaultRules, type Rules } from '../rules';
-import { canFumble, endRound, justArrived, listActions, livingEnemies, pickableEnemies, performAction, spendFumble, type ActionOption, type BattleState, type HeroAction, type HeroState } from './combat';
+import { actionDamage, canFumble, endRound, justArrived, listActions, livingEnemies, pickableEnemies, performAction, spendFumble, type ActionOption, type BattleState, type HeroAction, type HeroState } from './combat';
 
 /**
  * A simple rule-based player used by the batch simulator and tests. It is not
@@ -99,9 +99,38 @@ export function chooseAction(
   }
 }
 
-export function autoplay(initial: BattleState, rules: Rules = defaultRules): BattleState {
+/** How the bot plays choices the simulator wants to compare. */
+export interface BotPolicy {
+  /** Open the battle with every hero's biggest single-target attack on a sleeping Dragon. */
+  ambushDragon?: boolean;
+}
+
+/** Rough damage of an attack on one target, for picking the biggest hit (e.g. "12×2" → 24). */
+const hitSize = (o: ActionOption, hero: HeroState) => {
+  const d = actionDamage(o.def, hero);
+  if (!d) return 0;
+  const [a, b] = d.split('×').map(Number);
+  return o.def.target.type === 'enemies' ? a : a * (b || 1);
+};
+
+function ambush(state: BattleState, rules: Rules): BattleState {
+  const dragon = state.enemies.find((e) => e.alive && e.asleep);
+  if (!dragon) return state;
+  for (const h of state.heroes) {
+    if (!h.alive || h.acted || h.prone) continue;
+    const hero = state.heroes.find((x) => x.id === h.id)!;
+    const best = listActions(state, h.id, rules)
+      .filter((o) => o.available && o.attack && o.validTargets.includes(dragon.id))
+      .sort((a, b) => hitSize(b, hero) - hitSize(a, hero))[0];
+    if (best) state = performAction(state, { heroId: h.id, actionId: best.def.id, targetIds: [dragon.id] }, rules);
+  }
+  return state;
+}
+
+export function autoplay(initial: BattleState, rules: Rules = defaultRules, policy: BotPolicy = {}): BattleState {
   let state = initial;
   let guard = 0;
+  if (policy.ambushDragon) state = ambush(state, rules);
   while (state.phase === 'party' && guard++ < 1000) {
     const order = ['warrior', 'cleric', 'ranger', 'rogue', 'wizard'];
     const ready = state.heroes.filter((h) => h.alive && !h.acted && !h.prone).sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));

@@ -22,6 +22,8 @@ export interface MonsterSpec {
   fumbles: number;
   /** Box-score traits from its player's standout stats (one for a role, two for the boss). */
   traits?: TraitId[];
+  /** On the field from the first wave but asleep until the final wave (the Dragon). */
+  sleeps?: boolean;
   /** For champions: the real performance behind them. */
   source?: { playerId: number; gameId: string; team: string; line: BoxLine; mirrorOf?: HeroClass };
 }
@@ -217,7 +219,7 @@ export function buildHorde(picks: HeroGamePick[], data: SeasonData, rules: Rules
         id: '',
         kind: 'goblin',
         name: `${monsterName('goblin', encounter, rules)} (${opp.team})`,
-        hp: rules.monsters.goblin.hp!,
+        hp: enc.minionHp ?? rules.monsters.goblin.hp!,
         damage,
         isWarlord: false,
         extraActions: 0,
@@ -240,7 +242,12 @@ export function buildHorde(picks: HeroGamePick[], data: SeasonData, rules: Rules
   const rest = byStrength.filter((c) => !pinnedWave(c));
   const wave2Count = Math.ceil(rest.length / 2);
   waves[1].push(...rest.slice(0, wave2Count));
-  waves[2].push(...rest.slice(wave2Count), warlord);
+  // A sleeping boss (the Dragon) lies on the field from the start; it belongs to the final wave.
+  if (enc.bossSleeps) {
+    warlord.sleeps = true;
+    waves[0].push(warlord);
+    waves[2].push(...rest.slice(wave2Count));
+  } else waves[2].push(...rest.slice(wave2Count), warlord);
   // A boss companion (the Lich's Phylactery) arrives beside the boss at its tier.
   if (enc.boss && enc.bossCompanion) {
     const def = rules.monsters[enc.bossCompanion];

@@ -12,6 +12,22 @@
       "description": "Hits every hero for its damage −2 and knocks its target prone",
       "splashPenalty": 2
     },
+    "netShot": {
+      "name": "Net Shot",
+      "short": "Net",
+      "description": "Hits the lowest-armor hero and nets them: they can't use an attack next round (utilities still work)"
+    },
+    "titheBlessing": {
+      "name": "Tithe Blessing",
+      "short": "Tithe",
+      "description": "Adds 3 coins to the sleeping Dragon's hoard. Once the hoard is sealed, it has no special",
+      "coins": 3
+    },
+    "dragon": {
+      "name": "Fire Breath",
+      "short": "Breath",
+      "description": "Breathes fire over the whole party: every hero takes its full damage (armor still helps)"
+    },
     "goblinToss": {
       "name": "Goblin Toss",
       "short": "Toss",
@@ -123,5 +139,21 @@
       "elite": 4
     },
     "healFraction": 0.5
+  },
+  "hoardTithe": {
+    "name": "Hoard Tithe",
+    "description": "While the Dragon sleeps, each kobold still standing at the end of a round adds a coin to its hoard. Every 3 coins give the Dragon +1 damage (up to +5). Waking the Dragon seals the hoard",
+    "coinsPerDamage": 3,
+    "maxBonus": 5
+  },
+  "dragonscale": {
+    "name": "Dragonscale",
+    "description": "Dragonkin take half damage from fire",
+    "fireMultiplier": 0.5
+  },
+  "dragonSleep": {
+    "name": "Asleep",
+    "description": "Sleeps on its hoard until the final wave arrives or a hero hits it. While asleep it takes extra damage (an ambush), and attacks that hit every enemy pass it by. A hit wakes it at the end of that round, groggy: one action a round until the final wave arrives",
+    "damageMultiplier": 2
   }
 }

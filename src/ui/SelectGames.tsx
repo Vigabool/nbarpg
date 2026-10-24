@@ -146,7 +146,7 @@ export function SelectGames({ data, game, onChange }: { data: SeasonData; game: 
             return (
               <div key={i} className="stack" style={{ gap: 4 }}>
                 <h3 className="small muted">
-                  Wave {i + 1} · {wave.reduce((s, m) => s + m.hp, 0)} total HP
+                  Wave {i + 1} · {wave.filter((m) => !m.sleeps).reduce((s, m) => s + m.hp, 0)} total HP
                 </h3>
                 <div className="row">
                   {goblins.length > 0 && (
@@ -157,6 +157,7 @@ export function SelectGames({ data, game, onChange }: { data: SeasonData; game: 
                   {named.map((m) => (
                     <span key={m.id} className={`chip ${m.isWarlord ? 'warn' : ''}`}>
                       {monsterIcon(m.kind, game.encounter)} {m.name} · {m.hp} HP · {m.damage} dmg{m.isWarlord ? ' ×2 actions' : ''}
+                      {m.sleeps ? ' · 💤 asleep until the final wave' : ''}
                       {m.fumbles > 0 ? ` · 💫${m.fumbles}` : ''}
                       {(m.traits ?? []).map((id) => ` · ${rules.traits[id].icon} ${rules.traits[id].name}`).join('')}
                     </span>

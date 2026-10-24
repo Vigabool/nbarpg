@@ -141,6 +141,76 @@
           "icon": "⚱️"
         }
       }
+    },
+    "dragon-lair": {
+      "name": "The Dragon's Lair",
+      "tagline": "A red dragon's mountain lair, guarded by kobold zealots and drakes. Bring something other than fire.",
+      "boss": "dragon",
+      "bossSleeps": true,
+      "twists": [
+        "hoardTithe",
+        "dragonscale"
+      ],
+      "teamPointsPerMinion": 35,
+      "minionHp": 6,
+      "goblinKin": [],
+      "monsters": {
+        "goblin": {
+          "name": "Kobold",
+          "short": "Kobold",
+          "icon": "🦎",
+          "description": "Small and fragile, but every kobold still standing tithes a coin to the Dragon's hoard. Attacks whoever taunted it, then the Warrior, then the lowest-HP hero"
+        },
+        "ogre": {
+          "name": "Magma Drake",
+          "short": "Drake",
+          "icon": "🌋",
+          "specialName": "Tail Sweep",
+          "specialShort": "Sweep",
+          "dragonkin": true,
+          "moltenHide": {
+            "name": "Molten Hide",
+            "damage": 2,
+            "description": "Heroes who hit it with a weapon take 2 burn damage"
+          }
+        },
+        "warlock": {
+          "name": "Kobold Firecaller",
+          "short": "Firecaller",
+          "icon": "🔥",
+          "specialName": "Choking Smoke",
+          "specialShort": "Smoke"
+        },
+        "hunter": {
+          "name": "Kobold Trapper",
+          "short": "Trapper",
+          "icon": "🪤",
+          "special": "netShot"
+        },
+        "assassin": {
+          "name": "Wyrmling",
+          "short": "Wyrmling",
+          "icon": "🐲",
+          "dragonkin": true,
+          "shinyThief": {
+            "name": "Shiny Thief",
+            "description": "While the Dragon sleeps, each hit that drains energy also adds a coin to the hoard"
+          }
+        },
+        "shaman": {
+          "name": "Scale Priest",
+          "short": "Priest",
+          "icon": "🕯️",
+          "special": "titheBlessing",
+          "description": "Heals the most injured monster (the Dragon included) and shields the horde (+2 armor through next round)"
+        },
+        "dragon": {
+          "name": "Dragon",
+          "short": "Dragon",
+          "icon": "🐉",
+          "dragonkin": true
+        }
+      }
     }
   }
 }

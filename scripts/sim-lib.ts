@@ -4,7 +4,7 @@
  * class among a random draw, and each hero's best game that week.
  */
 import { CLASSES, type HeroClass } from '../src/rules';
-import { autoplay } from '../src/engine/autoplay';
+import { autoplay, type BotPolicy } from '../src/engine/autoplay';
 import { eligiblePlayers } from '../src/engine/calibration';
 import type { HeroGamePick } from '../src/engine/horde';
 import { computePool, seasonTier } from '../src/engine/rating';
@@ -27,7 +27,7 @@ export interface SimResult {
   goblinDamage: number;
 }
 
-export function simulate(data: SeasonData, battles: number, seedIn = 1, encounter?: string): SimResult {
+export function simulate(data: SeasonData, battles: number, seedIn = 1, encounter?: string, policy: BotPolicy = {}): SimResult {
   let seed = seedIn;
   const rand = () => ((seed = (seed * 1103515245 + 12345) % 2 ** 31) / 2 ** 31);
   const pool = eligiblePlayers(data);
@@ -54,7 +54,7 @@ export function simulate(data: SeasonData, battles: number, seedIn = 1, encounte
     r.horde += prepared.horde.waves.flat().length;
     r.goblins += prepared.horde.waves.flat().filter((m) => m.kind === 'goblin').length;
     for (const p of Object.values(prepared.pools)) r.pools.push(p!.pool);
-    const end = autoplay(prepared.battle);
+    const end = autoplay(prepared.battle, undefined, policy);
     if (end.phase === 'won') r.won++;
     else r.lost++;
     if (end.outcomeReason?.includes('rounds')) r.roundCap++;

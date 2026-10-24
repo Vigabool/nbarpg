@@ -22,9 +22,9 @@ export type Tier = (typeof TIERS)[number];
 export const CLASSES = ['warrior', 'ranger', 'cleric', 'rogue', 'wizard'] as const;
 export type HeroClass = (typeof CLASSES)[number];
 export type ChampionKind = 'ogre' | 'warlock' | 'hunter' | 'assassin' | 'shaman';
-export type MonsterKind = 'goblin' | ChampionKind | 'chieftain' | 'lich' | 'phylactery';
-export type Behavior = 'default' | ChampionKind | 'chieftain' | 'lich' | 'wraith' | 'phylactery';
-export type Twist = 'packTactics' | 'packGuard' | 'restlessDead';
+export type MonsterKind = 'goblin' | ChampionKind | 'chieftain' | 'lich' | 'phylactery' | 'dragon';
+export type Behavior = 'default' | ChampionKind | 'chieftain' | 'lich' | 'wraith' | 'phylactery' | 'dragon';
+export type Twist = 'packTactics' | 'packGuard' | 'restlessDead' | 'hoardTithe' | 'dragonscale';
 
 export type RatingFormula = Partial<Record<StatKey, number>>;
 /** Minimum Rating for each tier above Cold. */
@@ -160,10 +160,14 @@ export interface EncounterDef {
   tagline: string;
   /** Boss monster kind; without one the classic Warlord (a boosted Champion) is used. */
   boss?: MonsterKind;
+  /** The boss lies asleep on the field from round 1 until the final wave (the Dragon). */
+  bossSleeps?: boolean;
   /** Arrives beside the boss at its tier (e.g. the Lich's Phylactery). */
   bossCompanion?: MonsterKind;
   /** Overrides horde.minions.teamPointsPerGoblin (e.g. fewer, tougher skeletons). */
   teamPointsPerMinion?: number;
+  /** Overrides the minion's HP (e.g. fragile kobolds). */
+  minionHp?: number;
   /** Monster kinds that count as goblins for the Chieftain's Command. */
   goblinKin: MonsterKind[];
   /** Encounter rules in play, e.g. Pack Tactics for goblins or Restless Dead for the Crypt. */
@@ -191,6 +195,12 @@ export interface EncounterMonster {
   boneHarvest?: { name: string; heal: number; description: string };
   /** Reassembles like a skeleton after a weapon kill, this many times (e.g. the Skeletal Archer). */
   restless?: { name: string; rises: number; description: string };
+  /** Dragonkin: Dragonscale halves fire damage. */
+  dragonkin?: boolean;
+  /** Burns heroes who hit it with a weapon (e.g. the Magma Drake). */
+  moltenHide?: { name: string; damage: number; description: string };
+  /** Energy it drains also adds coins to the hoard (e.g. the Wyrmling). */
+  shinyThief?: { name: string; description: string };
 }
 
 /** A box-score trait: a standout stat on the mirrored player's night gives its monster an ability. */
