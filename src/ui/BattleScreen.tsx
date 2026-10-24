@@ -28,7 +28,7 @@ import {
   type LogEntry,
   type SummonState,
 } from '../engine/combat';
-import { rules, type HeroClass, type Tier } from '../rules';
+import { rules, type HeroClass, type Tier, type TraitId } from '../rules';
 import { EnemyHead, Feature, monsterBehavior, monsterPassives, type EnemyPage, type TutorialTopic } from './Tutorial';
 import { behaviorOf, encounterIds, encounterOf, monsterIcon, monsterName, monsterShort } from '../engine/encounter';
 import { CLASS_ICON, ConfirmButton, TIER_LABEL, TierChip, statLine, weekLabel } from './common';
@@ -537,6 +537,40 @@ function EnemyIcons({ e, state }: { e: EnemyState; state: BattleState }) {
   );
 }
 
+/** What a trait is doing right now, if anything changes it (used up, built up). */
+function traitStatus(e: EnemyState, id: TraitId, state: BattleState): { text: string; spent?: boolean } {
+  const t = rules.traits[id];
+  if (id === 'swat' && e.swatRound === state.round) return { text: `${t.icon} ${t.name} used`, spent: true };
+  if (id === 'secondChance' && e.secondChanceUsed) return { text: `${t.icon} ${t.name} used`, spent: true };
+  if (id === 'hotHand' && (e.hotStacks ?? 0) > 0) return { text: `${t.icon} ${t.name} +${e.hotStacks}` };
+  if (id === 'takeover' && e.hp <= e.maxHp / 2) return { text: `${t.icon} ${t.name}: 2 actions` };
+  return { text: `${t.icon} ${t.name}` };
+}
+
+/** Box-score traits: abilities from the mirrored player's standout stats. */
+function TraitChips({ e, state }: { e: EnemyState; state: BattleState }) {
+  return (
+    <>
+      {(e.traits ?? []).map((id) => {
+        const s = traitStatus(e, id, state);
+        return (
+          <span key={id} className={`tag static trait${s.spent ? ' spent' : ''}`} aria-label={`${rules.traits[id].name}: ${rules.traits[id].description}`}>
+            {s.text}
+          </span>
+        );
+      })}
+    </>
+  );
+}
+
+/** The stat behind a trait on this line, e.g. "4 blocks" or "11-of-16 shooting". */
+function traitSource(id: TraitId, e: EnemyState): string {
+  const line = e.spec.source?.line;
+  const t = rules.traits[id].trigger;
+  if (!line) return '';
+  return 'stat' in t ? `${line[t.stat]} ${t.label}` : `${line[t.made]}-of-${line[t.attempts]} ${t.label}`;
+}
+
 /** Fumbles from the opposing player's turnovers: tap to cancel this enemy's next action. */
 function FumbleChip({ e, state, onFumble }: { e: EnemyState; state: BattleState; onFumble: () => void }) {
   if (e.fumbled) return <span className="tag static fumbled">💫 Fumbling</span>;
@@ -619,6 +653,7 @@ function EnemyCard({
       <Meter kind="hp" value={e.hp} max={e.maxHp} />
       <IntentLine e={e} state={state} intent={intent} />
       <div className="u-foot">
+        <TraitChips e={e} state={state} />
         <FumbleChip e={e} state={state} onFumble={onFumble} />
         <EnemyIcons e={e} state={state} />
       </div>
@@ -839,6 +874,24 @@ function EnemyDetail({
               )
             }
           />
+          {(e.traits ?? []).map((id) => {
+            const t = rules.traits[id];
+            const src = traitSource(id, e);
+            return (
+              <Feature
+                key={id}
+                title={`${traitStatus(e, id, state).text} · trait`}
+                text={
+                  <>
+                    {t.description}.{src && ` From ${player ?? 'its player'}'s ${src}.`}
+                    <span className="tiny muted" style={{ display: 'block' }}>
+                      Counter: {t.counter}.
+                    </span>
+                  </>
+                }
+              />
+            );
+          })}
           {(e.fumbles > 0 || e.fumbled) && (
             <Feature
               title={`💫 Fumbles · ${e.fumbles} left`}

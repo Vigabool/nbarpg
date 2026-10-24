@@ -40,7 +40,8 @@ export function SelectGames({ data, game, onChange }: { data: SeasonData; game: 
           <h1>Choose this week's games</h1>
           <p className="muted small">
             Each hero's starting energy comes from one game this week. Every game also sends that night's opposing player into the horde as a mirrored
-            Champion, and the best opposing performance becomes the boss. Sloppy opponents help: every {rules.horde.turnoversPerFumble}{' '}
+            Champion; a big night gives it a trait (✋ Swat for 3+ blocks, 📣 Floor General for 10+ assists…). The best opposing line by anyone else
+            becomes the boss. Sloppy opponents help: every {rules.horde.turnoversPerFumble}{' '}
             turnovers give you a 💫 Fumble to cancel that Champion's action in battle.
           </p>
         </div>
@@ -103,6 +104,7 @@ export function SelectGames({ data, game, onChange }: { data: SeasonData; game: 
                         <br />
                         <TierChip tier={mirror.tier!} /> {mirror.hp} HP · {mirror.damage} dmg
                         <FumbleNote m={mirror} />
+                        <TraitNote m={mirror} />
                       </div>
                     )}
                   </button>
@@ -156,6 +158,7 @@ export function SelectGames({ data, game, onChange }: { data: SeasonData; game: 
                     <span key={m.id} className={`chip ${m.isWarlord ? 'warn' : ''}`}>
                       {monsterIcon(m.kind, game.encounter)} {m.name} · {m.hp} HP · {m.damage} dmg{m.isWarlord ? ' ×2 actions' : ''}
                       {m.fumbles > 0 ? ` · 💫${m.fumbles}` : ''}
+                      {(m.traits ?? []).map((id) => ` · ${rules.traits[id].icon} ${rules.traits[id].name}`).join('')}
                     </span>
                   ))}
                 </div>
@@ -182,13 +185,25 @@ export function SelectGames({ data, game, onChange }: { data: SeasonData; game: 
 
 /** The Fumbles a Champion brings: one per few turnovers by its player. */
 function FumbleNote({ m }: { m: MonsterSpec }) {
-  const tov = m.source?.line.tov ?? 0;
-  const per = rules.horde.turnoversPerFumble;
+  if (m.fumbles === 0) return null;
   return (
-    <span className={`fumble-note${m.fumbles > 0 ? ' on' : ''}`}>
+    <span className="fumble-note on">
       {' '}
-      · 💫 {m.fumbles > 0 ? `${m.fumbles} Fumble${m.fumbles > 1 ? 's' : ''}` : `no Fumbles`} ({tov} TOV
-      {m.fumbles === 0 && tov > 0 ? `, ${per - (tov % per)} short` : ''})
+      · 💫 {m.fumbles} Fumble{m.fumbles > 1 ? 's' : ''} ({m.source?.line.tov ?? 0} TOV)
     </span>
+  );
+}
+
+/** The trait a big night gives this Champion, and what it does. */
+function TraitNote({ m }: { m: MonsterSpec }) {
+  if (!m.traits?.length) return null;
+  return (
+    <>
+      {m.traits.map((id) => (
+        <span key={id} className="trait-note" style={{ display: 'block' }}>
+          {rules.traits[id].icon} <strong>{rules.traits[id].name}:</strong> {rules.traits[id].description}
+        </span>
+      ))}
+    </>
   );
 }

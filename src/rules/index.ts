@@ -5,6 +5,7 @@ import salaryJson from './salary.json';
 import calibrationJson from './calibration.json';
 import progressionJson from './progression.json';
 import combatJson from './combat.json';
+import traitsJson from './traits.json';
 import classesJson from './classes.json';
 import summonsJson from './summons.json';
 import monstersJson from './monsters.json';
@@ -184,6 +185,23 @@ export interface EncounterMonster {
   aura?: { name: string; bonus: number; description: string };
 }
 
+/** A box-score trait: a standout stat on the mirrored player's night gives its monster an ability. */
+export type TraitId = 'swat' | 'pickpocket' | 'secondChance' | 'floorGeneral' | 'deepRange' | 'takeover' | 'hotHand';
+export type TraitTrigger =
+  | { stat: StatKey; atLeast: number; label: string }
+  | { made: StatKey; attempts: StatKey; minAttempts: number; pctAtLeast: number; label: string };
+export interface TraitDef {
+  name: string;
+  icon: string;
+  trigger: TraitTrigger;
+  description: string;
+  counter: string;
+  energy?: number;
+  hpFraction?: number;
+  bonus?: number;
+  max?: number;
+}
+
 export interface Rules {
   tiers: TiersConfig;
   pool: {
@@ -201,6 +219,7 @@ export interface Rules {
     comparisonPools: Record<HeroClass, { description: string; seasonMin: Partial<Record<StatKey, number>> }>;
   };
   progression: typeof progressionJson;
+  traits: Record<TraitId, TraitDef>;
   combat: typeof combatJson & { shaman: { healByTier: Record<Tier, number>; shieldArmor: number } };
   classes: Record<HeroClass, ClassDef>;
   summons: Record<SummonKind, SummonDef>;
@@ -216,6 +235,7 @@ export const rules: Rules = {
   calibration: calibrationJson as Rules['calibration'],
   progression: progressionJson,
   combat: combatJson as Rules['combat'],
+  traits: traitsJson as Record<TraitId, TraitDef>,
   classes: classesJson as unknown as Record<HeroClass, ClassDef>,
   summons: summonsJson as Record<SummonKind, SummonDef>,
   monsters: monstersJson as unknown as Record<MonsterKind, MonsterDef>,

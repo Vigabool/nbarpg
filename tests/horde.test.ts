@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildHorde } from '../src/engine/horde';
-import { rules } from '../src/rules';
+import { rules, tierIndex } from '../src/rules';
 import { boxLine, season } from './helpers';
 
 // Hero team AAA plays BBB. BBB's lines are built so each mirror is unambiguous.
@@ -28,24 +28,40 @@ describe('horde generation', () => {
 
   it('mirrors each hero with the matching opposing player', () => {
     const byKind = (k: string) => all.find((m) => m.kind === k && !m.isWarlord);
-    // 101 was the Wizard's mirror but had the best line, so they became the Chieftain instead.
-    expect(byKind('warlock')).toBeUndefined();
+    expect(byKind('warlock')?.source?.playerId).toBe(101);
     expect(byKind('hunter')?.source?.playerId).toBe(102);
     expect(byKind('ogre')?.source?.playerId).toBe(103);
     expect(byKind('assassin')?.source?.playerId).toBe(104);
     expect(byKind('shaman')?.source?.playerId).toBe(105);
   });
 
-  it('makes the best performance the Goblin Chieftain, scaled by that line', () => {
-    // 101: 30 + 4 + 5 = 39, the highest pts+reb+ast. Its best tier as any Champion type sets the
-    // Chieftain's strength: 30 points on 55% shooting is an Elite Sharpshooter line.
-    expect(horde.warlord.source?.playerId).toBe(101);
+  it('makes the best line by a player who is not already a Champion the Goblin Chieftain', () => {
+    // 101 has the best line overall but mirrors the Wizard, so the boss is the next best: 106.
+    expect(horde.warlord.source?.playerId).toBe(106);
     expect(horde.warlord.kind).toBe('chieftain');
-    expect(horde.warlord.name).toBe('Goblin Chieftain · P101');
-    expect(horde.warlord.tier).toBe('elite');
-    expect(horde.warlord.hp).toBe(rules.monsters.chieftain.hpByTier![4]);
-    expect(horde.warlord.damage).toBe(rules.monsters.chieftain.damageByTier![4]);
+    expect(horde.warlord.name).toBe('Goblin Chieftain · P106');
+    const t = tierIndex(horde.warlord.tier!);
+    expect(horde.warlord.hp).toBe(rules.monsters.chieftain.hpByTier![t]);
+    expect(horde.warlord.damage).toBe(rules.monsters.chieftain.damageByTier![t]);
     expect(horde.warlord.extraActions).toBe(1);
+  });
+
+  it('always fields every role; a hero who sits out leaves an average, traitless one', () => {
+    const h = buildHorde(picks.filter((p) => p.heroClass !== 'rogue'), data);
+    const assassin = h.waves.flat().find((m) => m.kind === 'assassin')!;
+    expect(assassin.tier).toBe('average');
+    expect(assassin.source).toBeUndefined();
+    expect(assassin.traits).toEqual([]);
+    for (const k of ['ogre', 'warlock', 'hunter', 'assassin', 'shaman']) expect(h.waves.flat().some((m) => m.kind === k)).toBe(true);
+  });
+
+  it("gives each Champion one trait from its own player's standout stat", () => {
+    const byKind = (k: string) => all.find((m) => m.kind === k && !m.isWarlord)!;
+    expect(byKind('assassin').traits).toEqual(['pickpocket']); // 4 steals
+    expect(byKind('shaman').traits).toEqual(['floorGeneral']); // 11 assists
+    expect(byKind('ogre').traits).toEqual(['secondChance']); // 15 rebounds
+    expect(byKind('hunter').traits).toEqual(['hotHand']); // 9-of-15
+    expect(byKind('warlock').traits).toEqual([]); // 30 points on 55%: no standout
   });
 
   it('uses encounter names for champions and minions', () => {
@@ -57,14 +73,17 @@ describe('horde generation', () => {
     const noBoss = structuredClone(rules);
     delete noBoss.encounters.encounters['goblin-horde'].boss;
     const h = buildHorde(picks, data, noBoss);
-    expect(h.warlord.kind).toBe('warlock');
-    // A Great Warlock doubled, +2 damage.
-    expect(h.warlord.hp).toBe(noBoss.monsters.warlock.hpByTier![3] * 2);
-    expect(h.warlord.damage).toBe(noBoss.monsters.warlock.damageByTier![3] + 2);
+    expect(h.warlord.source?.playerId).toBe(106);
+    expect(h.warlord.name.startsWith('Warlord ')).toBe(true);
+    // Its Champion version doubled, +2 damage.
+    const def = noBoss.monsters[h.warlord.kind];
+    const t = tierIndex(h.warlord.tier!);
+    expect(h.warlord.hp).toBe(def.hpByTier![t] * 2);
+    expect(h.warlord.damage).toBe(def.damageByTier![t] + 2);
   });
 
   it('fumbles champions for turnovers (1 per 3)', () => {
-    expect(horde.warlord.fumbles).toBe(1);
+    expect(all.find((m) => m.kind === 'warlock')!.fumbles).toBe(1); // 101: 3 turnovers
   });
 
   it('adds goblins per opposing points, half in wave 1', () => {
@@ -79,11 +98,11 @@ describe('horde generation', () => {
   it('puts the Shaman in wave 1, the Warlord last, and the weaker champions in wave 2', () => {
     expect(horde.waves[0].filter((m) => m.kind !== 'goblin').map((m) => m.kind)).toEqual(['shaman']);
     expect(horde.waves[2].at(-1)?.isWarlord).toBe(true);
-    // Four non-Warlord champions; the Shaman is pinned, the other three split 2 / 1.
+    // Five champions; the Shaman is pinned, the other four split 2 / 2.
     const champs2 = horde.waves[1].filter((m) => m.kind !== 'goblin');
     const champs3 = horde.waves[2].filter((m) => m.kind !== 'goblin' && !m.isWarlord);
     expect(champs2.length).toBe(2);
-    expect(champs3.length).toBe(1);
+    expect(champs3.length).toBe(2);
   });
 
   it('moves down the list when one player would fill two mirrors', () => {

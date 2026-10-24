@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { energyGain, isAttack } from '../engine/combat';
 import type { ActionDef } from '../rules';
-import { CLASSES, rules, type ChampionKind, type HeroClass, type MonsterKind } from '../rules';
+import { CLASSES, rules, type ChampionKind, type HeroClass, type MonsterKind, type TraitId } from '../rules';
 import type { JSX, ReactNode } from 'react';
 import { SampleTurn } from './SampleTurn';
 import { behaviorOf, encounterIds, encounterOf, hasTwist, monsterDescription, monsterIcon, monsterName, monsterShort, specialFor } from '../engine/encounter';
@@ -40,7 +40,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'classes', label: 'Classes' },
   { id: 'enemies', label: 'Enemies' },
 ];
-export type EnemyPage = 'goblin' | ChampionKind | 'warlord';
+export type EnemyPage = 'goblin' | ChampionKind | 'warlord' | 'traits';
 
 /** Where to open How to play, e.g. from a "?" in battle. */
 export type TutorialTopic =
@@ -95,8 +95,8 @@ export function Tutorial({ onClose, topic }: { onClose: () => void; topic?: Tuto
                 night means a big start.
               </li>
               <li>
-                <strong>Watch who you bring.</strong> Every game you pick also sends the opposing player who mirrors your hero into the horde.
-                The best opposing performance of the week becomes the <em>Warlord</em>, the final boss.
+                <strong>Watch who you bring.</strong> Every game you pick also sets how strong the opposing player who mirrors your hero is in
+                the horde, and a big night gives that monster a <em>trait</em>. The best opposing line by anyone else becomes the boss.
               </li>
               <li>
                 <strong>Fight.</strong> Three waves, {rules.combat.roundCap} rounds. Waves arrive on a clock (rounds {rules.combat.waveArrivalRounds.join(' and ')}) or as
@@ -345,7 +345,7 @@ function ClassesTab({ initialClass, initialOpen }: { initialClass?: HeroClass; i
 
 // ---------- Enemies tab ----------
 
-const ENEMY_PAGES: EnemyPage[] = ['goblin', 'ogre', 'warlock', 'hunter', 'assassin', 'shaman', 'warlord'];
+const ENEMY_PAGES: EnemyPage[] = ['goblin', 'ogre', 'warlock', 'hunter', 'assassin', 'shaman', 'warlord', 'traits'];
 
 function range(arr?: number[]): string {
   if (!arr?.length) return '';
@@ -360,11 +360,28 @@ function EnemiesTab({ initial, initialEncounter }: { initial?: EnemyPage; initia
   const every = c.specialEveryNRounds === 2 ? 'every other round' : `every ${c.specialEveryNRounds} rounds`;
   const enc = encounterOf(encId);
   // The boss page shows the encounter's own boss, or the classic Warlord.
-  const label = (p: EnemyPage) => (p === 'warlord' ? (enc.boss ? monsterShort(enc.boss, encId) : 'Warlord') : monsterShort(p, encId));
-  const icon = (p: EnemyPage) => (p === 'warlord' ? (enc.boss ? monsterIcon(enc.boss, encId) : '👑') : monsterIcon(p, encId));
+  const label = (p: EnemyPage) =>
+    p === 'traits' ? 'Traits' : p === 'warlord' ? (enc.boss ? monsterShort(enc.boss, encId) : 'Warlord') : monsterShort(p, encId);
+  const icon = (p: EnemyPage) => (p === 'traits' ? '✨' : p === 'warlord' ? (enc.boss ? monsterIcon(enc.boss, encId) : '👑') : monsterIcon(p, encId));
 
   let body: JSX.Element;
-  if (page === 'goblin') {
+  if (page === 'traits') {
+    body = (
+      <>
+        <EnemyHead icon="✨" name="Traits" sub="Big nights make monsters dangerous in new ways" />
+        <p className="small">
+          A standout stat on the opposing player's night gives their monster one trait (the boss can have two). Cold and average nights bring
+          a plain monster. You can see every trait while picking games.
+        </p>
+        {(Object.keys(rules.traits) as TraitId[]).map((id) => {
+          const t = rules.traits[id];
+          const g = t.trigger;
+          const when = 'stat' in g ? `${g.atLeast}+ ${g.label}` : `${Math.round(g.pctAtLeast * 100)}%+ ${g.label} on ${g.minAttempts}+ shots`;
+          return <Feature key={id} title={`${t.icon} ${t.name} · ${when}`} text={`${t.description}. Counter: ${t.counter}.`} />;
+        })}
+      </>
+    );
+  } else if (page === 'goblin') {
     const bands = rules.horde.minions.damageByTeamFgPct.map((b) => b.damage);
     body = (
       <>
@@ -393,8 +410,8 @@ function EnemiesTab({ initial, initialEncounter }: { initial?: EnemyPage; initia
         </div>
         <p className="small">
           The single best opposing line (points + rebounds + assists) across your chosen games leads the horde. Its best tier as any
-          Champion type sets its strength, and if that player was already a Champion, they become the boss instead. It arrives in the last
-          wave.
+          Champion type sets its strength, and its two biggest standout stats can each give it a trait. The boss is never a player who already
+          mirrors one of your heroes. It arrives in the last wave.
         </p>
         {sp && <Feature title={`⚠ Special · ${sp.name}`} text={`${sp.description}. Fires ${every} on the field, starting its 2nd round; flagged ⚠ the round before.`} warn />}
         {monsterPassives(enc.boss, encId).map((p) => (

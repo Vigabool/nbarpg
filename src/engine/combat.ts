@@ -1,4 +1,4 @@
-import { CLASSES, rules as defaultRules, type ActionDef, type Effect, type HeroClass, type Rules, type SummonKind } from '../rules';
+import { CLASSES, rules as defaultRules, type ActionDef, type Effect, type HeroClass, type Rules, type SummonKind, type TraitId } from '../rules';
 import { behaviorOf, encounterOf, hasTwist, isGoblinKin, monsterIcon, monsterName, specialFor, type SpecialInfo } from './encounter';
 import type { MonsterSpec } from './horde';
 import type { PoolBreakdown } from './rating';
@@ -97,6 +97,15 @@ export interface EnemyState {
   rises?: number;
   /** Destroyed for good by fire or holy damage: even Raise Dead can't bring it back. */
   destroyed?: boolean;
+  /** Box-score traits (see rules/traits.json). */
+  traits?: TraitId[];
+  /** Swat: the round it last negated a hit. */
+  swatRound?: number;
+  secondChanceUsed?: boolean;
+  /** Hot Hand: bonus damage built up over rounds it wasn't hit. */
+  hotStacks?: number;
+  /** The last round anything hit it. */
+  hitRound?: number;
 }
 
 export interface LogEntry {
@@ -170,6 +179,7 @@ function makeEnemy(spec: MonsterSpec, arrivedRound: number, wave: number): Enemy
     isWarlord: spec.isWarlord,
     extraActions: spec.extraActions,
     fumbles: spec.fumbles,
+    traits: spec.traits ?? [],
     alive: true,
     shield: null,
     poison: null,
@@ -375,7 +385,14 @@ function aimable(state: BattleState, hero: HeroState, def: ActionDef, rules: Rul
 }
 
 export function ignoresTaunt(e: EnemyState, rules: Rules = defaultRules): boolean {
-  return !!rules.monsters[e.kind].ignoresTaunt;
+  return !!rules.monsters[e.kind].ignoresTaunt || hasTrait(e, 'deepRange');
+}
+
+export const hasTrait = (e: EnemyState, id: TraitId) => !!e.traits?.includes(id);
+
+/** Takeover: a second action once below half HP. */
+export function actionsThisRound(e: EnemyState): number {
+  return 1 + e.extraActions + (hasTrait(e, 'takeover') && e.hp <= e.maxHp / 2 ? 1 : 0);
 }
 
 function validTargets(state: BattleState, hero: HeroState, def: ActionDef, rules: Rules = defaultRules): string[] {
@@ -477,10 +494,26 @@ function damageEnemy(
   rules: Rules = defaultRules,
   source: DamageSource = {},
 ): number {
+  if (amount > 0) {
+    enemy.hitRound = state.round;
+    enemy.hotStacks = 0;
+    // Swat: the first hit each round is batted away.
+    if (hasTrait(enemy, 'swat') && enemy.swatRound !== state.round) {
+      enemy.swatRound = state.round;
+      log(state, 'system', `✋ ${enemy.name} swats the hit away.`, enemy.id);
+      return 0;
+    }
+  }
   // Phylactery: the Lich takes reduced damage while its soul is safe.
   if (behaviorFor(state, enemy, rules) === 'lich' && phylactery(state, rules)) amount *= rules.combat.phylactery.damageTaken;
   const dealt = Math.max(0, Math.floor(amount) - (pierce ? 0 : enemyArmor(enemy)));
   enemy.hp = Math.max(0, enemy.hp - dealt);
+  if (enemy.hp === 0 && enemy.alive && hasTrait(enemy, 'secondChance') && !enemy.secondChanceUsed) {
+    // Second Chance: back up once, at a fraction of its HP.
+    enemy.secondChanceUsed = true;
+    enemy.hp = Math.max(1, Math.round(enemy.maxHp * rules.traits.secondChance.hpFraction!));
+    log(state, 'system', `🔁 ${enemy.name} grabs a second chance and gets back up at ${enemy.hp} HP!`, enemy.id);
+  }
   if (enemy.hp === 0 && enemy.alive) {
     enemy.alive = false;
     if (enemy.isWarlord) state.stats.warlordDefeated = true;
@@ -531,6 +564,11 @@ export function commandSources(state: BattleState, e: EnemyState, rules: Rules =
   const living = state.enemies.filter((x) => x.alive);
   if (isGoblinKin(e.kind, state.encounter, rules) && living.some((x) => behaviorFor(state, x, rules) === 'chieftain'))
     out.push({ icon: '👑', name: rules.combat.chieftainCommand.name, bonus: rules.combat.chieftainCommand.bonus });
+  for (const x of living)
+    if (x.id !== e.id && hasTrait(x, 'floorGeneral')) {
+      const t = rules.traits.floorGeneral;
+      out.push({ icon: t.icon, name: `${t.name} (${x.name.split(' · ')[0]})`, bonus: t.bonus! });
+    }
   if (e.kind === 'goblin') {
     const enc = encounterOf(state.encounter, rules);
     for (const kind of new Set(living.map((x) => x.kind))) {
@@ -545,7 +583,7 @@ export function commandSources(state: BattleState, e: EnemyState, rules: Rules =
 /** What one hit from this enemy deals; for a Wraith, the drain each hero takes. */
 export function enemyDamage(state: BattleState, e: EnemyState, rules: Rules = defaultRules): number {
   if (behaviorFor(state, e, rules) === 'wraith') return wraithDrain(e, rules);
-  const rage = (e.enraged ? rules.combat.warlordEnrage.damageBonus : 0) + packBonus(state, e, rules) + commandBonus(state, e, rules);
+  const rage = (e.enraged ? rules.combat.warlordEnrage.damageBonus : 0) + packBonus(state, e, rules) + commandBonus(state, e, rules) + (e.hotStacks ?? 0);
   const drum = e.drum && e.drum.round === state.round ? e.drum.amount : 0;
   const weaken = e.weaken && e.weaken.rounds > 0 ? e.weaken.amount : 0;
   return Math.max(0, e.damage + rage + drum - weaken);
@@ -913,7 +951,7 @@ interface Hit {
 }
 
 function hitHero(state: BattleState, enemy: EnemyState, h: HeroState, raw: number, rules: Rules, ignoreArmor = false): Hit {
-  const dealt = Math.max(0, raw - (ignoreArmor ? 0 : h.armor));
+  const dealt = Math.max(0, raw - (ignoreArmor || hasTrait(enemy, 'deepRange') ? 0 : h.armor));
   h.hp -= dealt;
   if (dealt > 0) (state.pendingHits ??= {})[h.id] = (state.pendingHits[h.id] ?? 0) + dealt;
   if (h.lastStand && h.hp < 1) h.hp = 1;
@@ -923,6 +961,11 @@ function hitHero(state: BattleState, enemy: EnemyState, h: HeroState, raw: numbe
     const drained = Math.min(h.pool, rules.combat.assassinDrain);
     h.pool -= drained;
     if (drained) text += `, drains ${drained} energy`;
+  }
+  if (hasTrait(enemy, 'pickpocket')) {
+    const stolen = Math.min(h.pool, rules.traits.pickpocket.energy!);
+    h.pool -= stolen;
+    if (stolen) text += `, steals ${stolen} energy`;
   }
   if (h.hp <= 0) {
     h.hp = 0;
@@ -1167,7 +1210,7 @@ export function endRound(prev: BattleState, rules: Rules = defaultRules): Battle
   const order = [...livingEnemies(state)].sort((a, b) => Number(drummer(b)) - Number(drummer(a)));
   for (const enemy of order) {
     if (justArrived(state, enemy)) continue;
-    for (let a = 0; a <= enemy.extraActions; a++) enemyAct(state, enemy, a, rules);
+    for (let a = 0; a < actionsThisRound(enemy); a++) enemyAct(state, enemy, a, rules);
   }
 
   if (state.heroes.every((h) => !h.alive)) {
@@ -1178,7 +1221,9 @@ export function endRound(prev: BattleState, rules: Rules = defaultRules): Battle
   }
 
   // Round end.
+  const hot = rules.traits.hotHand;
   for (const e of state.enemies) {
+    if (e.alive && hasTrait(e, 'hotHand') && e.hitRound !== state.round) e.hotStacks = Math.min(hot.max!, (e.hotStacks ?? 0) + hot.bonus!);
     e.tauntedBy = null;
     if (e.weaken && --e.weaken.rounds <= 0) e.weaken = null;
     if (e.shield && --e.shield.rounds <= 0) e.shield = null;

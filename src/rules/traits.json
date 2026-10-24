@@ -1,0 +1,9 @@
+{
+  "swat": {"name": "Swat", "icon": "✋", "trigger": {"stat": "blk", "atLeast": 3, "label": "blocks"}, "description": "Negates the first hit it takes each round", "counter": "Open with a cheap hit, then land the real one"},
+  "pickpocket": {"name": "Pickpocket", "icon": "🫳", "trigger": {"stat": "stl", "atLeast": 4, "label": "steals"}, "description": "Each hit steals 2 energy", "counter": "Kill or taunt it before your big spenders act", "energy": 2},
+  "secondChance": {"name": "Second Chance", "icon": "🔁", "trigger": {"stat": "reb", "atLeast": 12, "label": "rebounds"}, "description": "Once per battle, gets back up at 25% HP", "counter": "Save burst for the second life", "hpFraction": 0.25},
+  "floorGeneral": {"name": "Floor General", "icon": "📣", "trigger": {"stat": "ast", "atLeast": 10, "label": "assists"}, "description": "Every other monster deals +2 damage while it lives", "counter": "Focus it first", "bonus": 2},
+  "deepRange": {"name": "Deep Range", "icon": "🎯", "trigger": {"stat": "fg3m", "atLeast": 6, "label": "threes"}, "description": "Ignores taunts and armor", "counter": "Heal or shield whoever it targets"},
+  "takeover": {"name": "Takeover", "icon": "⚡", "trigger": {"stat": "pts", "atLeast": 35, "label": "points"}, "description": "Acts twice once below half HP", "counter": "Burst it from high HP to dead in one round"},
+  "hotHand": {"name": "Hot Hand", "icon": "♨️", "trigger": {"made": "fgm", "attempts": "fga", "minAttempts": 15, "pctAtLeast": 0.6, "label": "shooting"}, "description": "+2 damage for each round it isn't hit (up to +6); any hit resets it", "counter": "Keep touching it", "bonus": 2, "max": 6}
+}

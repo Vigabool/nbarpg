@@ -1,5 +1,5 @@
 import type { BoxLine, SeasonData } from '../data/types';
-import { rules as defaultRules, tierIndex, type ChampionKind, type HeroClass, type MonsterKind, type Rules, type Tier } from '../rules';
+import { rules as defaultRules, tierIndex, type ChampionKind, type HeroClass, type MonsterKind, type Rules, type Tier, type TraitId } from '../rules';
 import { encounterOf, monsterName } from './encounter';
 import { computeRating, shiftTier, tierFor } from './rating';
 
@@ -18,8 +18,10 @@ export interface MonsterSpec {
   tier?: Tier;
   isWarlord: boolean;
   extraActions: number;
-  /** Actions skipped on arrival, from the mirrored player's turnovers. */
+  /** Fumbles the party can spend on it, from its player's turnovers. */
   fumbles: number;
+  /** Box-score traits from its player's standout stats (one for a role, two for the boss). */
+  traits?: TraitId[];
   /** For champions: the real performance behind them. */
   source?: { playerId: number; gameId: string; team: string; line: BoxLine; mirrorOf?: HeroClass };
 }
@@ -50,6 +52,43 @@ function championTier(kind: ChampionKind, line: BoxLine, rules: Rules): Tier {
   return tier;
 }
 
+/** A trait's strength on this line: how far past its threshold (0 if it doesn't trigger). */
+function traitScore(id: TraitId, line: BoxLine, rules: Rules): number {
+  const t = rules.traits[id].trigger;
+  if ('stat' in t) return line[t.stat] >= t.atLeast ? line[t.stat] / t.atLeast : 0;
+  if (line[t.attempts] < t.minAttempts) return 0;
+  const pct = line[t.made] / line[t.attempts];
+  return pct >= t.pctAtLeast ? pct / t.pctAtLeast : 0;
+}
+
+/** The standout traits on a line, strongest first. */
+export function traitsFor(line: BoxLine, max: number, rules: Rules = defaultRules): TraitId[] {
+  return (Object.keys(rules.traits) as TraitId[])
+    .map((id) => ({ id, score: traitScore(id, line, rules) }))
+    .filter((t) => t.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, max)
+    .map((t) => t.id);
+}
+
+/** A role nobody mirrors this week (its hero sits out): an average, traitless monster. */
+function baselineChampion(kind: ChampionKind, rules: Rules, encounter?: string): MonsterSpec {
+  const def = rules.monsters[kind];
+  const tier: Tier = 'average';
+  return {
+    id: '',
+    kind,
+    name: monsterName(kind, encounter, rules),
+    hp: def.hpByTier![tierIndex(tier)],
+    damage: def.damageByTier![tierIndex(tier)],
+    tier,
+    isWarlord: false,
+    extraActions: 0,
+    fumbles: 0,
+    traits: [],
+  };
+}
+
 function makeChampion(
   kind: ChampionKind,
   line: BoxLine,
@@ -72,6 +111,7 @@ function makeChampion(
     isWarlord: false,
     extraActions: 0,
     fumbles: Math.floor(line.tov / rules.horde.turnoversPerFumble),
+    traits: traitsFor(line, 1, rules),
     source: { playerId: line.playerId, gameId, team: line.team, line, mirrorOf },
   };
 }
@@ -110,25 +150,29 @@ export function buildHorde(picks: HeroGamePick[], data: SeasonData, rules: Rules
     used.add(key(pick.gameId, line.playerId));
     champions.push(makeChampion(mirror.champion, line, pick.gameId, nameOf(line.playerId), rules, pick.heroClass, encounter));
   }
+  // Every role fights every week: a role whose hero sits out comes in at average strength.
+  for (const m of order) if (!champions.some((c) => c.kind === m.champion)) champions.push(baselineChampion(m.champion, rules, encounter));
 
-  // The Warlord: the single best opposing performance across the chosen games.
+  // The boss: the single best opposing performance by a player who isn't already a Champion
+  // (anyone, if every opposing player is).
   const w = rules.horde.warlord;
-  let best: { line: BoxLine; gameId: string; score: number } | undefined;
-  for (const opp of opposing.values()) {
-    for (const line of opp.lines) {
-      const score = computeRating(w.score, line);
-      if (!best || score > best.score || (score === best.score && line.min > best.line.min)) best = { line, gameId: opp.gameId, score };
-    }
-  }
-  // If that player was already mirrored, they become the boss instead.
-  const mirrored = champions.find((c) => c.source!.gameId === best!.gameId && c.source!.playerId === best!.line.playerId);
-  if (mirrored) champions.splice(champions.indexOf(mirrored), 1);
+  const bestLine = (skipUsed: boolean) => {
+    let top: { line: BoxLine; gameId: string; score: number } | undefined;
+    for (const opp of opposing.values())
+      for (const line of opp.lines) {
+        if (skipUsed && used.has(key(opp.gameId, line.playerId))) continue;
+        const score = computeRating(w.score, line);
+        if (!top || score > top.score || (score === top.score && line.min > top.line.min)) top = { line, gameId: opp.gameId, score };
+      }
+    return top;
+  };
+  const best = bestLine(true) ?? bestLine(false);
   // The performance's strength: the best tier it earns as any Champion type.
   const kinds = order.map((m) => m.champion);
   const bestKind = kinds.reduce((a, b) =>
     tierIndex(championTier(b, best!.line, rules)) > tierIndex(championTier(a, best!.line, rules)) ? b : a,
   );
-  const base = mirrored ?? makeChampion(bestKind, best!.line, best!.gameId, nameOf(best!.line.playerId), rules, undefined, encounter);
+  const base = makeChampion(bestKind, best!.line, best!.gameId, nameOf(best!.line.playerId), rules, undefined, encounter);
   let warlord: MonsterSpec;
   if (enc.boss) {
     // The encounter's own boss (e.g. the Goblin Chieftain), scaled by that performance.
@@ -143,6 +187,7 @@ export function buildHorde(picks: HeroGamePick[], data: SeasonData, rules: Rules
       damage: def.damageByTier![tierIndex(tier)],
       isWarlord: true,
       extraActions: w.extraActions,
+      traits: traitsFor(best!.line, 2, rules),
     };
   } else {
     // Classic Warlord: a boosted copy of that player's Champion.
@@ -153,6 +198,7 @@ export function buildHorde(picks: HeroGamePick[], data: SeasonData, rules: Rules
       damage: base.damage + w.damageBonus,
       isWarlord: true,
       extraActions: w.extraActions,
+      traits: traitsFor(best!.line, 2, rules),
     };
   }
 

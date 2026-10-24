@@ -73,7 +73,7 @@
     }
   },
   "minions": {
-    "teamPointsPerGoblin": 35,
+    "teamPointsPerGoblin": 50,
     "waveShare": [
       0.3,
       0.35,

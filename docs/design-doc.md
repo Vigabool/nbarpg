@@ -221,9 +221,27 @@ Gear damage and armor use the player's season-average Rating, mapped to the same
 | Rogue | Steals leader | Assassin | Steals |
 | Cleric | Assists leader | Shaman | Assists |
 
+**Every role fights every week.** All five Champions appear in every encounter; opponent performance only changes how strong they are. A role whose hero sits out the week comes in at Average tier with no trait.
+
 **Fallbacks.** If the same opposing player qualifies for two mirrors, take the next player down the list. Ties go to minutes played.
 
-**Minions.** Each opposing team adds 1 goblin per 35 team points scored (roughly 3 per game), with fixed stats. Opposing team FG% sets minion accuracy tier. *(Tuned by simulation: 1 per 25 originally, then 50, now 35 with goblins spread 20/40/40 across the waves so they fight alongside the Champions. Pack Tactics makes a big pack dangerous if it's left alive.)*
+### Traits (Champions)
+
+**A Champion is a role monster enhanced by its own mirrored player's big night.** A standout stat gives it one trait, a visible ability with a counter; cold and average nights bring a plain monster. The boss can have two, from its own line. Traits show on the pick-games screen, so choosing a hero's best game can mean facing a nastier mirror. Thresholds and effects live in `src/rules/traits.json`; about a quarter of Champions get one.
+
+| Standout stat | Trait | Effect | Counter |
+| --- | --- | --- | --- |
+| 3+ blocks | ✋ Swat | Negates the first hit it takes each round | Open with a cheap hit |
+| 4+ steals | 🫳 Pickpocket | Each hit steals 2 energy | Kill or taunt it before big spenders act |
+| 12+ rebounds | 🔁 Second Chance | Once per battle, gets back up at 25% HP | Save burst for the second life |
+| 10+ assists | 📣 Floor General | Every other monster +2 damage while it lives | Focus it first |
+| 6+ threes | 🎯 Deep Range | Ignores taunts and armor | Heal or shield its target |
+| 35+ points | ⚡ Takeover | Acts twice once below half HP | Burst it from high HP to dead |
+| 60%+ FG on 15+ shots | ♨️ Hot Hand | +2 damage per round it isn't hit (max +6); any hit resets | Keep touching it |
+
+Turnovers work separately, as Fumbles the party spends (see Monster behaviors).
+
+**Minions.** Each opposing team adds 1 goblin per 50 team points scored (roughly 2 per game), with fixed stats. Opposing team FG% sets minion accuracy tier. *(Tuned by simulation: 1 per 25 originally, then 50, then 35; back to 50 once every Champion appeared every week and traits arrived, which put the bots back at about 70% wins in both encounters.)*
 
 ### Wave structure (blended horde)
 
@@ -233,7 +251,7 @@ Gear damage and armor use the player's season-average Rating, mapped to the same
 
 **Waves arrive on a clock.** Wave 2 arrives at the start of round 2 and wave 3 at round 4, or at the start of the next round if the party clears the field first. Waves can overlap, which forces triage. A wave fights the round it arrives; the party always gets exactly one turn on it before it strikes.
 
-**The Warlord** is the single best opposing performance across your five chosen games (highest points + rebounds + assists). It is a boosted version of that player's Champion with double HP and one extra action per round. This is the cost of hindsight: pick a hero's best game against a team whose star also went off, and you might be building your own final boss.
+**The boss** is the single best opposing performance across your chosen games (highest points + rebounds + assists) by a player who isn't already mirroring one of your heroes, so the boss never replaces a role and every named monster is a different player. Encounters bring their own boss kit (the Goblin Chieftain, the Lich); without one, the classic Warlord is a boosted version of that player's Champion with double HP and one extra action per round. This is the cost of hindsight: pick a hero's best game against a team whose star also went off, and you might be building your own final boss.
 
 **The Warlord enrages** below half HP: +5 damage for the rest of the battle.
 
