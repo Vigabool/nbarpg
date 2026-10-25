@@ -33,7 +33,7 @@ Getting the game ready for outside testers, in this order.
 5. **Weekly encounter choice ✅ Done (interim).** **Choose your encounter** is now the first step of each week, and players may pick any encounter. Weekly offers come with the season structure (item 2 below).
 6. **Opt-in result logging:** encounter, outcome, rounds and difficulty per battle, to measure real win rates.
 7. **First-battle walkthrough:** three or four contextual tips in the first battle.
-8. **Landing-damage warning and feat tags:** items 4 and 6 below.
+8. **Landing-damage warning and feat tags ✅ Done** (items 4 and 6 below).
 9. **A full chapter on a phone:** play the exact build you'll share before sending it.
 
 ## 2. Season structure and encounter use
@@ -71,7 +71,10 @@ Normal and Hard shipped (see the design doc's Difficulty section). Normal scales
 - The simulators accept `--difficulty` and confirm the targets: Normal about 60% for the heuristic bot, Hard about 75% for the smart bot.
 - The Crypt's gap between casual and skilled play is checked separately. It's the most skill-dependent encounter, so it may need its own Normal levers.
 
-## 4. Landing damage in the fall warning
+## 4. Landing damage in the fall warning ✅ Done
+
+When one more hit this turn could topple a giant, the topple bar turns red and names who its landing would drop ("⛰️ 22/25 ☠ · landing drops the Wizard"). Those heroes get a ⛰️☠ tag. Last Stand heroes are safe.
+
 
 **Why.** A toppled giant deals 2 damage to every hero as it lands, and this happens during your own turn. The ☠ fall prediction only previews the enemy turn, so a hero at 1–2 HP can drop from your own topple with no warning.
 
@@ -92,7 +95,10 @@ Normal and Hard shipped (see the design doc's Difficulty section). Normal scales
 
 **Done when.** Respec works and is covered by Armory tests, and the How to play Progression tab explains it.
 
-## 6. Feat tags on hero rows
+## 6. Feat tags on hero rows ✅ Done
+
+Hero rows show owned gear and passive feats with their Armory icons; tap one to explain it. A used Shadow Cloak dims. The log credits feats and gear where they change a result: "(+3 Smite)", "(+3 Opportunist)", "(+1 Quick Draw)", "(+2 Amulet of Healing)", "(Blessed Ward)".
+
 
 **Why.** Passive feats (Cleave, Intercept, Opportunist, Smite, Arcane Surge, Evocation, Blessed Ward, Quick Draw) are invisible in battle. It's easy to forget you own them, or to miss why a hit was bigger than expected.
 

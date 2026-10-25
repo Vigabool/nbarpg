@@ -18,7 +18,7 @@ import type { MonsterSpec } from './horde';
 export { packBonus } from './encounters/goblinHorde';
 export { phylactery } from './encounters/crypt';
 export { hoardBonus } from './encounters/dragonLair';
-export { toppleThreshold } from './encounters/giantsHall';
+export { landingWarning, toppleThreshold } from './encounters/giantsHall';
 import type { PoolBreakdown } from './rating';
 
 /**
@@ -684,13 +684,14 @@ function armoryDamage(hero: HeroState, def: ActionDef, rules: Rules): number {
 }
 
 /** Damage that depends on the target: Smite against undead and dragonkin, Opportunist against helpless foes. */
-function featDamageVs(state: BattleState, hero: HeroState, e: EnemyState, rules: Rules): number {
-  let bonus = 0;
-  if (hero.heroClass === 'cleric' && hasFeat(hero, 'smite')) {
-    if (mechanicsFor(state, rules).some((m) => m.smiteVulnerable?.(state, e, rules))) bonus += 3;
-  }
-  if (hero.heroClass === 'rogue' && hasFeat(hero, 'opportunist') && (e.toppled || e.tauntedBy || (e.weaken && e.weaken.rounds > 0))) bonus += 3;
-  return bonus;
+function featDamageVs(state: BattleState, hero: HeroState, e: EnemyState, rules: Rules): { bonus: number; credit: string } {
+  const credits: string[] = [];
+  if (hero.heroClass === 'cleric' && hasFeat(hero, 'smite') && mechanicsFor(state, rules).some((m) => m.smiteVulnerable?.(state, e, rules)))
+    credits.push('Smite');
+  if (hero.heroClass === 'rogue' && hasFeat(hero, 'opportunist') && (e.toppled || e.tauntedBy || (e.weaken && e.weaken.rounds > 0)))
+    credits.push('Opportunist');
+  // Log credit, e.g. " (+3 Smite)", so a bigger hit than the tile shows is explained.
+  return { bonus: 3 * credits.length, credit: credits.map((c) => ` (+3 ${c})`).join('') };
 }
 
 function heroHitAmount(hero: HeroState, base: number): number {
@@ -778,11 +779,13 @@ function applyEffect(state: BattleState, hero: HeroState, effect: Effect, target
     const bonus = (hero.progress?.gear ?? []).reduce((t, g) => t + (rules.progression.gear[g]?.healBonus ?? 0), 0);
     const healed = Math.min(effect.amount + bonus, h.maxHp - h.hp);
     h.hp += healed;
-    let text = `${nameOf(state, h.id, rules)} +${healed} HP`;
+    // Credit the Amulet only for healing that landed (a heal can top out at max HP).
+    const amulet = Math.max(0, Math.min(bonus, healed - effect.amount));
+    let text = `${nameOf(state, h.id, rules)} +${healed} HP${amulet ? ` (+${amulet} Amulet of Healing)` : ''}`;
     if (hasFeat(hero, 'blessed-ward') && !(h.buffs ?? []).includes('blessed-ward')) {
       h.armor += 2;
       h.buffs = [...(h.buffs ?? []), 'blessed-ward'];
-      text += ', +2 armor';
+      text += ', +2 armor (Blessed Ward)';
     }
     parts.push(text);
   };
@@ -802,12 +805,12 @@ function applyEffect(state: BattleState, hero: HeroState, effect: Effect, target
           e.intangible = false;
           solidified = true;
         }
-        let base =
-          (effect.amount === 'gear' ? hero.gear : effect.amount) + (effect.bonus ?? 0) + armoryDamage(hero, def, rules) + featDamageVs(state, hero, e, rules);
+        const feat = featDamageVs(state, hero, e, rules);
+        let base = (effect.amount === 'gear' ? hero.gear : effect.amount) + (effect.bonus ?? 0) + armoryDamage(hero, def, rules) + feat.bonus;
         if (effect.doubleIfTauntedByOther && e.tauntedBy && e.tauntedBy !== hero.id) base *= 2;
         const amount = heroHitAmount(hero, base);
         const dealt = damageEnemy(state, e, amount, !!effect.pierce, rules, source);
-        parts.push(`${dealt} to ${e.name}${solidified ? ' (now solid)' : ''}${endText(e)}`);
+        parts.push(`${dealt} to ${e.name}${feat.credit}${solidified ? ' (now solid)' : ''}${endText(e)}`);
         for (const m of mechanicsFor(state, rules)) m.afterHeroStrike?.(state, hero, e, def, parts, rules);
         // Cleave: the Axe also hits a second enemy for half.
         if (def.id === 'axe' && hasFeat(hero, 'cleave')) {
@@ -831,8 +834,9 @@ function applyEffect(state: BattleState, hero: HeroState, effect: Effect, target
         let e = state.enemies.find((x) => x.id === targets[i % targets.length] && x.alive);
         if (!e || e.intangible) e = [...pickableEnemies(state, rules)].sort((a, b) => a.hp - b.hp)[0];
         if (!e) break;
-        const dealt = damageEnemy(state, e, heroHitAmount(hero, gearBase + featDamageVs(state, hero, e, rules)), false, rules, source);
-        parts.push(`${dealt} to ${e.name}${endText(e)}`);
+        const feat = featDamageVs(state, hero, e, rules);
+        const dealt = damageEnemy(state, e, heroHitAmount(hero, gearBase + feat.bonus), false, rules, source);
+        parts.push(`${dealt} to ${e.name}${feat.credit}${endText(e)}`);
         for (const m of mechanicsFor(state, rules)) m.afterHeroStrike?.(state, hero, e, def, parts, rules);
       }
       return true;
@@ -940,9 +944,10 @@ function applyEffect(state: BattleState, hero: HeroState, effect: Effect, target
       }
       return false;
     case 'gainEnergy': {
-      const gain = effect.amount + (def.id === 'longbow' && hasFeat(hero, 'quick-draw') ? 1 : 0);
+      const quick = def.id === 'longbow' && hasFeat(hero, 'quick-draw') ? 1 : 0;
+      const gain = effect.amount + quick;
       hero.pool += gain;
-      parts.push(`+${gain} energy`);
+      parts.push(`+${gain} energy${quick ? ' (+1 Quick Draw)' : ''}`);
       return false;
     }
     case 'mark':

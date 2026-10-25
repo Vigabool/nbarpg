@@ -1007,6 +1007,12 @@ textarea.input.mono {
   color: #fff;
   text-shadow: 0 1px 2px rgb(0 0 0 / 0.7);
 }
+.topple-bar.danger {
+  border-color: var(--danger);
+}
+.topple-bar.danger > span {
+  background: linear-gradient(90deg, #7a3b3c, var(--danger));
+}
 .topple-bar.down {
   height: auto;
   padding: 1px 6px;
@@ -1076,6 +1082,9 @@ textarea.input.mono {
   border-color: var(--info);
 }
 
+.tag.spent {
+  opacity: 0.45;
+}
 .tag {
   display: inline-flex;
   align-items: center;

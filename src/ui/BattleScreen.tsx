@@ -1,7 +1,17 @@
 import { Fragment, useMemo, useState } from 'react';
 import type { SeasonData } from '../data/types';
 import { finishBattle, type SaveGame } from '../app/game';
-import { endRound, listActions, performAction, previewRound, spendFumble, nextWaveRound, type ActionOption, type BattleState } from '../engine/combat';
+import {
+  endRound,
+  landingWarning,
+  listActions,
+  performAction,
+  previewRound,
+  spendFumble,
+  nextWaveRound,
+  type ActionOption,
+  type BattleState,
+} from '../engine/combat';
 import { rules, type HeroClass } from '../rules';
 import type { TutorialTopic } from './Tutorial';
 import { encounterOf, monsterShort } from '../engine/encounter';
@@ -35,6 +45,8 @@ export function BattleScreen({ data, game, onChange, onHelp, onQuit }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   const setBattle = (b: BattleState) => onChange({ ...game, battle: b });
+  // Heroes a giant's landing would drop, if one more hit this turn could topple it.
+  const landing = useMemo(() => new Set<string>(state.enemies.flatMap((e) => landingWarning(state, e).map((h) => h.id))), [state]);
   const { intents, summonIntents, doomed, incoming } = useMemo(() => {
     const map: Record<string, Intent> = {};
     const summon: Record<string, string[]> = {};
@@ -262,6 +274,7 @@ export function BattleScreen({ data, game, onChange, onHelp, onQuit }: Props) {
               <HeroRow
                 h={h}
                 netted={h.nettedRound === state.round}
+                landing={landing.has(h.id)}
                 doomed={doomed.has(h.id)}
                 threatOn={threat === h.id}
                 onThreat={() => setThreatPick(threat === h.id ? null : h.id)}

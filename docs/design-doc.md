@@ -399,6 +399,8 @@ Role Champions get ×1.08 HP and damage here. Ice Wolves are the real minion thr
 
 Encounters without their own boss fall back to the classic Warlord: a boosted copy of the top performer's Champion (double HP, +2 damage).
 
+**Landing warning.** The topple bar turns red when one more hit this turn could topple a giant and its landing would drop someone ("⛰️ 22/25 ☠ · landing drops the Wizard"). Those heroes get a ⛰️☠ tag. "Could topple" means the damage still needed is no more than the biggest attack a hero can still make on it this round.
+
 ## Monster behaviors
 
 Monsters follow fixed behaviors; the opposing player's tier scales their HP and damage. Each Champion counters a different hero, so the horde's makeup changes which of your heroes is under pressure.

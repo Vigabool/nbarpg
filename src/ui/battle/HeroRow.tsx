@@ -3,9 +3,28 @@ import { rules } from '../../rules';
 import { CLASS_ICON } from '../common';
 import { Meter, Tag, foeShort, foeIcon } from './parts';
 
+/**
+ * The hero's Armory gear and passive feats, so they're visible in battle. Feats that are abilities
+ * (Hunter's Mark, Vanish) show as actions instead; weapon and shield levels show in ⚔ and ⛨.
+ */
+function armoryTags(h: HeroState): { id: string; icon: string; text: string; spent?: boolean }[] {
+  const p = rules.progression;
+  const abilityFeats = new Set(rules.classes[h.heroClass].abilities.map((a) => a.feat).filter(Boolean));
+  const gear = (h.progress?.gear ?? []).map((id) => {
+    const g = p.gear[id];
+    const spent = id === 'shadow-cloak' && !!h.cloakUsed;
+    return { id, icon: g.icon, text: `${g.name}: ${g.description}${spent ? ' (used this battle)' : ''}`, spent };
+  });
+  const feats = (h.progress?.feats ?? [])
+    .filter((id) => !abilityFeats.has(id))
+    .map((id) => ({ id, icon: p.feats[id].icon, text: `${p.feats[id].name} (feat): ${p.feats[id].description}` }));
+  return [...gear, ...feats];
+}
+
 export function HeroRow({
   h,
   netted,
+  landing,
   doomed,
   threatOn,
   onThreat,
@@ -15,6 +34,8 @@ export function HeroRow({
 }: {
   h: HeroState;
   netted: boolean;
+  /** A giant could be toppled this turn, and its landing would drop this hero. */
+  landing: boolean;
   doomed: boolean;
   threatOn: boolean;
   onThreat: () => void;
@@ -80,6 +101,17 @@ export function HeroRow({
             icon={`☣${h.poison.perRound}`}
             text={`Poisoned: ${h.poison.perRound} damage after the horde acts, ${h.poison.rounds} more time${h.poison.rounds > 1 ? 's' : ''}`}
             tone="poison"
+          />
+        )}
+        {armoryTags(h).map((t) => (
+          <Tag key={t.id} passThrough icon={t.icon} text={t.text} tone={t.spent ? 'spent' : ''} />
+        ))}
+        {landing && (
+          <Tag
+            passThrough
+            icon="⛰️☠"
+            text={`A giant could be toppled this turn: its landing deals ${rules.combat.topple.crashDamage} to every hero, enough to drop the ${cls.name}`}
+            tone="warn"
           />
         )}
         {h.prone && <Tag passThrough icon="⤵" text="Prone: can't act this round" tone="warn" />}

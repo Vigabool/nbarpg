@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { endRound, performAction, specialDue, toppleThreshold, type BattleState } from '../src/engine/combat';
+import { endRound, landingWarning, performAction, specialDue, toppleThreshold, type BattleState } from '../src/engine/combat';
 import { buildHorde } from '../src/engine/horde';
 import { rules } from '../src/rules';
 import { battle, boxLine, monster, party, season } from './helpers';
@@ -117,5 +117,34 @@ describe("Giant's Hall: roles", () => {
 
   it('Ice Wolves hit for 4-5 by team shooting', () => {
     expect(rules.encounters.encounters[HALL].minionDamage).toEqual([4, 4, 5]);
+  });
+});
+
+describe("Giant's Hall: landing warning", () => {
+  const crash = rules.combat.topple.crashDamage;
+  const setup = (toppleDamage: number, wizardHp: number) => {
+    const g = monster({ kind: 'ogre', id: 'G', hp: 100, damage: 0 });
+    const s = patch(battle([[g]], party(), HALL), 'G', { toppleDamage });
+    return { ...s, heroes: s.heroes.map((h) => (h.id === 'wizard' ? { ...h, hp: wizardHp } : h)) };
+  };
+
+  it('names the heroes the landing would drop when one more hit could topple the giant', () => {
+    const s = setup(49, crash);
+    expect(landingWarning(s, enemy(s, 'G')).map((h) => h.id)).toEqual(['wizard']);
+    // And that's what happens.
+    const after = act(s, 'warrior', 'axe', ['G']);
+    expect(hero(after, 'wizard').alive).toBe(false);
+  });
+
+  it('stays quiet when the topple is out of reach this turn, or nobody is low enough', () => {
+    expect(landingWarning(setup(0, crash), enemy(setup(0, crash), 'G'))).toEqual([]);
+    const healthy = setup(49, crash + 1);
+    expect(landingWarning(healthy, enemy(healthy, 'G'))).toEqual([]);
+  });
+
+  it('Last Stand heroes are safe: they hold at 1 HP', () => {
+    const s = setup(49, crash);
+    const stand = { ...s, heroes: s.heroes.map((h) => (h.id === 'wizard' ? { ...h, lastStand: true } : h)) };
+    expect(landingWarning(stand, enemy(stand, 'G'))).toEqual([]);
   });
 });

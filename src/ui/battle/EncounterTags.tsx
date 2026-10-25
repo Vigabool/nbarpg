@@ -1,4 +1,4 @@
-import { toppleThreshold, hoardBonus, type BattleState, type EnemyState } from '../../engine/combat';
+import { landingWarning, toppleThreshold, hoardBonus, type BattleState, type EnemyState } from '../../engine/combat';
 import { rules } from '../../rules';
 import { behaviorOf } from '../../engine/encounter';
 
@@ -8,11 +8,22 @@ export function ToppleBar({ e, state }: { e: EnemyState; state: BattleState }) {
   if (t === null) return null;
   if (e.toppled) return <div className="topple-bar down">⛰️ Toppled: loses its next turn</div>;
   const n = Math.min(t, e.toppleDamage ?? 0);
+  // One more hit could topple it, and the landing would drop someone.
+  const drops = landingWarning(state, e).map((h) => rules.classes[h.heroClass].name);
+  const warn = drops.length ? ` · landing drops the ${drops.join(', the ')}` : '';
   return (
-    <div className="topple-bar" role="meter" aria-label={`Topple: ${n} of ${t} damage this round`} aria-valuenow={n} aria-valuemax={t}>
+    <div
+      className={`topple-bar${warn ? ' danger' : ''}`}
+      role="meter"
+      aria-label={`Topple: ${n} of ${t} damage this round${warn}`}
+      aria-valuenow={n}
+      aria-valuemax={t}
+      title={warn ? `Toppling it now: the landing deals ${rules.combat.topple.crashDamage} to every hero` : undefined}
+    >
       <span style={{ width: `${(n / t) * 100}%` }} />
       <b className="num">
         ⛰️ {n}/{t}
+        {warn && ' ☠'}
       </b>
     </div>
   );

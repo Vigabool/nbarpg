@@ -175,6 +175,17 @@ describe('upgrades in battle', () => {
     expect(hit({ feats: ['opportunist'] })).toBe(hit({}) + 3);
   });
 
+  it('the log credits feats and gear where they change a result', () => {
+    const last = (st: BattleState) => st.log.at(-1)!.text;
+    expect(last(act(battle([[dummy()]], withProgress('cleric', { feats: ['smite'] }), 'crypt'), 'cleric', 'mace', ['D']))).toContain('(+3 Smite)');
+    expect(last(act(battle([[dummy()]], withProgress('ranger', { feats: ['quick-draw'] })), 'ranger', 'longbow', ['D']))).toContain('(+1 Quick Draw)');
+    let s = battle([[dummy()]], withProgress('cleric', { gear: ['amulet-of-healing'], feats: ['blessed-ward'] }));
+    s = act({ ...s, heroes: s.heroes.map((h) => (h.id === 'wizard' ? { ...h, hp: 5 } : h)) }, 'cleric', 'cure-wounds', ['wizard']);
+    expect(last(s)).toMatch(/\(\+\d+ Amulet of Healing\).*\(Blessed Ward\)/);
+    // No credit without the feat.
+    expect(last(act(battle([[dummy()]], undefined, 'crypt'), 'cleric', 'mace', ['D']))).not.toContain('Smite');
+  });
+
   it('Vanish works once per battle', () => {
     let s = battle([[dummy()]], withProgress('rogue', { feats: ['vanish'] }));
     s = act(s, 'rogue', 'vanish');

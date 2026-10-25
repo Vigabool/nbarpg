@@ -1,8 +1,10 @@
 import { rules as defaultRules, type Rules } from '../../rules';
 import {
+  actionDamage,
   actionsThisRound,
   enemyDamage,
   hitHero,
+  listActions,
   log,
   lowestHp,
   targetableHeroes,
@@ -22,6 +24,41 @@ export function toppleThreshold(state: BattleState, e: EnemyState, rules: Rules 
   // Rallying Saga: while the Skald lives, every giant is harder to topple.
   const saga = state.enemies.reduce((sum, x) => sum + (x.alive ? (enc.monsters[x.kind]?.rallyingSaga?.bonus ?? 0) : 0), 0);
   return Math.ceil(e.maxHp * (e.isWarlord ? t.bossThreshold : t.threshold)) + saga;
+}
+
+/** Heroes a landing would drop right now: the crash hits every hero, and Last Stand holds at 1 HP. */
+export function landingVictims(state: BattleState, rules: Rules = defaultRules): HeroState[] {
+  const crash = rules.combat.topple.crashDamage;
+  return state.heroes.filter((h) => h.alive && !h.lastStand && h.hp <= crash);
+}
+
+/** The biggest hit a hero who can still attack this round could land on this enemy (before armor). */
+export function bestHitOn(state: BattleState, e: EnemyState, rules: Rules = defaultRules): number {
+  let best = 0;
+  for (const h of state.heroes) {
+    if (!h.alive || h.acted || h.prone) continue;
+    for (const o of listActions(state, h.id, rules)) {
+      if (!o.available || !o.attack || !o.validTargets.includes(e.id)) continue;
+      const d = actionDamage(o.def, h);
+      if (!d) continue;
+      const [a, b] = d.split('×').map(Number);
+      // "8×3" spreads over targets (8 each); "2×6" is six hits that can all land on one.
+      best = Math.max(best, o.def.target.type === 'enemies' || o.def.target.type === 'allEnemies' ? a : a * (b || 1));
+    }
+  }
+  return best;
+}
+
+/**
+ * Landing warning: when one more hit this round could topple this giant, the heroes its landing
+ * would drop. Empty when no topple is in reach or nobody is that low.
+ */
+export function landingWarning(state: BattleState, e: EnemyState, rules: Rules = defaultRules): HeroState[] {
+  const t = toppleThreshold(state, e, rules);
+  if (t === null || !e.alive || e.toppled || state.phase !== 'party') return [];
+  const victims = landingVictims(state, rules);
+  if (!victims.length) return [];
+  return t - (e.toppleDamage ?? 0) <= bestHitOn(state, e, rules) ? victims : [];
 }
 
 /**
