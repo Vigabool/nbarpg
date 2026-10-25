@@ -8,10 +8,13 @@ import { playerGamesInWeek, prepareBattle } from '../engine/week';
 import { CLASSES, emptyProgress, rules, type HeroClass, type HeroProgress } from '../rules';
 import { SAVE_VERSION } from './saves';
 
-export type Phase = 'roster' | 'assign' | 'select' | 'battle' | 'result';
+/** A week runs encounter → assign → select → battle → result; chapters open with roster moves first. */
+export type Phase = 'roster' | 'encounter' | 'assign' | 'select' | 'battle' | 'result';
 
 export interface WeekResult {
   weekIndex: number;
+  /** Encounter fought (absent in saves from before it was recorded). */
+  encounter?: string;
   outcome: 'won' | 'lost';
   rounds: number;
   rewards: Rewards;
@@ -124,7 +127,10 @@ export function finishBattle(game: SaveGame): SaveGame {
     phase: 'result',
     pp,
     gold: (game.gold ?? 0) + (rewards.gold?.total ?? 0),
-    history: [...game.history, { weekIndex: game.weekIndex, outcome: b.phase, rounds: b.round, rewards }],
+    history: [
+      ...game.history,
+      { weekIndex: game.weekIndex, encounter: game.encounter ?? rules.encounters.default, outcome: b.phase, rounds: b.round, rewards },
+    ],
   };
 }
 
@@ -145,7 +151,7 @@ export function nextWeek(game: SaveGame, data: SeasonData): SaveGame | null {
     assignments,
     tenDay: [],
     weekIndex: next.index,
-    phase: chapterEnds ? 'roster' : 'assign',
+    phase: chapterEnds ? 'roster' : 'encounter',
     chapterRoster: chapterEnds ? [...game.roster] : null,
     gamePicks: {},
     battle: null,

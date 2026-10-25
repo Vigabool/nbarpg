@@ -2,6 +2,7 @@
   "default": "goblin-horde",
   "encounters": {
     "goblin-horde": {
+      "challenge": 2,
       "name": "Goblin Horde",
       "tagline": "A goblin warband led by its Chieftain, with a shaman, a sharpshooter, a hexer, a cutthroat and an ogre for hire.",
       "boss": "chieftain",
@@ -67,6 +68,7 @@
       }
     },
     "crypt": {
+      "challenge": 3,
       "name": "The Crypt",
       "tagline": "A necromancer's tomb where the dead won't stay down. Fire and holy power end them for good.",
       "boss": "lich",
@@ -151,6 +153,7 @@
       }
     },
     "dragon-lair": {
+      "challenge": 2,
       "name": "The Dragon's Lair",
       "tagline": "A red dragon's mountain lair, guarded by kobold zealots and drakes. Bring something other than fire.",
       "boss": "dragon",
@@ -221,6 +224,7 @@
       }
     },
     "giants-hall": {
+      "challenge": 1,
       "name": "The Giant's Hall",
       "tagline": "A frost giant lord's mead hall. Few foes, each a mountain. Bring them down together.",
       "boss": "giantLord",

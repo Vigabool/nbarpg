@@ -12,6 +12,7 @@ import { SelectGames } from './ui/SelectGames';
 import { BattleScreen } from './ui/BattleScreen';
 import { ResultScreen } from './ui/ResultScreen';
 import { SaveFile } from './ui/SaveFile';
+import { ChooseEncounter } from './ui/ChooseEncounter';
 
 const SEASON = '2025-26';
 
@@ -86,6 +87,8 @@ export default function App() {
         <TitleScreen data={data} saved={game} onStart={update} onImport={() => setSaveFile('import')} />
       ) : active.phase === 'roster' ? (
         <RosterBuilder data={data} game={active} onChange={update} />
+      ) : active.phase === 'encounter' ? (
+        <ChooseEncounter data={data} game={active} onChange={update} onHelp={setTutorial} />
       ) : active.phase === 'assign' ? (
         <AssignHeroes data={data} game={active} onChange={update} />
       ) : active.phase === 'select' ? (

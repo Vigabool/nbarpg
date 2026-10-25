@@ -6,7 +6,7 @@ import { buildHorde, opponentOf, playerLine, type MonsterSpec } from '../engine/
 import { computePool } from '../engine/rating';
 import { playerGamesInWeek, scaleHorde } from '../engine/week';
 import { CLASSES, rules, type HeroClass } from '../rules';
-import { encounterIds, encounterOf, monsterIcon, monsterName } from '../engine/encounter';
+import { encounterOf, monsterIcon, monsterName } from '../engine/encounter';
 import { ClassName, TierChip, formatDate, statLine } from './common';
 
 function mirrorFor(c: HeroClass, playerId: number, gameId: string, data: SeasonData, encounter?: string): MonsterSpec | undefined {
@@ -127,22 +127,9 @@ export function SelectGames({ data, game, onChange }: { data: SeasonData; game: 
           <div className="stack" style={{ gap: 2 }}>
             <div className="spread">
               <span className="section-label">This week's encounter</span>
-              <label className="row tiny muted" style={{ gap: 6 }}>
-                Testing:
-                <select
-                  className="input"
-                  id="encounter-pick"
-                  style={{ minHeight: 30, padding: '2px 8px', width: 'auto' }}
-                  value={game.encounter ?? rules.encounters.default}
-                  onChange={(e) => onChange({ ...game, encounter: e.target.value })}
-                >
-                  {encounterIds().map((id) => (
-                    <option key={id} value={id}>
-                      {encounterOf(id).name}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <button className="btn ghost small" onClick={() => onChange({ ...game, phase: 'encounter' })}>
+                Change
+              </button>
             </div>
             <h2>{enc.name}</h2>
             {chapter > 1 && (

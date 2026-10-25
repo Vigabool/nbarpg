@@ -30,7 +30,7 @@ Getting the game ready for outside testers, in this order.
 2. **Feedback and build number:** the build now shows on the title screen. For close friends, feedback comes by text; for a broader test, add a Feedback button that captures the note plus context (week, encounter, round, optionally the save).
 3. **A link friends can open ✅ Set up.** Pushing to the `playtest` branch deploys to https://vigabool.github.io/nbarpg/ (`.github/workflows/pages.yml`). It needs Pages enabled once, with Source: GitHub Actions. The title screen shows the build label.
 4. **Normal difficulty:** item 3 below. Casual play currently wins 40–48% (Crypt 23%).
-5. **Weekly encounter choice:** replace the "Testing:" dropdown. This is the smallest part of item 2 below.
+5. **Weekly encounter choice ✅ Done (interim).** **Choose your encounter** is now the first step of each week, and players may pick any encounter. Weekly offers come with the season structure (item 2 below).
 6. **Opt-in result logging:** encounter, outcome, rounds and difficulty per battle, to measure real win rates.
 7. **First-battle walkthrough:** three or four contextual tips in the first battle.
 8. **Landing-damage warning and feat tags:** items 4 and 6 below.

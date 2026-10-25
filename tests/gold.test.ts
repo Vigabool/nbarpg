@@ -107,3 +107,14 @@ describe('gold: saves', () => {
     expect(g.tenDay).toEqual([]);
   });
 });
+
+describe('weekly flow', () => {
+  it('each new week starts by choosing the encounter, and the result records which one was fought', () => {
+    let g: SaveGame = { ...run(), encounter: 'crypt', phase: 'battle' as const, battle: { ...battle([[monster()]]), phase: 'won' as const }, battlePools: {} };
+    g = finishBattle(g);
+    expect(g.history.at(-1)!.encounter).toBe('crypt');
+    const next = nextWeek(g, data)!;
+    expect(next.phase).toBe('encounter');
+    expect(next.encounter).toBe('crypt');
+  });
+});

@@ -163,6 +163,8 @@ export interface HordeConfig {
 export interface EncounterDef {
   name: string;
   tagline: string;
+  /** How hard it plays for a newcomer, 1–3 (from casual win rates), shown when choosing. */
+  challenge?: number;
   /** Boss monster kind; without one the classic Warlord (a boosted Champion) is used. */
   boss?: MonsterKind;
   /** The boss lies asleep on the field from round 1 until the final wave (the Dragon). */

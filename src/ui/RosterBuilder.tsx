@@ -396,7 +396,7 @@ export function RosterBuilder({ data, game, onChange }: { data: SeasonData; game
                 chapterRoster: null,
                 assignments: slots,
                 gamePicks: changed ? {} : game.gamePicks,
-                phase: 'assign',
+                phase: 'encounter',
               });
             }}
           >

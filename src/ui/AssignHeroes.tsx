@@ -153,8 +153,8 @@ export function AssignHeroes({ data, game, onChange }: { data: SeasonData; game:
 
       <div className="sticky-bottom">
         <div className="spread">
-          <button className="btn ghost small" onClick={() => onChange({ ...game, phase: 'roster' })} disabled={game.history.length > 0}>
-            ← Roster
+          <button className="btn ghost small" onClick={() => onChange({ ...game, phase: 'encounter' })}>
+            ← Encounter
           </button>
           <span className="small muted">{complete ? `${playing} of 5 heroes play this week` : 'Assign all five heroes'}</span>
           <button className="btn primary" disabled={!complete || playing === 0} onClick={() => onChange({ ...game, phase: 'select' })}>
