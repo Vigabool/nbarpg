@@ -20,9 +20,12 @@ import { rules, type HeroClass } from '../rules';
  * what the game would actually do.
  */
 
+/** Stand-ins for the NBA player under each hero row. */
+const SAMPLE_PLAYER: Partial<Record<HeroClass, string>> = { warrior: 'Your rebounder', cleric: 'Your playmaker', wizard: 'Your shooter' };
+
 function hero(heroClass: HeroClass, energy: number, gear: number): HeroSetup {
   const pool: PoolBreakdown = { heroClass, rating: 0, tier: 'good', basePool: energy, modifiers: [], pool: energy, doubleDouble: false, tripleDouble: false };
-  return { heroClass, playerId: 0, playerName: rules.classes[heroClass].name, gear, pool };
+  return { heroClass, playerId: 0, playerName: SAMPLE_PLAYER[heroClass] ?? rules.classes[heroClass].name, gear, pool };
 }
 
 function monster(id: string, kind: MonsterSpec['kind'], hp: number, damage: number): MonsterSpec {
@@ -78,7 +81,7 @@ export function buildSteps(): Step[] {
   });
   push(
     'Utility: Provoke',
-    'Utilities like taunts, heals and buffs cost energy, and a hero can use as many as their energy allows. The Warrior Provokes the Ogre, so its attack now goes to the Warrior instead of the Wizard.',
+    'Utilities like taunts, heals and buffs cost energy, and a hero can use as many as their energy allows. The Warrior Provokes the Ogre (⚑ on its card): a taunted enemy must attack the taunter. The Ogre was coming for the Warrior anyway; a taunt matters most for pulling a dangerous enemy off your Wizard or Cleric.',
     act({ heroId: 'warrior', actionId: 'provoke', targetIds: ['ogre'] }),
   );
   push(

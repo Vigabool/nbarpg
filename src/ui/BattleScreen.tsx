@@ -1,22 +1,12 @@
 import { Fragment, useMemo, useState } from 'react';
 import type { SeasonData } from '../data/types';
 import { finishBattle, type SaveGame } from '../app/game';
-import {
-  endRound,
-  landingWarning,
-  listActions,
-  performAction,
-  previewRound,
-  spendFumble,
-  nextWaveRound,
-  type ActionOption,
-  type BattleState,
-} from '../engine/combat';
+import { endRound, landingWarning, listActions, performAction, spendFumble, nextWaveRound, type ActionOption, type BattleState } from '../engine/combat';
 import { rules, type HeroClass } from '../rules';
 import type { TutorialTopic } from './Tutorial';
 import { encounterOf, monsterShort } from '../engine/encounter';
 import { CLASS_ICON, ConfirmButton, weekLabel } from './common';
-import { groupGoblins, type Intent } from './battle/parts';
+import { groupGoblins } from './battle/parts';
 import { HoardTag } from './battle/EncounterTags';
 import { EnemyCard, GoblinStack } from './battle/EnemyCard';
 import { EnemyDetail } from './battle/EnemyDetail';
@@ -24,6 +14,7 @@ import { HeroRow, ThreatCallout, SummonRow } from './battle/HeroRow';
 import { ActionTile } from './battle/ActionTile';
 import { Ticker, LogDrawer } from './battle/BattleLog';
 import { CoachMarks } from './CoachMarks';
+import { roundPreview } from './battle/preview';
 import { BATTLE_TIPS } from './coachTips';
 
 interface Props {
@@ -49,31 +40,7 @@ export function BattleScreen({ data, game, onChange, onHelp, onQuit }: Props) {
   const setBattle = (b: BattleState) => onChange({ ...game, battle: b });
   // Heroes a giant's landing would drop, if one more hit this turn could topple it.
   const landing = useMemo(() => new Set<string>(state.enemies.flatMap((e) => landingWarning(state, e).map((h) => h.id))), [state]);
-  const { intents, summonIntents, doomed, incoming } = useMemo(() => {
-    const map: Record<string, Intent> = {};
-    const summon: Record<string, string[]> = {};
-    const preview = previewRound(state);
-    // Heroes who fall if the round ends now, and who hits each hero for how much.
-    const doomed = new Set<string>(state.heroes.filter((h) => h.alive && !preview.after.heroes.find((x) => x.id === h.id)?.alive).map((h) => h.id));
-    const incoming: Record<string, Record<string, number>> = {};
-    for (const l of preview.log)
-      for (const [heroId, n] of Object.entries(l.hits ?? {})) {
-        const by = (incoming[heroId] ??= {});
-        if (l.actorId) by[l.actorId] = (by[l.actorId] ?? 0) + n;
-      }
-    for (const l of preview.log) {
-      if (l.side === 'summon' && l.actorId) {
-        (summon[l.actorId] ??= []).push(l.short ?? l.text);
-        continue;
-      }
-      const e = state.enemies.find((x) => x.id === l.actorId);
-      if (!e) continue;
-      const i = (map[e.id] ??= { short: [], full: [] });
-      i.short.push(l.short ?? l.text);
-      i.full.push(l.text);
-    }
-    return { intents: map, summonIntents: summon, doomed, incoming };
-  }, [state]);
+  const { intents, summonIntents, doomed, incoming } = useMemo(() => roundPreview(state), [state]);
   // The hero whose fall the player is inspecting (tap their ☠).
   const [threatPick, setThreatPick] = useState<string | null>(null);
   const threat = threatPick && doomed.has(threatPick) ? threatPick : null;

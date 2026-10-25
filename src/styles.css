@@ -1624,6 +1624,10 @@ textarea.input.mono {
   background: var(--bg-2);
   border-bottom: 1px solid var(--line);
 }
+.sample-hit {
+  border-radius: 12px;
+  box-shadow: 0 0 0 2px var(--danger);
+}
 .sample-board {
   display: flex;
   flex-direction: column;
@@ -1632,53 +1636,6 @@ textarea.input.mono {
   border: 1px solid var(--line);
   border-radius: 12px;
   padding: 8px 10px;
-}
-.sample-row {
-  display: grid;
-  grid-template-columns: 7.5rem minmax(0, 1fr);
-  grid-template-areas: 'name meter' 'note note';
-  gap: 2px 8px;
-  align-items: center;
-  padding: 4px 6px;
-  border-radius: 8px;
-  border: 1px solid transparent;
-}
-.sample-row > .meter {
-  grid-area: meter;
-}
-.sample-name {
-  grid-area: name;
-  font-size: 0.82rem;
-  font-weight: 650;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.sample-note {
-  grid-area: note;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 6px;
-  font-size: 0.72rem;
-}
-.sample-note .meter {
-  flex: 0 0 110px;
-}
-.sample-intent {
-  color: #ffb3a3;
-}
-.sample-row.aimable {
-  border-color: var(--info);
-  box-shadow: 0 0 0 1px var(--info);
-}
-.sample-row.picked {
-  border-color: var(--gold);
-  box-shadow: 0 0 0 1px var(--gold);
-  background: color-mix(in srgb, var(--gold) 8%, transparent);
-}
-.sample-check {
-  color: var(--gold);
 }
 .sample-aim {
   display: flex;
@@ -1691,14 +1648,6 @@ textarea.input.mono {
 }
 .sample-aim .btn {
   pointer-events: none;
-}
-.sample-row.acted {
-  border-color: var(--gold);
-  background: color-mix(in srgb, var(--gold) 8%, transparent);
-}
-.sample-row.hit {
-  border-color: var(--danger);
-  background: color-mix(in srgb, var(--danger) 10%, transparent);
 }
 .sample-events {
   font-size: 0.8rem;

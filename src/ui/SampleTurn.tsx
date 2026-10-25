@@ -1,8 +1,12 @@
 import { useMemo, useRef, useState } from 'react';
-import { activeSpecial, enemyDamage, livingEnemies, previewEnemyPhase, specialDue } from '../engine/combat';
-import { rules } from '../rules';
-import { monsterIcon } from '../engine/encounter';
+import { livingEnemies } from '../engine/combat';
 import { CLASS_ICON } from './common';
+import { EnemyCard, GoblinStack } from './battle/EnemyCard';
+import { HeroRow } from './battle/HeroRow';
+import { groupGoblins } from './battle/parts';
+import { roundPreview } from './battle/preview';
+
+const noop = () => {};
 import { buildSteps } from './sampleTurnScript';
 
 export function SampleTurn() {
@@ -20,11 +24,12 @@ export function SampleTurn() {
   const targets = new Set(step.events.flatMap((e) => e.targetIds ?? []));
   const picked = (id: string) => !!step.aiming?.picked.includes(id);
   const aimable = (id: string) => !!step.aiming?.valid.includes(id);
-  const intents = useMemo(() => {
-    const map: Record<string, string[]> = {};
-    for (const l of previewEnemyPhase(s)) if (l.actorId) (map[l.actorId] ??= []).push(l.short ?? l.text);
-    return map;
-  }, [s]);
+  const preview = useMemo(() => roundPreview(s), [s]);
+  const living = livingEnemies(s);
+  const champions = living.filter((e) => e.kind !== 'goblin');
+  const goblinGroups = groupGoblins(living.filter((e) => e.kind === 'goblin'));
+  // Enemies this step's actions hit get a red ring.
+  const hitClass = (id: string) => (targets.has(id) && !actors.has(id) ? 'sample-hit' : undefined);
 
   return (
     <div className="stack" style={{ gap: 10 }}>
@@ -64,46 +69,58 @@ export function SampleTurn() {
           </span>
         </div>
       )}
-      <div className="sample-board">
+      {/* The real battle components, so this always looks like the game. Taps do nothing here. */}
+      <div className="sample-board" inert>
         <div className="section-label">Horde</div>
-        {livingEnemies(s).length === 0 && <div className="tiny muted">No goblins left.</div>}
-        {livingEnemies(s).map((e) => {
-          const hit = targets.has(e.id);
-          const sp = activeSpecial(s, e);
-          return (
-            <div
-              key={e.id}
-              className={`sample-row${hit ? ' hit' : ''}${actors.has(e.id) ? ' acted' : ''}${picked(e.id) ? ' picked' : aimable(e.id) ? ' aimable' : ''}`}
-            >
-              <span className="sample-name">
-                {monsterIcon(e.kind)} {e.name}
-                {picked(e.id) && <span className="sample-check"> ✓</span>}
-              </span>
-              <SampleMeter value={e.hp} max={e.maxHp} kind="hp" />
-              <span className="sample-note">
-                <span className="u-dmg">⚔{enemyDamage(s, e)}</span>
-                {e.tauntedBy && <span className="tag static taunt">⚑</span>}
-                {e.weaken && <span className="tag static curse">↓{e.weaken.amount}</span>}
-                {sp && specialDue(e, s.round + 1) && <span className="tag static soon">⏳ {sp.short} next round</span>}
-                <span className="sample-intent">{(intents[e.id] ?? []).join(' · ')}</span>
-              </span>
+        <div className="enemy-grid">
+          {champions.map((e) => (
+            <div key={e.id} className={hitClass(e.id)}>
+              <EnemyCard
+                e={e}
+                state={s}
+                intent={preview.intents[e.id]}
+                targetable={aimable(e.id) && !picked(e.id)}
+                targeted={picked(e.id)}
+                aiming={!!step.aiming}
+                onClick={noop}
+                onFumble={noop}
+              />
             </div>
-          );
-        })}
+          ))}
+          {goblinGroups.map((g) => (
+            <div key={g[0].id} className={g.some((x) => targets.has(x.id)) ? 'sample-hit' : undefined}>
+              <GoblinStack
+                goblins={g}
+                state={s}
+                intents={preview.intents}
+                threat={0}
+                isTarget={aimable}
+                targeted={step.aiming?.picked ?? []}
+                onPick={noop}
+                onDetail={noop}
+              />
+            </div>
+          ))}
+          {living.length === 0 && <div className="tiny muted">The horde is beaten.</div>}
+        </div>
         <div className="section-label">Party</div>
-        {s.heroes.map((h) => (
-          <div key={h.id} className={`sample-row${actors.has(h.id) ? ' acted' : ''}${targets.has(h.id) ? ' hit' : ''}`}>
-            <span className="sample-name">
-              {CLASS_ICON[h.heroClass]} {rules.classes[h.heroClass].name}
-              {h.acted && <span className="h-state"> ✓</span>}
-            </span>
-            <SampleMeter value={h.hp} max={h.maxHp} kind="hp" />
-            <span className="sample-note">
-              <SampleMeter value={h.pool} max={24} kind="pool" />
-              {h.armor > 0 && <span className="tag static shield">⛨{h.armor}</span>}
-            </span>
-          </div>
-        ))}
+        <div className="party">
+          {s.heroes.map((h) => (
+            <div key={h.id} className={hitClass(h.id)}>
+              <HeroRow
+                h={h}
+                netted={false}
+                landing={false}
+                doomed={preview.doomed.has(h.id)}
+                threatOn={false}
+                onThreat={noop}
+                selected={actors.has(h.id) || step.aiming?.heroId === h.id}
+                targetable={false}
+                onClick={noop}
+              />
+            </div>
+          ))}
+        </div>
       </div>
 
       {step.events.length > 0 && (
@@ -115,16 +132,6 @@ export function SampleTurn() {
           ))}
         </div>
       )}
-    </div>
-  );
-}
-
-function SampleMeter({ value, max, kind }: { value: number; max: number; kind: 'hp' | 'pool' }) {
-  const pct = Math.max(0, Math.min(100, (value / max) * 100));
-  return (
-    <div className={`meter ${kind}${kind === 'hp' && pct > 50 ? ' ok' : ''}`}>
-      <span style={{ width: `${pct}%` }} />
-      <b className="num">{kind === 'hp' ? `${value}/${max}` : `${value} energy`}</b>
     </div>
   );
 }
