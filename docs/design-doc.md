@@ -472,6 +472,8 @@ Balance is measured with two bots (`npm run data:simulate -- [--smart]`, `npm ru
 | Dragon's Lair | 56% | 96% |
 | Giant's Hall | 59% | 67% |
 
+Over full seasons (16 runs, upgrades bought greedily), the smart bot wins 78% with most-energy picks, 81% with Smart pick and 83% with encounter-aware Smart pick, against 50% when it never upgrades. Upgrades are worth about 28 points of season win rate to a strong player. By chapter it stays between 69% and 95%, so the +3% chapter scaling barely bites a skilled team. By encounter (encounter-aware picks): Goblin Horde 86%, Crypt 91%, Lair 92%, Hall 62%.
+
 The 60–65% balance targets were set against the heuristic bot, on the assumption that players do better. The smart bot shows how much better a strong player can do, and the gap is uneven: the Lair and the Crypt reward smart play far more than the Giant's Hall does.
 
 ## Build plan
