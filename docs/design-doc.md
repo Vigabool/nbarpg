@@ -435,6 +435,12 @@ A typical win (three waves, one Elite foe) is about 70 PP per hero; a wave-3 los
 
 All values live in `src/rules/progression.json`. Purchases are permanent (no respec yet). The original plan's talent branches and stat affinities are parked; affinities may return later as a way to widen which players fit a class.
 
+### Smart pick (game selection)
+
+The pick-games screen offers **🧠 Smart pick** next to "Most energy for each". It scores a whole lineup in starting-energy points: each hero's energy, +8 for a double-double (Signature) or +16 for a triple-double (Legendary), minus the horde those games build: 3 per tier of each mirrored Champion, 5 per tier of the boss, 6 per trait, plus 4 per Fumble handed to the party. It starts from the most-energy picks and improves one hero at a time, rebuilding the real horde each time so the boss and mirror rules are respected. Weights live in `src/app/smartPick.ts`.
+
+Season simulator result: picking by smart pick instead of most energy raises bot season wins from 45% to 55%, better in every chapter, and changes about 21% of hero picks (in 70% of weeks). Switching factors off one at a time: the mirrored Champion's tier matters most (55% → 50% without it); double/triple-double value and traits are worth about 2 points each; the boss tier and Fumbles barely register for the bot (it spends Fumbles naively). Doubling the weights didn't help. Game choice is a real skill, and Champion strength is the biggest lever after energy.
+
 ### Chapters: the horde keeps pace
 
 The season runs in chapters of 4 weeks (roster moves happen between chapters). Each chapter after the first gives Champions and bosses +3% HP and damage (minions unchanged). The pick-games screen shows the current chapter's bonus.

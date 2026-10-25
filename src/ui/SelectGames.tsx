@@ -1,5 +1,6 @@
 import type { SeasonData } from '../data/types';
 import { bestGames } from '../app/autoAssign';
+import { smartGames } from '../app/smartPick';
 import { chapterOf, currentWeek, readyPicks, startBattle, type SaveGame } from '../app/game';
 import { buildHorde, opponentOf, playerLine, type MonsterSpec } from '../engine/horde';
 import { computePool } from '../engine/rating';
@@ -38,9 +39,18 @@ export function SelectGames({ data, game, onChange }: { data: SeasonData; game: 
             turnovers give you a 💫 Fumble to cancel that Champion's action in battle.
           </p>
         </div>
-        <button className="btn small" onClick={pickBest}>
-          Most energy for each
-        </button>
+        <div className="stack" style={{ gap: 6, alignItems: 'flex-end' }}>
+          <button
+            className="btn small"
+            onClick={() => onChange({ ...game, gamePicks: { ...game.gamePicks, ...smartGames(game, data) } })}
+            title="Weighs energy, double-doubles and triple-doubles against the Champions, traits, Fumbles and boss each game brings"
+          >
+            🧠 Smart pick
+          </button>
+          <button className="btn ghost small" onClick={pickBest}>
+            Most energy for each
+          </button>
+        </div>
       </div>
 
       {heroes.map((c) => {
