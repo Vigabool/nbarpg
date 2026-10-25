@@ -38,7 +38,7 @@ A single-player tactical fantasy RPG where each hero in a five-person party is p
 
 ### New game flow
 
-1. Choose a season and starting week (sandbox mode: any week of 2025–26).
+1. Start in the current season's latest finished week (or, in sandbox mode, any week of an older season).
 2. Build a roster of eight players under the cap.
 3. Assign five players to heroes; three are reserves.
 4. Play the first weekly battle.
@@ -92,7 +92,51 @@ The NBA's cap rules give natural hooks for later design:
 - **Soft cap:** exceed the cap, but the horde's Threat rises.
 - **First apron:** a larger overage costs PP each week.
 - **Second apron:** the heaviest overage blocks roster moves for a chapter.
-- **Salary updates:** in live mode, game salaries reprice monthly as players heat up or cool off.
+- **Salary updates:** in live mode, game salaries reprice monthly as players heat up or cool off (see Live season).
+
+## Live season
+
+**The current season is the default game mode: real games from the week just played power that week's battle.** Replaying an older season stays possible as a sandbox, and 2025–26 stays the fixed data set for tests, calibration and the golden baseline, because a live season changes every week.
+
+### Form: the last 15 regular-season games
+
+Salary, season tier, gear and auto-draft all read a player's per-game averages. A whole-season average looks ahead (in a replay, week 3 would know March), and in a live season it is empty for weeks. Instead, each week's averages (a player's **form**) come from the player's **15 most recent regular-season games before that week**. Early in the season the window reaches back into the prior regular season: a player with 4 games this year uses those 4 plus their last 11 of last season. Once they have 15 games this season, form is their season-to-date average.
+
+**Why 15 (measured on 2025–26):**
+
+| Class rating | Reliability of a 5 / 10 / 15 / 20-game average | Games to reach 0.8 |
+| --- | --- | --- |
+| Ranger (PTS) | 0.85 / 0.92 / 0.94 / 0.96 | 4 |
+| Cleric (AST) | 0.84 / 0.92 / 0.94 / 0.96 | 4 |
+| Warrior (DREB + 2×OREB + 3×BLK) | 0.81 / 0.89 / 0.93 / 0.94 | 5 |
+| Wizard (3PM) | 0.69 / 0.81 / 0.87 / 0.90 | 9 |
+| Rogue (3×STL + FTM) | 0.64 / 0.78 / 0.84 / 0.88 | 11 |
+
+Reliability is the odd/even split-half correlation, stepped up with Spearman-Brown (303 players with 40+ games at 15+ minutes). Rogue and Wizard are the slow stats, because steals and threes are rare events. Predicting the salary tier of a player's *next 12 games* (about a chapter) from a window of past games: 52% exact with 5 games, 57% with 10, 59% with 15, 61% with 20, and no better after that (60% with the whole season so far); within one tier 98% from 10 games on. The ceiling is the noise in the next 12 games themselves, so 15 games captures nearly all the signal while staying current. Not yet measured: how well last season's games predict this season (trades, new roles, aging). That needs a 2024–25 log to test against 2025–26.
+
+### Salaries lock for each chapter
+
+Form updates weekly, but **salary is set at each chapter boundary** (when roster moves happen) and holds for the chapter, so a roster that was legal at the draft stays legal. Repricing never forces a release: the cap only applies when signing. A player who breaks out is a bargain until the next chapter, and that is part of the fun. Gear and season tier follow the same lock, so a hero's character sheet doesn't shift mid-chapter.
+
+### Rookies and players with little data
+
+- **Rookies are priced by draft slot** until they have 15 NBA games; their tier and gear come from the slot too. The slot-to-tier table should be calibrated from the 2025 draft class's first 15 games; until then, a placeholder (for example picks 1–3 Good, 4–14 Average, later picks and undrafted Cold).
+- **A "Limited data" warning** on the player card and in the roster builder ("priced by draft slot: #4 pick" or "5 NBA games") marks the risk. It applies to anyone with fewer than 15 games in the window, not just rookies.
+- **Others without a full window:** players who missed last season (injury), arrive from overseas, or were drafted years ago and stashed. Draft slot is misleading for a stash or a returning veteran, so they use whatever games they have (looking back a further season if needed) and carry the warning; with no NBA games at all they fall back to the rookie rule.
+- **Eligibility:** the 15+ minutes rule is measured over the window. First-round rookies are eligible from opening night; second-rounders and undrafted players once they have 5 games at 15+ minutes.
+- **Draft data:** a small hand-kept file per draft class (about 60 rows: player ID, pick) is simpler than another stats.nba.com request.
+
+### Weekly calendar
+
+A week becomes playable once its Sunday is over, and the game shows when the next battle unlocks instead of running out of data. A short first week (the season opens midweek) is still week 1. Ten-day contracts and roster moves work as in sandbox mode; expanding them (dropping a player any time, more signings) is for live testing.
+
+### Data refresh
+
+stats.nba.com blocks most cloud servers, probably including GitHub Actions. The plan is a scheduled workflow (Monday mornings, Eastern time) that fetches the finished week from the NBA's public CDN (the schedule plus each game's box score), commits the raw log, and lets the existing workflows rebuild and deploy. If the CDN also blocks Actions, the fallback is running `scripts/fetch_gamelogs.py` on your own computer each Monday (or a self-hosted runner on that machine).
+
+### Recalibration
+
+Tier thresholds stay at the 2025–26 values through the start of the season, since changing them changes every battle. After 6–8 weeks of 2026–27 games, run `npm run data:calibrate`, record the result as `docs/calibration-2026-27.md`, and adopt it at a chapter boundary only if it moves the tier mix noticeably.
 
 ## Stat ownership
 
@@ -581,7 +625,7 @@ Over full seasons (greedy upgrades, encounter-aware Smart pick, chapter scaling 
 ### Project shape
 
 - **Platform:** mobile-friendly web app, simple card-based visuals; art later.
-- **Sandbox mode first:** replay any week of 2025–26. The live weekly mode comes later.
+- **Live season by default:** the current season, a week at a time (see Live season). Sandbox mode replays any week of an older season; 2025–26 is the first.
 - **Rules as data:** classes, abilities, costs, tiers, monsters and PP values live in config files, so tuning is a data edit, not a code change.
 - **Accounts:** a single local user for the MVP; storage designed to move to accounts later.
 - **Saves:** one run in the browser's storage. Each save records its format version, and older saves are upgraded step by step on load (`src/app/saves.ts`). **Save file** (top bar) downloads or copies the run; **Import a save file** (title screen) loads it back, so a run survives clearing site data or moving devices.
@@ -603,7 +647,7 @@ Over full seasons (greedy upgrades, encounter-aware Smart pick, chapter scaling 
 
 | Topic | Decision |
 | --- | --- |
-| Calibration | Set tier thresholds from 2025–26 season data; recalibrate from 2026–27 results as the season goes |
+| Calibration | Set tier thresholds from 2025–26 season data; recalibrate after 6–8 weeks of 2026–27 games, adopting at a chapter boundary |
 | Reserves | Three reserve players; hero assignments set at the start of the week only |
 | Injuries | No mid-week replacements for now |
 | Positioning | No front/back row; taunt handles targeting |
@@ -637,7 +681,7 @@ Gaps in the rules above, filled in for the first build. All live in `src/rules/`
 | Buff stacking | The same buff (Parry, Shield Wall, Ready Crit, Empower) can't stack with itself in a round; different buffs combine |
 | Pool penalties | Cleric pays −2 for every turnover, on top of the universal −2 per turnover above 2. Triple-double gives +12 total (not +18). Pool floor 0 |
 | Season tier | Season averages are rated against the single-game thresholds (sets gear and salary) |
-| Roster pool | Players with 10+ games and 15+ minutes per game |
+| Roster pool | Players averaging 15+ minutes over their form window (sandbox: 10+ games and 15+ minutes per game); rookie rules in Live season |
 | Chapters | 4 weeks; up to 3 roster moves between chapters |
 | Salary display | Gold, 1 gold = $1M; cap 180 gold |
 | PP split | Party PP divided evenly (fractions kept); spotlight PP to that hero. Bounties not yet implemented |

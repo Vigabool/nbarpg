@@ -34,6 +34,26 @@ Getting the game ready for outside testers, in this order.
 6. **Landing-damage warning and feat tags ✅ Done** (items 4 and 6 below).
 7. **A full chapter on a phone:** play the exact build you'll share before sending it.
 
+## Live season (2026–27)
+
+**Why.** Live results powering battles is the most compelling way to play, so the current season becomes the default mode. Today the app loads one finished season and rates players on whole-season averages, which look ahead in a replay and are empty early in a live season. Design: the design doc's Live season section.
+
+**What, in order.**
+1. **Form window:** the build writes each week's per-player averages from the last 15 regular-season games before that week, filled from the prior regular season (`npm run data:build -- --prior <raw file>`). Salary, season tier, gear, ten-day fees and auto-draft read form for the current week instead of `player.avg`. Test it on 2025–26 with a 2024–25 log as the prior (fetch it locally), which also measures how well last season predicts this one.
+2. **Chapter salary lock:** salary, tier and gear are fixed at each chapter boundary; repricing never forces a release.
+3. **Rookies and limited data:** a hand-kept draft file per class, draft-slot pricing (calibrated from the 2025 class's first 15 games), the eligibility rules, and a "Limited data" warning in the roster builder, Assign heroes and ten-day lists.
+4. **Live calendar:** the current season is the default; a week unlocks once its Sunday is over, with a "next battle unlocks Monday" screen. Sandbox replays of older seasons stay, with one save per season (bump `SAVE_VERSION` if the save shape changes). 2025–26 stays the data for tests, the golden baseline and the simulators.
+5. **Automated refresh:** a scheduled GitHub Actions workflow (Monday morning ET, plus `workflow_dispatch` for testing) that fetches the week from the NBA's CDN (schedule and box scores), commits the raw log and triggers the rebuild and deploy. Fallback if Actions is blocked: the local fetch script each Monday, or a self-hosted runner.
+6. **Recalibration:** after 6–8 weeks, `npm run data:calibrate` on 2026–27; adopt at a chapter boundary if the tier mix moved.
+
+**Done when.**
+- A new run starts in the latest finished week of 2026–27, and the next week unlocks on its own after the refresh.
+- No rating anywhere uses a game from the week being played or later (a test checks this on 2025–26).
+- Rookies are draftable from opening night with a warning, and reprice from their own games after 15.
+- The simulators and golden baseline still run on 2025–26, unchanged.
+
+**Decide during live testing.** Roster moves beyond ten-day contracts and cap raises: releasing a player at any time (not only between chapters), signing replacements mid-chapter, and what a release costs. See Gold, phase 2.
+
 ## 2. Season structure and encounter use
 
 **Why.** The encounter is still a "Testing:" dropdown, and the season simply stops when the data runs out. The pieces (encounters, chapters, progression, Smart pick) need a frame that makes a season feel like a campaign.
@@ -117,6 +137,7 @@ Hero rows show owned gear and passive feats with their Armory icons; tap one to 
 **What.**
 - **Roster spots:** a 9th and a 10th spot at escalating prices (for example 40 and 80 gold), capped at 10.
 - **Extra roster moves:** a signing outside the between-chapters window, at a price that rises each time.
+- **Release any time:** drop a player mid-chapter to free a roster spot and cap room, which matters more in a live season (injuries, slumps, breakout free agents). Decide the cost (none, gold, or a lost move) during live testing.
 - **Quartermaster consumables:** single-use battle items bought with gold, such as a Healing Potion, a Scroll of Fireball, a Smoke Bomb or War Paint.
 - **Simulator:** let the season simulator make roster moves, so cap room can be weighed against rentals.
 
@@ -134,6 +155,5 @@ For a wider test beyond close friends, who send feedback by text.
 - **More feats:** three feats per class, or a choice between two feats at each tier, for real build diversity.
 - **Cleric heals cure poison:** a clean counter to Dirty Arrows.
 - **Fumble chip:** if mis-taps continue, show only the count on enemy cards and spend from the detail sheet.
-- **Season data refresh:** a scheduled weekly run of the fetch script to play the current season as it happens.
 - **Flurry in the Giant's Hall:** replacing Venom Strike with Flurry raised the smart bot's chapter-1 Hall win rate from 76% to 83.5% (over a season 65% → 75%, on target). If playtests find early Hall battles too easy, raise Flurry's cost to 5 or drop it to G − 2 (see the design doc's Rogue section).
 - **Smart pick refit:** rerun `npm run data:fit-picks` after big rules changes, and consider fitting with the smart bot.
