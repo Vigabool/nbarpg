@@ -1,11 +1,18 @@
+import { useState } from 'react';
 import type { SeasonData } from '../data/types';
+import type { RewardLine } from '../engine/rewards';
+import { Armory } from './Armory';
 import { nextWeek, type SaveGame } from '../app/game';
 import { CLASSES, rules } from '../rules';
 import { ClassName, weekLabel } from './common';
 
 export function ResultScreen({ data, game, onChange }: { data: SeasonData; game: SaveGame; onChange: (g: SaveGame) => void }) {
+  const [armory, setArmory] = useState(false);
   const result = game.history.at(-1)!;
   const r = result.rewards;
+  // Saves from before whole-number PP stored "spotlightLines".
+  const partyLines = r.partyLines ?? [];
+  const heroLines = r.heroLines ?? (r as { spotlightLines?: RewardLine[] }).spotlightLines ?? [];
   const next = nextWeek(game, data);
   const wins = game.history.filter((h) => h.outcome === 'won').length;
 
@@ -20,13 +27,23 @@ export function ResultScreen({ data, game, onChange }: { data: SeasonData; game:
 
       <div className="grid">
         <section className="card stack">
-          <h2>Party progression points</h2>
-          {r.partyLines.length === 0 ? (
-            <p className="muted small">No party PP this week.</p>
+          <h2>Progression points</h2>
+          {partyLines.length === 0 && heroLines.length === 0 ? (
+            <p className="muted small">No PP this week.</p>
           ) : (
             <table className="table small">
               <tbody>
-                {r.partyLines.map((l) => (
+                {partyLines.map((l) => (
+                  <tr key={l.label}>
+                    <td>
+                      {l.label} <span className="muted">(every hero)</span>
+                    </td>
+                    <td className="num" style={{ textAlign: 'right' }}>
+                      +{l.pp}
+                    </td>
+                  </tr>
+                ))}
+                {heroLines.map((l) => (
                   <tr key={l.label}>
                     <td>{l.label}</td>
                     <td className="num" style={{ textAlign: 'right' }}>
@@ -34,44 +51,24 @@ export function ResultScreen({ data, game, onChange }: { data: SeasonData; game:
                     </td>
                   </tr>
                 ))}
-                <tr>
-                  <td>
-                    <strong>Total</strong> <span className="muted">(split across 5 heroes)</span>
-                  </td>
-                  <td className="num" style={{ textAlign: 'right' }}>
-                    <strong>{r.partyTotal}</strong>
-                  </td>
-                </tr>
               </tbody>
             </table>
-          )}
-          {r.spotlightLines.length > 0 && (
-            <>
-              <h3>Spotlight</h3>
-              <table className="table small">
-                <tbody>
-                  {r.spotlightLines.map((l) => (
-                    <tr key={l.label}>
-                      <td>{l.label}</td>
-                      <td className="num" style={{ textAlign: 'right' }}>
-                        +{l.pp}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </>
           )}
         </section>
 
         <section className="card stack">
-          <h2>Heroes</h2>
+          <div className="spread">
+            <h2>Heroes</h2>
+            <button className="btn small" onClick={() => setArmory(true)}>
+              🛠️ Armory
+            </button>
+          </div>
           <table className="table small">
             <thead>
               <tr>
                 <th>Hero</th>
                 <th style={{ textAlign: 'right' }}>This week</th>
-                <th style={{ textAlign: 'right' }}>Total PP</th>
+                <th style={{ textAlign: 'right' }}>To spend</th>
               </tr>
             </thead>
             <tbody>
@@ -81,21 +78,19 @@ export function ResultScreen({ data, game, onChange }: { data: SeasonData; game:
                     <ClassName c={c} />
                   </td>
                   <td className="num" style={{ textAlign: 'right' }}>
-                    +{r.perHero[c].toFixed(1)}
+                    +{Math.round(r.perHero[c] ?? 0)}
                   </td>
                   <td className="num" style={{ textAlign: 'right' }}>
-                    {game.pp[c].toFixed(1)}
+                    {game.pp[c]}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-          <p className="tiny muted">
-            Spending PP on gear, talents and affinities arrives with progression (milestone 4). Each hero keeps their PP whichever player
-            powers them.
-          </p>
+          <p className="tiny muted">Spend PP in the Armory on weapon upgrades, gear and feats. Each hero keeps their PP whichever player powers them.</p>
         </section>
       </div>
+      {armory && <Armory game={game} onChange={onChange} onClose={() => setArmory(false)} />}
 
       <div className="sticky-bottom">
         <div className="spread">

@@ -1,7 +1,38 @@
 {
-  "perWaveCleared": 2,
-  "warlordDefeated": 5,
-  "perHeroStanding": 1,
-  "flawless": 3,
-  "spotlight": { "eliteTier": 1, "doubleDouble": 1, "tripleDouble": 3 }
+  "earn": {
+    "perWaveCleared": 10,
+    "winStanding": 30,
+    "winFallen": 15,
+    "eliteDefeated": 10,
+    "eliteNight": 10,
+    "doubleDouble": 10,
+    "tripleDouble": 20
+  },
+  "weapon": { "costs": [100, 200, 300], "damagePerLevel": 1 },
+  "shield": { "costs": [150, 300], "armorPerLevel": 1 },
+  "chapterScaling": 0.1,
+  "gear": {
+    "plate-armor": { "heroClass": "warrior", "name": "Plate Armor", "icon": "🛡️", "cost": 200, "description": "+1 armor every round, on top of the shield", "armorPerRound": 1 },
+    "war-banner": { "heroClass": "warrior", "name": "War Banner", "icon": "🚩", "cost": 150, "description": "+2 starting energy", "startingEnergy": 2 },
+    "amulet-of-healing": { "heroClass": "cleric", "name": "Amulet of Healing", "icon": "📿", "cost": 200, "description": "Heals restore 2 more HP", "healBonus": 2 },
+    "chain-mail": { "heroClass": "cleric", "name": "Chain Mail", "icon": "⛓️", "cost": 150, "description": "+1 armor every round", "armorPerRound": 1 },
+    "leather-armor": { "heroClass": "ranger", "name": "Leather Armor", "icon": "🧥", "cost": 150, "description": "+1 armor every round", "armorPerRound": 1 },
+    "quiver-of-plenty": { "heroClass": "ranger", "name": "Quiver of Plenty", "icon": "🏹", "cost": 200, "description": "Double Strike costs 1 less energy", "costReduction": { "action": "double-strike", "amount": 1 } },
+    "shadow-cloak": { "heroClass": "rogue", "name": "Shadow Cloak", "icon": "🧣", "cost": 200, "description": "The first enemy hit on the Rogue each battle misses" },
+    "poisoners-kit": { "heroClass": "rogue", "name": "Poisoner's Kit", "icon": "🧪", "cost": 150, "description": "Poison the Rogue applies lasts 1 more round", "poisonRounds": 1 },
+    "spellbook": { "heroClass": "wizard", "name": "Spellbook", "icon": "📖", "cost": 150, "description": "+3 starting energy", "startingEnergy": 3 },
+    "focus-crystal": { "heroClass": "wizard", "name": "Focus Crystal", "icon": "🔮", "cost": 250, "description": "Spells deal 1 more damage", "spellDamage": 1 }
+  },
+  "feats": {
+    "cleave": { "heroClass": "warrior", "name": "Cleave", "icon": "🪓", "cost": 300, "description": "The Axe also hits a second enemy for half its damage" },
+    "intercept": { "heroClass": "warrior", "name": "Intercept", "icon": "🛡️", "cost": 300, "description": "Once per round, the Warrior takes an enemy attack meant for an ally below 25% HP" },
+    "blessed-ward": { "heroClass": "cleric", "name": "Blessed Ward", "icon": "✨", "cost": 300, "description": "Heals also grant +2 armor for the round" },
+    "smite": { "heroClass": "cleric", "name": "Smite", "icon": "⚡", "cost": 300, "description": "Cleric attacks deal 3 more damage to undead (the Crypt) and dragonkin" },
+    "hunters-mark": { "heroClass": "ranger", "name": "Hunter's Mark", "icon": "🎯", "cost": 300, "description": "New utility (3 energy): the marked enemy takes 2 more damage from every hit this round" },
+    "quick-draw": { "heroClass": "ranger", "name": "Quick Draw", "icon": "🏹", "cost": 300, "description": "The Longbow gains 3 energy instead of 2" },
+    "opportunist": { "heroClass": "rogue", "name": "Opportunist", "icon": "🗡️", "cost": 300, "description": "Rogue attacks deal 3 more damage to toppled, taunted or cursed enemies" },
+    "vanish": { "heroClass": "rogue", "name": "Vanish", "icon": "💨", "cost": 300, "description": "New utility (2 energy, once per battle): untargetable for a round" },
+    "arcane-surge": { "heroClass": "wizard", "name": "Arcane Surge", "icon": "🌀", "cost": 300, "description": "The first spell each round costs 1 less energy" },
+    "evocation": { "heroClass": "wizard", "name": "Evocation", "icon": "💥", "cost": 300, "description": "Spells that hit several enemies deal 1 more damage to each" }
+  }
 }

@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import type { SeasonData } from '../data/types';
+import { Armory } from './Armory';
 import { currentWeek, type SaveGame } from '../app/game';
 import { gearDamage, seasonTier } from '../engine/rating';
 import { playerGamesInWeek } from '../engine/week';
@@ -6,6 +8,7 @@ import { CLASSES, rules, tierIndex, type HeroClass } from '../rules';
 import { ClassName, TierChip, gamesCount } from './common';
 
 export function AssignHeroes({ data, game, onChange }: { data: SeasonData; game: SaveGame; onChange: (g: SaveGame) => void }) {
+  const [armory, setArmory] = useState<HeroClass | null>(null);
   const week = currentWeek(game, data);
   const games = (id: number) => (week ? playerGamesInWeek(data, week, id).length : 0);
   const assigned = new Set(Object.values(game.assignments));
@@ -75,7 +78,9 @@ export function AssignHeroes({ data, game, onChange }: { data: SeasonData; game:
                 <h2>
                   <ClassName c={c} />
                 </h2>
-                <span className="tiny muted">{game.pp[c].toFixed(1)} PP</span>
+                <button className="btn ghost small" onClick={() => setArmory(c)} title="Spend this hero's PP in the Armory">
+                  🛠️ {game.pp[c]} PP
+                </button>
               </div>
               <div className="tiny muted">
                 {rules.classes[c].role} · {rules.classes[c].hp} HP · Energy from {rules.classes[c].ratingLabel}
@@ -135,6 +140,7 @@ export function AssignHeroes({ data, game, onChange }: { data: SeasonData; game:
           </button>
         </div>
       </div>
+      {armory && <Armory game={game} onChange={onChange} initial={armory} onClose={() => setArmory(null)} />}
     </div>
   );
 }

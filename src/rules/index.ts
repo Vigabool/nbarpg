@@ -77,7 +77,8 @@ export type Effect =
   | { type: 'weaken'; amount: number; rounds: number }
   | { type: 'summon'; unit: SummonKind; count: number }
   | { type: 'instakill' }
-  | { type: 'lastStand' };
+  | { type: 'lastStand' }
+  | { type: 'mark'; amount: number };
 
 export interface ActionDef {
   id: string;
@@ -89,6 +90,10 @@ export interface ActionDef {
   unlock?: 'signature' | 'legendary';
   /** Spells can touch intangible foes; fire (like holy) destroys restless dead for good. */
   tags?: ('spell' | 'fire')[];
+  /** Only available once the hero has bought this feat (see progression.json). */
+  feat?: string;
+  /** Usable once per battle. */
+  oncePerBattle?: boolean;
   target: TargetSpec;
   effects: Effect[];
 }
@@ -230,6 +235,58 @@ export interface TraitDef {
   max?: number;
 }
 
+/** A one-time gear purchase from the Armory. */
+export interface GearDef {
+  heroClass: HeroClass;
+  name: string;
+  icon: string;
+  cost: number;
+  description: string;
+  armorPerRound?: number;
+  startingEnergy?: number;
+  healBonus?: number;
+  costReduction?: { action: string; amount: number };
+  poisonRounds?: number;
+  spellDamage?: number;
+}
+
+/** A feat: a new capability bought in the Armory. */
+export interface FeatDef {
+  heroClass: HeroClass;
+  name: string;
+  icon: string;
+  cost: number;
+  description: string;
+}
+
+export interface ProgressionConfig {
+  earn: {
+    perWaveCleared: number;
+    winStanding: number;
+    winFallen: number;
+    eliteDefeated: number;
+    eliteNight: number;
+    doubleDouble: number;
+    tripleDouble: number;
+  };
+  weapon: { costs: number[]; damagePerLevel: number };
+  shield: { costs: number[]; armorPerLevel: number };
+  /** Champions and bosses gain this much HP and damage per chapter after the first. */
+  chapterScaling: number;
+  gear: Record<string, GearDef>;
+  feats: Record<string, FeatDef>;
+}
+
+/** What a hero has bought in the Armory. Progress belongs to the hero, not the player. */
+export interface HeroProgress {
+  weapon: number;
+  shield: number;
+  gear: string[];
+  feats: string[];
+}
+
+export const emptyProgress = (): HeroProgress => ({ weapon: 0, shield: 0, gear: [], feats: [] });
+
 export interface Rules {
   tiers: TiersConfig;
   pool: {
@@ -246,7 +303,7 @@ export interface Rules {
     percentiles: Record<Exclude<Tier, 'cold'>, number>;
     comparisonPools: Record<HeroClass, { description: string; seasonMin: Partial<Record<StatKey, number>> }>;
   };
-  progression: typeof progressionJson;
+  progression: ProgressionConfig;
   traits: Record<TraitId, TraitDef>;
   combat: typeof combatJson & { shaman: { healByTier: Record<Tier, number>; shieldArmor: number } };
   classes: Record<HeroClass, ClassDef>;
@@ -261,7 +318,7 @@ export const rules: Rules = {
   pool: poolJson as unknown as Rules['pool'],
   salary: salaryJson as Rules['salary'],
   calibration: calibrationJson as Rules['calibration'],
-  progression: progressionJson,
+  progression: progressionJson as unknown as ProgressionConfig,
   combat: combatJson as Rules['combat'],
   traits: traitsJson as Record<TraitId, TraitDef>,
   classes: classesJson as unknown as Record<HeroClass, ClassDef>,

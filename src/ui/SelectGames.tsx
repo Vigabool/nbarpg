@@ -1,8 +1,8 @@
 import type { SeasonData } from '../data/types';
-import { currentWeek, readyPicks, startBattle, type SaveGame } from '../app/game';
+import { chapterOf, currentWeek, readyPicks, startBattle, type SaveGame } from '../app/game';
 import { buildHorde, opponentOf, playerLine, type MonsterSpec } from '../engine/horde';
 import { computePool } from '../engine/rating';
-import { playerGamesInWeek } from '../engine/week';
+import { playerGamesInWeek, scaleHorde } from '../engine/week';
 import { CLASSES, rules, type HeroClass } from '../rules';
 import { encounterIds, encounterOf, monsterIcon, monsterName } from '../engine/encounter';
 import { ClassName, TierChip, formatDate, statLine } from './common';
@@ -17,7 +17,8 @@ export function SelectGames({ data, game, onChange }: { data: SeasonData; game: 
   const heroes = CLASSES.filter((c) => game.assignments[c] !== undefined);
   const picks = readyPicks(game, data);
   const playing = heroes.filter((c) => playerGamesInWeek(data, week, game.assignments[c]!).length > 0);
-  const horde = picks.length ? buildHorde(picks, data, undefined, game.encounter) : null;
+  const chapter = chapterOf(game);
+  const horde = picks.length ? scaleHorde(buildHorde(picks, data, undefined, game.encounter), chapter) : null;
   const enc = encounterOf(game.encounter);
   const allPicked = playing.every((c) => game.gamePicks[c]);
 
@@ -138,6 +139,11 @@ export function SelectGames({ data, game, onChange }: { data: SeasonData; game: 
               </label>
             </div>
             <h2>{enc.name}</h2>
+            {chapter > 1 && (
+              <span className="small warn">
+                Chapter {chapter}: Champions and bosses have +{Math.round(rules.progression.chapterScaling * (chapter - 1) * 100)}% HP and damage
+              </span>
+            )}
             <span className="small muted">{enc.tagline}</span>
           </div>
           {horde.waves.map((wave, i) => {

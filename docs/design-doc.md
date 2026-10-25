@@ -395,84 +395,49 @@ Specials are telegraphed: the Champion's card shows a dashed amber ⏳ "Slam nex
 
 ## Progression
 
-**Progress belongs to heroes, not players.** A hero keeps her gear, talents and affinities no matter which NBA player powers her this week. Heroes earn progression points (PP) each battle and spend them on three tracks. At these rates a hero earns roughly 80–100 PP over a season, enough to go deep in some tracks but not to max everything.
+**Progress belongs to heroes, not players.** A hero keeps their upgrades, gear and feats no matter which NBA player powers them this week. Heroes earn whole-number progression points (PP) each battle and spend their own PP in the **🛠️ Armory**, reached from the result screen and from each hero card when assigning players. Over a 25-week season a hero earns roughly 1,200–1,500 PP: enough to max their weapon and buy both gear items plus a feat or two, not everything.
 
-### Earning PP
+### Earning PP (per hero)
 
-| Source | PP |
+| Source | PP | Who |
+| --- | --- | --- |
+| Each wave cleared | 10 | Every hero who fought |
+| Victory | 30 standing, 15 if fallen at the end | Each hero |
+| Each Elite Champion or boss defeated | 10 | Every hero who fought |
+| Player's Elite night | 10 | That hero |
+| Double-double / triple-double | 10 / 20 | That hero |
+
+A typical win (three waves, one Elite foe) is about 70 PP per hero; a wave-3 loss about 20. Player performance is deliberately a small share. Saves from before whole-number PP round on load.
+
+### Spending
+
+**Weapon upgrades:** +1 weapon damage per level (applies to every weapon-damage attack), costing 100 / 200 / 300. The **Warrior's shield** levels separately: +1 armor every round per level, 150 / 300.
+
+**Gear** (one-time):
+
+| Class | Gear |
 | --- | --- |
-| Each wave cleared | 2 (max 6) |
-| Warlord defeated | 5 |
-| Each hero standing at the end | 1 |
-| Flawless battle (no hero fell) | 3 |
-| Weekly bounty (one per week) | 4–6 |
-| Spotlight: bound player hits Elite tier | 1 |
-| Spotlight: double-double / triple-double | 1 / 3 |
+| Warrior | Plate Armor (200): +1 armor every round · War Banner (150): +2 starting energy |
+| Cleric | Amulet of Healing (200): heals restore +2 · Chain Mail (150): +1 armor every round |
+| Ranger | Leather Armor (150): +1 armor every round · Quiver of Plenty (200): Double Strike costs 1 less |
+| Rogue | Shadow Cloak (200): the first enemy hit each battle misses · Poisoner's Kit (150): poison lasts 1 more round |
+| Wizard | Spellbook (150): +3 starting energy · Focus Crystal (250): spells deal +1 damage |
 
-Most PP comes from how you play, not from the box scores. Example bounties: defeat the Warlord within 3 rounds; win without using any Signature ability; win with the Cleric casting no heals.
+**Feats** (300 each):
 
-PP is awarded to the party and split evenly across the five heroes, with spotlight PP going to that hero alone.
-
-### Track 1: Gear upgrades
-
-Each item levels Common → Rare → Epic → Legendary. Upgrades are permanent.
-
-| Level | Cost | Effect |
-| --- | --- | --- |
-| Rare | 8 | +1 gear damage (or +1 armor for the Shield) |
-| Epic | 15 | Another +1, and +2 to that hero's starting pool |
-| Legendary | 25 | The item's signature effect (below) |
-
-| Item | Legendary effect |
+| Class | Feats |
 | --- | --- |
-| Wizard Staff | Echo: gear attack also deals 2 damage to a second enemy |
-| Rogue Dagger | Serrated: gear attacks apply 2 poison for 1 round |
-| Ranger Longbow | Piercing: gear attacks ignore armor |
-| Ranger Longsword | Counter: +2 more damage against an enemy that attacked the Ranger |
-| Warrior Axe | Cleave: gear attack hits 2 enemies |
-| Warrior Shield | Reflect: while taunting, return 2 damage per hit taken |
-| Cleric Mace | Blessed: gear attack also heals the lowest-HP ally 2 |
+| Warrior | Cleave: the Axe also hits a second enemy for half · Intercept: once per round, take an attack meant for an ally below 25% HP |
+| Cleric | Blessed Ward: heals also grant +2 armor that round · Smite: Cleric attacks +3 vs undead (the Crypt) and dragonkin |
+| Ranger | Hunter's Mark (new utility, 3): the marked enemy takes +2 from every hit this round · Quick Draw: the Longbow gains 3 energy |
+| Rogue | Opportunist: +3 vs toppled, taunted or cursed enemies · Vanish (new utility, 2, once per battle): untargetable for a round |
+| Wizard | Arcane Surge: the first spell each round costs 1 less · Evocation: multi-target spells +1 to each |
 
-### Track 2: Talent branches
+All values live in `src/rules/progression.json`. Purchases are permanent (no respec yet). The original plan's talent branches and stat affinities are parked; affinities may return later as a way to widen which players fit a class.
 
-Each class has two branches of three talents, costing 6, 10 and 15 PP in order. A hero can unlock both branches over time but has only one active per battle, chosen at the start of the week. The third talent in each branch is the payoff.
+### Chapters: the horde keeps pace
 
-| Class | Branch A | Branch B |
-| --- | --- | --- |
-| Wizard | **Pyromancer:** Fireball hits 4 targets → Fireball costs 8 → Ignite: Fireball burns 2 per round for 2 rounds | **Stormcaller:** Lightning Bolt costs 5 → Bolt chains 6 to a second target → Static: every 3rd spell refunds 3 points |
-| Rogue | **Assassin:** Backstab +4 damage → Ready Crit costs 2 → Execute: Backstab defeats a target under 8 HP | **Poisoner:** Venom lasts 1 more round → poison stacks → Toxic Cloud (new, 8): poison all enemies 2 per round for 3 rounds |
-| Ranger | **Beastmaster:** Wolf +6 HP → Bear costs 11 → Pack Bond: summons heal 2 per round | **Marksman:** Aimed Shot costs 4 → Double Strike makes 3 attacks → Hunter's Mark (new, 5): target takes +3 damage from all sources |
-| Warrior | **Guardian:** Provoke taunts 2 enemies → Shield Wall costs 7 → Intercept: once per wave, take a hit meant for an ally | **Berserker:** Second Wind adds +2 to the next attack → Rage: +1 gear damage per 10 HP lost → Whirlwind (new, 8): G damage to every enemy |
-| Cleric | **Healer:** Cure Wounds heals 11 → Cure All costs 6 → Renewal (new, 6): ally heals 3 per round for 3 rounds | **Battle Priest:** Empower gives +75% → Curse lasts 3 rounds → Smite (new, 6): 10 damage, +5 vs Warlock and Shaman |
-
-### Track 3: Stat affinities
-
-Affinities change which stats feed a hero's Rating, widening which players fit the class. Each costs 10 PP to unlock. A hero starts with one affinity slot; a second slot costs 20 PP.
-
-| Class | Affinity | Effect on Rating or pool |
-| --- | --- | --- |
-| Wizard | Free Throw Line | Every 3 FTM counts as one 3PM |
-| Wizard | Heat Check | 3P% bonus threshold drops from 40% to 37% |
-| Rogue | Two-Way | Each block adds 2 to the Rating |
-| Rogue | Clean Hands | 0 turnovers: +4 pool |
-| Ranger | Glass Eater | Each OREB adds 2 to the Rating |
-| Ranger | Efficient Scorer | FG% bonus threshold drops from 55% to 52% |
-| Warrior | Outlet Pass | Each assist adds 1 to the Rating |
-| Warrior | Stretch Big | Each 3PM adds 2 to the Rating |
-| Cleric | Floor General | 2 or fewer turnovers: +4 pool |
-| Cleric | Point Forward | Every 2 rebounds add 1 to the Rating |
-
-### Respec
-
-For 3 PP, a hero can reset talents and affinities with a full refund. Gear upgrades are permanent. Cheap respecs keep experimenting fun as the players powering heroes change.
-
-### Open: horde scaling with PP
-
-The horde scales with real opponents, not party power, so upgraded heroes will eventually breeze through. The horde needs a Threat level tied to PP invested. Candidate approaches, not yet chosen:
-
-- **Threat multiplier:** monster HP and damage rise with the party's total PP invested.
-- **Chapters:** the season splits into chapters, each adding base horde strength, with the playoffs as the finale.
-- **Warlord traits:** the Warlord gains a new trait at each Threat level.
+The season runs in chapters of 4 weeks (roster moves happen between chapters). Each chapter after the first gives Champions and bosses +10% HP and damage (minions unchanged), so upgraded heroes still face a challenge. The pick-games screen shows the current chapter's bonus. Balance targets per chapter will be retuned once upgrade spending can be simulated.
 
 ## Multiplayer direction (future)
 

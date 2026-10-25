@@ -5,7 +5,7 @@ import type { PoolBreakdown } from '../engine/rating';
 import { computeRewards, type Rewards } from '../engine/rewards';
 import { computeSalary } from '../engine/rating';
 import { playerGamesInWeek, prepareBattle } from '../engine/week';
-import { CLASSES, type HeroClass } from '../rules';
+import { CLASSES, emptyProgress, type HeroClass, type HeroProgress } from '../rules';
 
 export type Phase = 'roster' | 'assign' | 'select' | 'battle' | 'result';
 
@@ -30,7 +30,10 @@ export interface SaveGame {
   battlePools: Partial<Record<HeroClass, PoolBreakdown>> | null;
   /** Encounter for the coming battle (a testing choice until weekly selection is designed). */
   encounter?: string;
+  /** Unspent progression points per hero (whole numbers). */
   pp: Record<HeroClass, number>;
+  /** What each hero has bought in the Armory (absent in saves from before progression). */
+  progress?: Record<HeroClass, HeroProgress>;
   history: WeekResult[];
 }
 
@@ -50,8 +53,26 @@ export function newGame(season: string, weekIndex: number): SaveGame {
     battle: null,
     battlePools: null,
     pp: Object.fromEntries(CLASSES.map((c) => [c, 0])) as Record<HeroClass, number>,
+    progress: Object.fromEntries(CLASSES.map((c) => [c, emptyProgress()])) as Record<HeroClass, HeroProgress>,
     history: [],
   };
+}
+
+/** Brings an older save up to date: whole-number PP and an empty Armory. */
+export function migrateSave(game: SaveGame): SaveGame {
+  const pp = Object.fromEntries(CLASSES.map((c) => [c, Math.round(game.pp?.[c] ?? 0)])) as Record<HeroClass, number>;
+  const progress = Object.fromEntries(CLASSES.map((c) => [c, { ...emptyProgress(), ...(game.progress?.[c] ?? {}) }])) as Record<HeroClass, HeroProgress>;
+  return { ...game, pp, progress };
+}
+
+export function progressOf(game: SaveGame, c: HeroClass): HeroProgress {
+  return game.progress?.[c] ?? emptyProgress();
+}
+
+/** Chapter number (1-based): every CHAPTER_WEEKS weeks from the run's first week. */
+export function chapterOf(game: SaveGame): number {
+  const startWeek = game.history[0]?.weekIndex ?? game.weekIndex;
+  return Math.floor((game.weekIndex - startWeek) / CHAPTER_WEEKS) + 1;
 }
 
 export function currentWeek(game: SaveGame, data: SeasonData): Week | undefined {
@@ -83,7 +104,8 @@ export function readyPicks(game: SaveGame, data: SeasonData): HeroGamePick[] {
 }
 
 export function startBattle(game: SaveGame, data: SeasonData): SaveGame {
-  const prepared = prepareBattle(readyPicks(game, data), data, undefined, game.encounter);
+  const progress = Object.fromEntries(CLASSES.map((c) => [c, progressOf(game, c)])) as Record<HeroClass, HeroProgress>;
+  const prepared = prepareBattle(readyPicks(game, data), data, undefined, game.encounter, { progress, chapter: chapterOf(game) });
   return { ...game, phase: 'battle', battle: prepared.battle, battlePools: prepared.pools };
 }
 

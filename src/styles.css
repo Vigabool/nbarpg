@@ -480,3 +480,9 @@ select.input { appearance: auto; }
 .draft-menu { position: absolute; right: 0; top: calc(100% + 4px); z-index: 20; display: grid; gap: 2px; width: min(260px, calc(100vw - 32px)); padding: 4px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4); }
 .draft-mode { display: grid; gap: 2px; text-align: left; padding: 8px 10px; border: 0; border-radius: 8px; background: transparent; color: inherit; cursor: pointer; font: inherit; }
 .draft-mode:hover, .draft-mode:focus-visible { background: var(--bg-2); }
+.armory-item { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg-2); }
+.armory-item.owned { border-color: color-mix(in srgb, var(--good) 45%, var(--line)); }
+.armory-icon { font-size: 1.4rem; }
+.pp-chip { color: var(--gold); }
+.pp-balance { color: var(--gold); font-weight: 700; }
+.cost.discounted { color: var(--good); }

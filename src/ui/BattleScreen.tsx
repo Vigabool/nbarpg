@@ -452,7 +452,7 @@ function ActionTile({
             +{gain}
           </span>
         ) : (
-          <span className="cost">{o.def.unlock ? (o.def.unlock === 'signature' ? 'DD' : 'TD') : o.def.cost}</span>
+          <span className={`cost${o.cost !== undefined && o.def.cost !== undefined && o.cost < o.def.cost ? ' discounted' : ''}`}>{o.def.unlock ? (o.def.unlock === 'signature' ? 'DD' : 'TD') : o.cost}</span>
         )}
       </span>
       {details && <span className="tiny muted">{description}</span>}

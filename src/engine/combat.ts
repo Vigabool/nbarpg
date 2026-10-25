@@ -1,4 +1,4 @@
-import { CLASSES, rules as defaultRules, type ActionDef, type Effect, type HeroClass, type Rules, type SummonKind, type TraitId } from '../rules';
+import { CLASSES, emptyProgress, rules as defaultRules, type ActionDef, type Effect, type HeroClass, type HeroProgress, type Rules, type SummonKind, type TraitId } from '../rules';
 import { behaviorOf, encounterOf, hasTwist, isGoblinKin, monsterIcon, monsterName, specialFor, type SpecialInfo } from './encounter';
 import type { MonsterSpec } from './horde';
 import type { PoolBreakdown } from './rating';
@@ -14,6 +14,8 @@ export interface HeroSetup {
   playerName: string;
   gear: number;
   pool: PoolBreakdown;
+  /** Armory purchases (weapon and shield levels, gear, feats). */
+  progress?: HeroProgress;
 }
 
 export interface HeroState {
@@ -53,6 +55,16 @@ export interface HeroState {
   legendaryReady: boolean;
   attackedByThisRound: string[];
   attackedByLastRound: string[];
+  /** Armory purchases this hero brings to the battle. */
+  progress?: HeroProgress;
+  /** Once-per-battle abilities already used (e.g. Vanish). */
+  usedOnce?: string[];
+  /** Shadow Cloak: the first enemy hit already missed. */
+  cloakUsed?: boolean;
+  /** Arcane Surge: the last round a spell was cast. */
+  lastSpellRound?: number;
+  /** Intercept: the last round the Warrior took a hit for an ally. */
+  interceptRound?: number;
 }
 
 export interface SummonState {
@@ -112,6 +124,8 @@ export interface EnemyState {
   toppledRound?: number;
   /** The last round it took fire damage (stops a Frost Troll regenerating). */
   burnedRound?: number;
+  /** Hunter's Mark: extra damage from every hit during this round. */
+  mark?: { round: number; amount: number };
   /** Box-score traits (see rules/traits.json). */
   traits?: TraitId[];
   /** Swat: the round it last negated a hit. */
@@ -177,6 +191,8 @@ export interface ActionOption {
   attack: boolean;
   reason?: string;
   validTargets: string[];
+  /** Energy it costs this hero right now (after Quiver of Plenty, Arcane Surge). */
+  cost?: number;
 }
 
 const clone = <T>(v: T): T => structuredClone(v);
@@ -207,7 +223,14 @@ function makeEnemy(spec: MonsterSpec, arrivedRound: number, wave: number): Enemy
 }
 
 export function createBattle(heroes: HeroSetup[], waves: MonsterSpec[][], rules: Rules = defaultRules, encounter?: string): BattleState {
-  const ordered = [...heroes].sort((a, b) => CLASSES.indexOf(a.heroClass) - CLASSES.indexOf(b.heroClass));
+  const ordered = structuredClone(heroes).sort((a, b) => CLASSES.indexOf(a.heroClass) - CLASSES.indexOf(b.heroClass));
+  // Armory: weapon levels add damage, gear adds starting energy.
+  for (const h of ordered) {
+    const prog = h.progress ?? emptyProgress();
+    h.gear += prog.weapon * rules.progression.weapon.damagePerLevel;
+    const bonus = prog.gear.reduce((t, id) => t + (rules.progression.gear[id]?.startingEnergy ?? 0), 0);
+    if (bonus) h.pool = { ...h.pool, pool: h.pool.pool + bonus };
+  }
   const state: BattleState = {
     round: 1,
     phase: 'party',
@@ -238,6 +261,7 @@ export function createBattle(heroes: HeroSetup[], waves: MonsterSpec[][], rules:
       legendaryReady: h.pool.tripleDouble,
       attackedByThisRound: [],
       attackedByLastRound: [],
+      progress: h.progress ?? emptyProgress(),
     })),
     summons: [],
     enemies: waves[0].map((m) => makeEnemy(m, 0, 0)),
@@ -401,6 +425,7 @@ function startRound(state: BattleState, rules: Rules) {
     h.buffs = [];
     if (!h.alive) continue;
     for (const p of rules.classes[h.heroClass].passives) if (p.type === 'armorPerRound') h.armor += p.amount;
+    h.armor += armoryArmor(h, rules);
     h.acted = h.skipNextTurn;
     h.prone = h.skipNextTurn;
     if (h.skipNextTurn) log(state, 'system', `${rules.classes[h.heroClass].name} is prone and skips this turn.`, h.id);
@@ -526,7 +551,9 @@ export function listActions(state: BattleState, heroId: HeroClass, rules: Rules 
     let reason = blockedFor(def);
     if (!reason && targets.length === 0)
       reason = def.target.type === 'enemy' && def.target.attackedSelfLastRound ? 'No enemy attacked you last round' : 'No targets';
-    if (!reason && def.cost !== undefined && def.cost > hero.pool) reason = `Needs ${def.cost} energy`;
+    const cost = actionCost(state, hero, def, rules);
+    if (!reason && def.oncePerBattle && hero.usedOnce?.includes(def.id)) reason = 'Already used this battle';
+    if (!reason && cost !== undefined && cost > hero.pool) reason = `Needs ${cost} energy`;
     opts.push({
       def,
       source: 'gear',
@@ -534,9 +561,12 @@ export function listActions(state: BattleState, heroId: HeroClass, rules: Rules 
       available: !reason,
       reason,
       validTargets: targets,
+      cost,
     });
   }
   for (const def of cls.abilities) {
+    // Feat abilities appear once the hero has bought the feat.
+    if (def.feat && !hasFeat(hero, def.feat)) continue;
     const targets = validTargets(state, hero, def, rules);
     let reason = blockedFor(def);
     if (!reason && def.unlock === 'signature' && !hero.signatureReady)
@@ -544,9 +574,11 @@ export function listActions(state: BattleState, heroId: HeroClass, rules: Rules 
     if (!reason && def.unlock === 'legendary' && !hero.legendaryReady)
       reason = hero.legendaryUnlocked ? 'Already used' : 'Needs a triple-double';
     if (!reason && alreadyActive(def, hero)) reason = 'Already active this round';
-    if (!reason && def.cost !== undefined && def.cost > hero.pool) reason = `Needs ${def.cost} energy`;
+    const cost = actionCost(state, hero, def, rules);
+    if (!reason && def.oncePerBattle && hero.usedOnce?.includes(def.id)) reason = 'Already used this battle';
+    if (!reason && cost !== undefined && cost > hero.pool) reason = `Needs ${cost} energy`;
     if (!reason && def.target.type !== 'none' && targets.length === 0) reason = 'No valid targets';
-    opts.push({ def, source: 'ability', attack: isAttack(def), available: !reason, reason, validTargets: targets });
+    opts.push({ def, source: 'ability', attack: isAttack(def), available: !reason, reason, validTargets: targets, cost });
   }
   return opts;
 }
@@ -561,6 +593,8 @@ function damageEnemy(
   rules: Rules = defaultRules,
   source: DamageSource = {},
 ): number {
+  // Hunter's Mark: every hit this round lands harder.
+  if (amount > 0 && enemy.mark?.round === state.round) amount += enemy.mark.amount;
   if (amount > 0) {
     enemy.hitRound = state.round;
     enemy.hotStacks = 0;
@@ -750,12 +784,55 @@ export function specialDue(e: EnemyState, round: number, rules: Rules = defaultR
 export function actionDamage(def: ActionDef, hero: HeroState): string | null {
   for (const e of def.effects) {
     if (e.type === 'damage') {
-      const hit = heroHitAmount(hero, (e.amount === 'gear' ? hero.gear : e.amount) + (e.bonus ?? 0));
+      const hit = heroHitAmount(hero, (e.amount === 'gear' ? hero.gear : e.amount) + (e.bonus ?? 0) + armoryDamage(hero, def, defaultRules));
       return def.target.type === 'enemies' ? `${hit}×${def.target.count}` : `${hit}`;
     }
     if (e.type === 'gearAttack') return `${e.times}×${heroHitAmount(hero, hero.gear)}`;
   }
   return null;
+}
+
+// ---------- Armory (progression) ----------
+
+export const hasFeat = (h: HeroState, id: string) => !!h.progress?.feats.includes(id);
+
+/** Armor every round from the shield's upgrade levels and armor gear. */
+function armoryArmor(h: HeroState, rules: Rules): number {
+  const prog = h.progress;
+  if (!prog) return 0;
+  const shield = h.heroClass === 'warrior' ? prog.shield * rules.progression.shield.armorPerLevel : 0;
+  return shield + prog.gear.reduce((t, id) => t + (rules.progression.gear[id]?.armorPerRound ?? 0), 0);
+}
+
+/** Energy an action costs this hero now: Quiver of Plenty and Arcane Surge make some cheaper. */
+export function actionCost(state: BattleState, hero: HeroState, def: ActionDef, rules: Rules = defaultRules): number | undefined {
+  if (def.cost === undefined) return undefined;
+  let cost = def.cost;
+  for (const id of hero.progress?.gear ?? []) {
+    const r = rules.progression.gear[id]?.costReduction;
+    if (r && r.action === def.id) cost -= r.amount;
+  }
+  if (hasFeat(hero, 'arcane-surge') && def.tags?.includes('spell') && hero.lastSpellRound !== state.round) cost -= 1;
+  return Math.max(0, cost);
+}
+
+/** Flat damage the Armory adds to every hit of an action: Focus Crystal and Evocation on spells. */
+function armoryDamage(hero: HeroState, def: ActionDef, rules: Rules): number {
+  if (!def.tags?.includes('spell')) return 0;
+  const crystal = (hero.progress?.gear ?? []).reduce((t, id) => t + (rules.progression.gear[id]?.spellDamage ?? 0), 0);
+  const multi = def.target.type === 'enemies' || def.target.type === 'allEnemies';
+  return crystal + (multi && hasFeat(hero, 'evocation') ? 1 : 0);
+}
+
+/** Damage that depends on the target: Smite against undead and dragonkin, Opportunist against helpless foes. */
+function featDamageVs(state: BattleState, hero: HeroState, e: EnemyState, rules: Rules): number {
+  let bonus = 0;
+  if (hero.heroClass === 'cleric' && hasFeat(hero, 'smite')) {
+    const undead = hasTwist('restlessDead', state.encounter, rules);
+    if (undead || encounterOf(state.encounter, rules).monsters[e.kind]?.dragonkin) bonus += 3;
+  }
+  if (hero.heroClass === 'rogue' && hasFeat(hero, 'opportunist') && (e.toppled || e.tauntedBy || (e.weaken && e.weaken.rounds > 0))) bonus += 3;
+  return bonus;
 }
 
 function heroHitAmount(hero: HeroState, base: number): number {
@@ -800,7 +877,9 @@ export function performAction(prev: BattleState, action: HeroAction, rules: Rule
     for (const t of targets) if (!option.validTargets.includes(t)) throw new Error(`Invalid target ${t}`);
   }
 
-  if (def.cost) hero.pool -= def.cost;
+  hero.pool -= option.cost ?? 0;
+  if (def.tags?.includes('spell')) hero.lastSpellRound = state.round;
+  if (def.oncePerBattle) hero.usedOnce = [...(hero.usedOnce ?? []), def.id];
   if (def.unlock === 'signature') {
     hero.signatureReady = false;
     state.stats.signaturesUsed++;
@@ -859,6 +938,20 @@ function applyEffect(
 ): boolean {
   const defId = def.id;
   const source = damageSource(hero, def);
+  // Amulet of Healing adds to every heal; Blessed Ward also gives the healed ally armor this round.
+  const heal = (h: HeroState) => {
+    if (effect.type !== 'heal') return;
+    const bonus = (hero.progress?.gear ?? []).reduce((t, g) => t + (rules.progression.gear[g]?.healBonus ?? 0), 0);
+    const healed = Math.min(effect.amount + bonus, h.maxHp - h.hp);
+    h.hp += healed;
+    let text = `${nameOf(state, h.id, rules)} +${healed} HP`;
+    if (hasFeat(hero, 'blessed-ward') && !(h.buffs ?? []).includes('blessed-ward')) {
+      h.armor += 2;
+      h.buffs = [...(h.buffs ?? []), 'blessed-ward'];
+      text += ', +2 armor';
+    }
+    parts.push(text);
+  };
   const endText = (e: EnemyState) => (e.alive ? '' : e.pile ? ' (falls, will reassemble)' : ' (defeated)');
   switch (effect.type) {
     case 'damage': {
@@ -875,11 +968,20 @@ function applyEffect(
           e.intangible = false;
           solidified = true;
         }
-        let base = (effect.amount === 'gear' ? hero.gear : effect.amount) + (effect.bonus ?? 0);
+        let base = (effect.amount === 'gear' ? hero.gear : effect.amount) + (effect.bonus ?? 0) + armoryDamage(hero, def, rules) + featDamageVs(state, hero, e, rules);
         if (effect.doubleIfTauntedByOther && e.tauntedBy && e.tauntedBy !== hero.id) base *= 2;
-        const dealt = damageEnemy(state, e, heroHitAmount(hero, base), !!effect.pierce, rules, source);
+        const amount = heroHitAmount(hero, base);
+        const dealt = damageEnemy(state, e, amount, !!effect.pierce, rules, source);
         parts.push(`${dealt} to ${e.name}${solidified ? ' (now solid)' : ''}${endText(e)}`);
         moltenHide(state, hero, e, def, parts, rules);
+        // Cleave: the Axe also hits a second enemy for half.
+        if (def.id === 'axe' && hasFeat(hero, 'cleave')) {
+          const second = pickableEnemies(state, rules).filter((x) => x.id !== e.id).sort((a, b) => a.hp - b.hp)[0];
+          if (second) {
+            const cleft = damageEnemy(state, second, Math.floor(amount / 2), false, rules, source);
+            parts.push(`cleaves ${cleft} into ${second.name}${endText(second)}`);
+          }
+        }
       }
       return true;
     }
@@ -892,7 +994,7 @@ function applyEffect(
         let e = state.enemies.find((x) => x.id === targets[i % targets.length] && x.alive);
         if (!e || e.intangible) e = [...pickableEnemies(state, rules)].sort((a, b) => a.hp - b.hp)[0];
         if (!e) break;
-        const dealt = damageEnemy(state, e, heroHitAmount(hero, gearBase), false, rules, source);
+        const dealt = damageEnemy(state, e, heroHitAmount(hero, gearBase + featDamageVs(state, hero, e, rules)), false, rules, source);
         parts.push(`${dealt} to ${e.name}${endText(e)}`);
         moltenHide(state, hero, e, def, parts, rules);
       }
@@ -902,7 +1004,8 @@ function applyEffect(
       for (const id of targets) {
         const e = state.enemies.find((x) => x.id === id);
         if (!e || !e.alive) continue;
-        e.poison = { perRound: Math.max(effect.perRound, e.poison?.perRound ?? 0), rounds: Math.max(effect.rounds, e.poison?.rounds ?? 0) };
+        const rounds = effect.rounds + (hero.progress?.gear ?? []).reduce((t, g) => t + (rules.progression.gear[g]?.poisonRounds ?? 0), 0);
+        e.poison = { perRound: Math.max(effect.perRound, e.poison?.perRound ?? 0), rounds: Math.max(rounds, e.poison?.rounds ?? 0) };
         parts.push(`${e.name} poisoned`);
       }
       return false;
@@ -925,19 +1028,12 @@ function applyEffect(
         const h = state.heroes
           .filter((x) => x.alive && x.hp < x.maxHp)
           .sort((a, b) => b.maxHp - b.hp - (a.maxHp - a.hp))[0];
-        if (h) {
-          const healed = Math.min(effect.amount, h.maxHp - h.hp);
-          h.hp += healed;
-          parts.push(`${nameOf(state, h.id, rules)} +${healed} HP`);
-        }
+        if (h) heal(h);
         return false;
       }
       for (const id of targets) {
         const h = state.heroes.find((x) => x.id === id);
-        if (!h || !h.alive) continue;
-        const healed = Math.min(effect.amount, h.maxHp - h.hp);
-        h.hp += healed;
-        parts.push(`${nameOf(state, id, rules)} +${healed} HP`);
+        if (h && h.alive) heal(h);
       }
       return false;
     case 'revive':
@@ -1008,9 +1104,19 @@ function applyEffect(
         parts.push(`${e.name} defeated`);
       }
       return false;
-    case 'gainEnergy':
-      hero.pool += effect.amount;
-      parts.push(`+${effect.amount} energy`);
+    case 'gainEnergy': {
+      const gain = effect.amount + (def.id === 'longbow' && hasFeat(hero, 'quick-draw') ? 1 : 0);
+      hero.pool += gain;
+      parts.push(`+${gain} energy`);
+      return false;
+    }
+    case 'mark':
+      for (const id of targets) {
+        const e = state.enemies.find((x) => x.id === id);
+        if (!e || !e.alive) continue;
+        e.mark = { round: state.round, amount: effect.amount };
+        parts.push(`${e.name} marked: +${effect.amount} from every hit this round`);
+      }
       return false;
     case 'lastStand':
       hero.lastStand = true;
@@ -1110,6 +1216,12 @@ interface Hit {
 }
 
 function hitHero(state: BattleState, enemy: EnemyState, h: HeroState, raw: number, rules: Rules, ignoreArmor = false): Hit {
+  // Shadow Cloak: the first enemy hit on the Rogue each battle misses.
+  if (raw > 0 && !h.cloakUsed && h.progress?.gear.includes('shadow-cloak')) {
+    h.cloakUsed = true;
+    const name = rules.classes[h.heroClass].name;
+    return { text: `misses the ${name} (Shadow Cloak)`, short: `${name} miss` };
+  }
   const dealt = Math.max(0, raw - (ignoreArmor || hasTrait(enemy, 'deepRange') ? 0 : h.armor));
   h.hp -= dealt;
   if (dealt > 0) (state.pendingHits ??= {})[h.id] = (state.pendingHits[h.id] ?? 0) + dealt;
@@ -1150,6 +1262,14 @@ function hitTarget(state: BattleState, enemy: EnemyState, target: Target, rules:
     s.hp = Math.max(0, s.hp - raw);
     if (s.hp === 0) s.alive = false;
     return { text: `${raw} to ${s.name}${s.alive ? '' : ' (defeated)'}`, short: `${s.name} ${raw}` };
+  }
+  // Intercept: once per round the Warrior steps in front of an attack on an ally below 25% HP.
+  const ally = target.unit;
+  const warrior = state.heroes.find((h) => h.heroClass === 'warrior' && h.alive && h.untargetableRounds <= 0 && hasFeat(h, 'intercept'));
+  if (warrior && ally !== warrior && ally.hp < ally.maxHp * 0.25 && warrior.interceptRound !== state.round) {
+    warrior.interceptRound = state.round;
+    const hit = hitHero(state, enemy, warrior, raw, rules);
+    return { text: `${hit.text} (the Warrior intercepts the blow meant for the ${rules.classes[ally.heroClass].name})`, short: hit.short };
   }
   return hitHero(state, enemy, target.unit, raw, rules);
 }

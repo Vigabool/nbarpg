@@ -33,12 +33,13 @@ const PLAYSTYLE: Record<HeroClass, { draft: string; play: string }> = {
   wizard: { draft: 'Volume three-point shooters', play: 'Burst damage: area spells for crowds, big bolts for Champions.' },
 };
 
-type Tab = 'basics' | 'sample' | 'classes' | 'enemies';
+type Tab = 'basics' | 'sample' | 'classes' | 'enemies' | 'progression';
 const TABS: { id: Tab; label: string }[] = [
   { id: 'basics', label: 'Basics' },
   { id: 'sample', label: 'Sample turn' },
   { id: 'classes', label: 'Classes' },
   { id: 'enemies', label: 'Enemies' },
+  { id: 'progression', label: 'Progression' },
 ];
 export type EnemyPage = 'goblin' | ChampionKind | 'warlord' | 'traits';
 
@@ -47,7 +48,8 @@ export type TutorialTopic =
   | { tab: 'basics' }
   | { tab: 'sample' }
   | { tab: 'classes'; heroClass?: HeroClass; abilityId?: string }
-  | { tab: 'enemies'; enemy?: EnemyPage; encounter?: string };
+  | { tab: 'enemies'; enemy?: EnemyPage; encounter?: string }
+  | { tab: 'progression' };
 
 export function Tutorial({ onClose, topic }: { onClose: () => void; topic?: TutorialTopic }) {
   const [tab, setTab] = useState<Tab>(topic?.tab ?? 'basics');
@@ -65,6 +67,7 @@ export function Tutorial({ onClose, topic }: { onClose: () => void; topic?: Tuto
   }, []);
 
   const s = rules.salary;
+  const nextTab = TABS[TABS.findIndex((t) => t.id === tab) + 1];
   return (
     <div className="modal-backdrop" onClick={close}>
       <div className="modal" role="dialog" aria-modal="true" aria-labelledby="tutorial-title" onClick={(e) => e.stopPropagation()}>
@@ -117,6 +120,7 @@ export function Tutorial({ onClose, topic }: { onClose: () => void; topic?: Tuto
           )}
 
           {tab === 'sample' && <SampleTurn />}
+          {tab === 'progression' && <ProgressionTab />}
           {tab === 'classes' && (
             <ClassesTab
               initialClass={topic?.tab === 'classes' ? topic.heroClass : undefined}
@@ -134,9 +138,9 @@ export function Tutorial({ onClose, topic }: { onClose: () => void; topic?: Tuto
 
         <div className="spread">
           <span className="tiny faint">Reopen anytime from "How to play".</span>
-          {tab !== 'enemies' ? (
-            <button className="btn primary small" onClick={() => setTab(TABS[TABS.findIndex((t) => t.id === tab) + 1].id)}>
-              {TABS[TABS.findIndex((t) => t.id === tab) + 1].label} →
+          {nextTab ? (
+            <button className="btn primary small" onClick={() => setTab(nextTab.id)}>
+              {nextTab.label} →
             </button>
           ) : (
             <button className="btn primary small" onClick={close}>
@@ -598,3 +602,76 @@ export function Feature({ title, text, warn }: { title: ReactNode; text: ReactNo
     </div>
   );
 }
+
+/** How heroes earn and spend progression points. */
+function ProgressionTab() {
+  const p = rules.progression;
+  const e = p.earn;
+  const [c, setC] = useState<HeroClass>('warrior');
+  const earn: [string, string][] = [
+    ['Each wave cleared', `${e.perWaveCleared} to every hero`],
+    ['Victory', `${e.winStanding} to each hero standing, ${e.winFallen} if fallen`],
+    ['Each Elite Champion or boss defeated', `${e.eliteDefeated} to every hero`],
+    ["Hero's player has an Elite night", `${e.eliteNight}`],
+    ['Double-double / triple-double', `${e.doubleDouble} / ${e.tripleDouble}`],
+  ];
+  return (
+    <div className="stack" style={{ gap: 12 }}>
+      <p className="small" style={{ margin: 0 }}>
+        Heroes earn <strong>progression points (PP)</strong> each week and spend them in the <strong>🛠️ Armory</strong> (after a battle, or
+        from the hero cards when assigning players). Progress belongs to the hero, whichever player powers them.
+      </p>
+      <section className="stack" style={{ gap: 4 }}>
+        <span className="section-label">Earning</span>
+        <table className="table small">
+          <tbody>
+            {earn.map(([k, v]) => (
+              <tr key={k}>
+                <td>{k}</td>
+                <td className="num" style={{ textAlign: 'right' }}>
+                  {v}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <span className="tiny muted">A typical win is worth about 70 PP per hero; how you play matters more than the box score.</span>
+      </section>
+      <section className="stack" style={{ gap: 6 }}>
+        <span className="section-label">Spending</span>
+        <Feature
+          title="⚔️ Weapon upgrades"
+          text={`+${p.weapon.damagePerLevel} weapon damage per level: ${p.weapon.costs.join(' / ')} PP. The Warrior's shield also levels up for +${p.shield.armorPerLevel} armor every round: ${p.shield.costs.join(' / ')} PP.`}
+        />
+        <div className="class-picker" role="tablist" aria-label="Class">
+          {CLASSES.map((k) => (
+            <button key={k} role="tab" aria-selected={k === c} className={`class-pick${k === c ? ' active' : ''}`} onClick={() => setC(k)}>
+              <span className="class-pick-icon" aria-hidden>
+                {CLASS_ICON[k]}
+              </span>
+              <span>{rules.classes[k].name}</span>
+            </button>
+          ))}
+        </div>
+        {Object.values(p.gear)
+          .filter((g) => g.heroClass === c)
+          .map((g) => (
+            <Feature key={g.name} title={`${g.icon} Gear · ${g.name} · ${g.cost} PP`} text={`${g.description}.`} />
+          ))}
+        {Object.values(p.feats)
+          .filter((f) => f.heroClass === c)
+          .map((f) => (
+            <Feature key={f.name} title={`${f.icon} Feat · ${f.name} · ${f.cost} PP`} text={`${f.description}.`} />
+          ))}
+      </section>
+      <section className="stack" style={{ gap: 4 }}>
+        <span className="section-label">Chapters</span>
+        <p className="small" style={{ margin: 0 }}>
+          The season runs in chapters of 4 weeks. Each new chapter, Champions and bosses gain +{Math.round(p.chapterScaling * 100)}% HP and
+          damage, so the horde keeps pace with your upgrades.
+        </p>
+      </section>
+    </div>
+  );
+}
+

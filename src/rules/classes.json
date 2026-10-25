@@ -40,7 +40,8 @@
       { "id": "venom-strike", "name": "Venom Strike", "cost": 6, "description": "4 damage + poison: 3 damage per round for 3 rounds", "target": { "type": "enemy" }, "effects": [{ "type": "damage", "amount": 4 }, { "type": "poison", "perRound": 3, "rounds": 3 }] },
       { "id": "ready-crit", "name": "Ready Crit", "cost": 4, "description": "Next attack (gear or ability) deals double damage", "target": { "type": "self" }, "effects": [{ "type": "nextAttackMultiplier", "multiplier": 2 }] },
       { "id": "shadowstep", "name": "Shadowstep", "unlock": "signature", "description": "Untargetable for 1 round; next attack is a guaranteed crit", "target": { "type": "self" }, "effects": [{ "type": "untargetable", "rounds": 1 }, { "type": "nextAttackMultiplier", "multiplier": 2 }] },
-      { "id": "assassinate", "name": "Assassinate", "unlock": "legendary", "description": "Instantly defeat any non-boss enemy", "target": { "type": "enemy", "nonBoss": true }, "effects": [{ "type": "instakill" }] }
+      { "id": "assassinate", "name": "Assassinate", "unlock": "legendary", "description": "Instantly defeat any non-boss enemy", "target": { "type": "enemy", "nonBoss": true }, "effects": [{ "type": "instakill" }] },
+      { "id": "vanish", "name": "Vanish", "feat": "vanish", "oncePerBattle": true, "cost": 2, "description": "Untargetable for a round (once per battle)", "target": { "type": "self" }, "effects": [{ "type": "untargetable", "rounds": 1 }] }
     ]
   },
   "ranger": {
@@ -64,7 +65,8 @@
       { "id": "summon-wolf", "name": "Summon Wolf", "cost": 8, "description": "Wolf: 12 HP, 4 damage per round", "target": { "type": "none" }, "effects": [{ "type": "summon", "unit": "wolf", "count": 1 }] },
       { "id": "summon-bear", "name": "Summon Bear", "cost": 14, "description": "Bear: 25 HP, 5 damage per round, taunts 1 enemy each round", "target": { "type": "none" }, "effects": [{ "type": "summon", "unit": "bear", "count": 1 }] },
       { "id": "volley", "name": "Volley", "unlock": "signature", "description": "6 damage to every enemy in the wave", "target": { "type": "allEnemies" }, "effects": [{ "type": "damage", "amount": 6 }] },
-      { "id": "call-of-the-pack", "name": "Call of the Pack", "unlock": "legendary", "description": "Summon a Bear and two Wolves", "target": { "type": "none" }, "effects": [{ "type": "summon", "unit": "bear", "count": 1 }, { "type": "summon", "unit": "wolf", "count": 2 }] }
+      { "id": "call-of-the-pack", "name": "Call of the Pack", "unlock": "legendary", "description": "Summon a Bear and two Wolves", "target": { "type": "none" }, "effects": [{ "type": "summon", "unit": "bear", "count": 1 }, { "type": "summon", "unit": "wolf", "count": 2 }] },
+      { "id": "hunters-mark", "name": "Hunter's Mark", "feat": "hunters-mark", "cost": 3, "description": "Mark 1 enemy: it takes +2 damage from every hit this round", "target": { "type": "enemy" }, "effects": [{ "type": "mark", "amount": 2 }] }
     ]
   },
   "warrior": {
