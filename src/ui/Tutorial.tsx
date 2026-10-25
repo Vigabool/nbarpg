@@ -572,7 +572,7 @@ export function monsterPassives(kind: MonsterKind, encounter?: string): { title:
   if (behavior === 'chieftain') out.push({ icon: '👑', title: c.chieftainCommand.name, text: `${c.chieftainCommand.description}: minions and the goblin Champions, not the Ogre. Kill the Chieftain and the buff ends.` });
   if (m.ignoresTaunt) out.push({ icon: '⊘⚑', title: 'Ignores taunts', text: "Provoke, Bulwark and the Bear don't work on it." });
   if (hasTwist('packGuard', encounter) && c.packGuard.guarded.includes(behavior)) out.push({ icon: '🔒', title: c.packGuard.name, text: `${c.packGuard.description}.` });
-  if (behavior === 'assassin') out.push({ title: 'Energy drain', text: `Each hit drains ${c.assassinDrain} energy from its target.` });
+  if (behavior === 'assassin') out.push({ icon: '🔋', title: 'Energy drain', text: `Each hit drains ${c.assassinDrain} energy from its target.` });
   return out;
 }
 

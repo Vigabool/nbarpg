@@ -550,6 +550,8 @@ function EnemyIcons({ e, state }: { e: EnemyState; state: BattleState }) {
   const ov = encounterOf(state.encounter).monsters[e.kind];
   if (ov?.dragonkin && hasTwist('dragonscale', state.encounter)) icons.push({ icon: '🔥½', tone: 'shield', label: 'Dragonscale: half damage from fire' });
   if (ov?.moltenHide) icons.push({ icon: `🌋${ov.moltenHide.damage}`, tone: 'warn', label: `${ov.moltenHide.name}: weapon hits burn the attacker for ${ov.moltenHide.damage}` });
+  if (behaviorOf(e.kind, state.encounter) === 'assassin')
+    icons.push({ icon: `🔋${rules.combat.assassinDrain}`, tone: 'curse', label: `Energy drain: each hit drains ${rules.combat.assassinDrain} energy` });
   if (ignoresTaunt(e)) icons.push({ icon: '⊘⚑', tone: '', label: 'Ignores taunts' });
   if (e.tauntedBy) icons.push({ icon: '⚑', tone: 'taunt', label: 'Taunted' });
   if (e.poison) icons.push({ icon: `☣${e.poison.perRound}`, tone: 'poison', label: 'Poisoned' });
