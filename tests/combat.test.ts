@@ -190,7 +190,7 @@ describe('attacks and utilities', () => {
   it('classifies damage and kills as attacks, everything else as utility', () => {
     const s = battle([[monster()]]);
     const kinds = Object.fromEntries(listActions(s, 'rogue').map((o) => [o.def.id, o.attack]));
-    expect(kinds).toMatchObject({ dagger: true, backstab: true, 'venom-strike': true, assassinate: true, 'ready-crit': false, shadowstep: false });
+    expect(kinds).toMatchObject({ dagger: true, backstab: true, flurry: true, assassinate: true, 'ready-crit': false, shadowstep: false });
   });
 
   it('Ready Crit and an attack combine in the same round', () => {
@@ -333,12 +333,30 @@ describe('the horde', () => {
   it('poison ticks at the start of the enemy phase', () => {
     const g = monster({ hp: 30, damage: 0 });
     let s = battle([[g]]);
-    s = act(s, 'rogue', 'venom-strike', [g.id]);
+    s = act(s, 'rogue', 'poisoned-blade', [g.id]);
     expect(enemy(s, g.id).hp).toBe(26);
     s = endRound(s);
-    expect(enemy(s, g.id).hp).toBe(23);
+    expect(enemy(s, g.id).hp).toBe(24);
     s = endRound(endRound(endRound(s)));
-    expect(enemy(s, g.id).hp).toBe(17);
+    expect(enemy(s, g.id).hp).toBe(22);
+  });
+
+  it('Flurry hits up to 3 different enemies for gear damage − 1', () => {
+    const gs = [1, 2, 3, 4].map((i) => monster({ id: `G${i}`, hp: 20, damage: 0 }));
+    let s = battle([gs]);
+    expect(actionDamage(listActions(s, 'rogue').find((o) => o.def.id === 'flurry')!.def, hero(s, 'rogue'))).toBe('3×3');
+    expect(() => act(s, 'rogue', 'flurry', ['G1', 'G2', 'G3', 'G4'])).toThrow(/1–3 targets/);
+    s = act(s, 'rogue', 'flurry', ['G1', 'G2', 'G3']);
+    expect(gs.map((g) => enemy(s, g.id).hp)).toEqual([17, 17, 17, 20]);
+    expect(hero(s, 'rogue').pool).toBe(16);
+    expect(hero(s, 'rogue').acted).toBe(true);
+  });
+
+  it('Ready Crit doubles every hit of a Flurry', () => {
+    const gs = [1, 2, 3].map((i) => monster({ id: `G${i}`, hp: 20, damage: 0 }));
+    let s = act(battle([gs]), 'rogue', 'ready-crit');
+    s = act(s, 'rogue', 'flurry', ['G1', 'G2', 'G3']);
+    expect(gs.map((g) => enemy(s, g.id).hp)).toEqual([14, 14, 14]);
   });
 
   it('Curse reduces monster damage for two rounds', () => {

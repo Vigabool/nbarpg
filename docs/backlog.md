@@ -135,4 +135,5 @@ For a wider test beyond close friends, who send feedback by text.
 - **Cleric heals cure poison:** a clean counter to Dirty Arrows.
 - **Fumble chip:** if mis-taps continue, show only the count on enemy cards and spend from the detail sheet.
 - **Season data refresh:** a scheduled weekly run of the fetch script to play the current season as it happens.
+- **Flurry in the Giant's Hall:** replacing Venom Strike with Flurry raised the smart bot's chapter-1 Hall win rate from 76% to 83.5% (over a season 65% → 75%, on target). If playtests find early Hall battles too easy, raise Flurry's cost to 5 or drop it to G − 2 (see the design doc's Rogue section).
 - **Smart pick refit:** rerun `npm run data:fit-picks` after big rules changes, and consider fitting with the smart bot.

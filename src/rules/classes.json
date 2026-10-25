@@ -37,7 +37,7 @@
     "passives": [],
     "abilities": [
       { "id": "backstab", "name": "Backstab", "cost": 5, "description": "10 damage; doubled if the target is taunted by someone else", "target": { "type": "enemy" }, "effects": [{ "type": "damage", "amount": 10, "doubleIfTauntedByOther": true }] },
-      { "id": "venom-strike", "name": "Venom Strike", "cost": 6, "description": "4 damage + poison: 3 damage per round for 3 rounds", "target": { "type": "enemy" }, "effects": [{ "type": "damage", "amount": 4 }, { "type": "poison", "perRound": 3, "rounds": 3 }] },
+      { "id": "flurry", "name": "Flurry", "cost": 4, "description": "Hits up to 3 enemies for G − 1 each", "target": { "type": "enemies", "count": 3 }, "effects": [{ "type": "damage", "amount": "gear", "bonus": -1 }] },
       { "id": "ready-crit", "name": "Ready Crit", "cost": 4, "description": "Next attack (gear or ability) deals double damage", "target": { "type": "self" }, "effects": [{ "type": "nextAttackMultiplier", "multiplier": 2 }] },
       { "id": "shadowstep", "name": "Shadowstep", "unlock": "signature", "description": "Untargetable for 1 round; next attack is a guaranteed crit", "target": { "type": "self" }, "effects": [{ "type": "untargetable", "rounds": 1 }, { "type": "nextAttackMultiplier", "multiplier": 2 }] },
       { "id": "assassinate", "name": "Assassinate", "unlock": "legendary", "description": "Instantly defeat any non-boss enemy", "target": { "type": "enemy", "nonBoss": true }, "effects": [{ "type": "instakill" }] },

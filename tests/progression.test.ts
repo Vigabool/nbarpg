@@ -106,6 +106,11 @@ describe('upgrades in battle', () => {
     expect(hero(s, 'warrior').armor).toBe(hero(base, 'warrior').armor + 2);
   });
 
+  it('weapon levels add to every hit of a Flurry', () => {
+    const hits = (weapon: number) => 999 - enemy(act(battle([[dummy()]], withProgress('rogue', { weapon })), 'rogue', 'flurry', ['D']), 'D').hp;
+    expect(hits(2)).toBe(hits(0) + 2);
+  });
+
   it('starting-energy gear adds to the pool', () => {
     const s = battle([[dummy()]], withProgress('wizard', { gear: ['spellbook'] }));
     expect(hero(s, 'wizard').pool).toBe(hero(battle([[dummy()]]), 'wizard').pool + 3);

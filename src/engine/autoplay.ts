@@ -101,8 +101,13 @@ export function chooseAction(state: BattleState, hero: HeroState, rules: Rules =
       if (has('assassinate') && nonBoss) return act(has('assassinate'), [nonBoss.id]);
       const taunted = byThreat.find((e) => e.tauntedBy && e.tauntedBy !== hero.id);
       if (has('backstab') && taunted) return act(has('backstab'), [taunted.id]);
-      const tanky = byThreat.find((e) => e.hp >= 16 && !e.poison);
-      if (has('venom-strike') && tanky) return act(has('venom-strike'), [tanky.id]);
+      const flurry = has('flurry');
+      const flurryCount = flurry?.def.target.type === 'enemies' ? flurry.def.target.count : 0;
+      if (flurry && flurryCount >= 2 && enemies.length >= flurryCount)
+        return act(
+          flurry,
+          byHpAsc.slice(0, flurryCount).map((e) => e.id),
+        );
       if (has('backstab') && byThreat[0] && byThreat[0].hp >= 10) return act(has('backstab'), [byThreat[0].id]);
       return gear();
     }

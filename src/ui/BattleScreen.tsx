@@ -325,7 +325,7 @@ export function BattleScreen({ data, game, onChange, onHelp, onQuit }: Props) {
               </button>
               {targetType === 'enemies' && (
                 <button className="btn primary small" disabled={multi.length === 0} onClick={() => run(action!, multi)}>
-                  Cast on {multi.length}
+                  {action!.def.tags?.includes('spell') ? 'Cast on' : 'Strike'} {multi.length}
                 </button>
               )}
               {targeting ? (

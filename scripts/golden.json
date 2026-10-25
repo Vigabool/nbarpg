@@ -1,47 +1,47 @@
 {
   "goblin-horde/fast": {
-    "fingerprint": "955601871e20fedb",
-    "wins": 60,
+    "fingerprint": "085e6d4197704383",
+    "wins": 64,
     "battles": 120
   },
   "goblin-horde/smart": {
-    "fingerprint": "2b2e4f3d34c8c0a5",
-    "wins": 7,
+    "fingerprint": "49915ebe5041587d",
+    "wins": 6,
     "battles": 8
   },
   "crypt/fast": {
-    "fingerprint": "82a22e14dea14752",
-    "wins": 28,
+    "fingerprint": "7b3e56e824adc26f",
+    "wins": 29,
     "battles": 120
   },
   "crypt/smart": {
-    "fingerprint": "9beafeece42a886f",
+    "fingerprint": "3f815484691428ac",
     "wins": 7,
     "battles": 8
   },
   "dragon-lair/fast": {
-    "fingerprint": "20a802f648991c1a",
-    "wins": 65,
+    "fingerprint": "97913641cb14831e",
+    "wins": 59,
     "battles": 120
   },
   "dragon-lair/smart": {
-    "fingerprint": "8376b516d96c6ed2",
+    "fingerprint": "31d36b98e658d19f",
     "wins": 5,
     "battles": 8
   },
   "giants-hall/fast": {
-    "fingerprint": "26535e3f67203904",
+    "fingerprint": "f8b723f2830ba054",
     "wins": 80,
     "battles": 120
   },
   "giants-hall/smart": {
-    "fingerprint": "7af2820ca131124a",
+    "fingerprint": "4fd58e3b1befd158",
     "wins": 4,
     "battles": 8
   },
   "seasons/fast": {
-    "fingerprint": "5ab592f3b07048dc",
-    "wins": 44,
+    "fingerprint": "11598af1f420b274",
+    "wins": 47,
     "battles": 100
   }
 }

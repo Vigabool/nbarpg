@@ -190,10 +190,14 @@ Gear damage and armor use the player's season-average Rating, mapped to the same
 | Ability | Cost | Effect |
 | --- | --- | --- |
 | Backstab | 5 | 10 damage; doubled if the target is attacking someone else this round (taunted) |
-| Venom Strike | 6 | 4 damage + poison: 3 damage per round for 3 rounds |
+| Flurry | 4 | G − 1 damage to up to 3 enemies (a weapon attack: weapon levels add to every hit) |
 | Ready Crit | 4 | Next attack (gear or ability) deals double damage |
 | Signature (DD): Shadowstep | Free, once | Untargetable for 1 round; next attack is a guaranteed crit |
 | Legendary (TD): Assassinate | Free, once | Instantly defeat any non-boss enemy |
+
+**Flurry replaced Venom Strike** (playtest feedback). Venom Strike was a bigger Poisoned Blade: the same hit-plus-poison shape on one target, and poison doesn't stack, so the two overwrote each other. Its fixed 4-damage hit also fell behind as gear improved. Flurry weaves through the field with dagger strikes: G − 1 to each of up to 3 enemies, a weapon attack, so weapon levels add to every hit. It gives the Rogue a job against packs that's weaker than Fireball (8 per target): on its own it softens goblins; with Ready Crit (8 per target at Good gear) it clears three. It's weak in the Crypt (weapon kills leave bone piles) and against the Hall's few, big foes.
+
+**Balance (Hard, 200 battles per encounter, smart bot):** 71.9% → 77.6% on average (Goblin Horde 76.5 → 79.5, Crypt 76.5 → 79.5, Lair 58.5 → 68, Hall 76 → 83.5). The heuristic bot barely moves: 44.6% → 46.0% on Hard, 61.1% → 62.4% on Normal. Other settings tried, with the smart bot's average: cost 3 78.1%, cost 5 76.8%, cost 6 76.3%; G − 2 at cost 4 74.5%, at cost 5 73.8%; two targets 73.5%. Over full seasons (`data:season`, 8 runs, smart bot, encounter-aware Smart pick) it's 75% → 78% (Goblin Horde 79 → 79, Crypt 81 → 79, Lair 73 → 79, Hall 65 → 75), and 45% → 44% for the heuristic bot (16 runs, within noise). Flurry is a deliberate buff to a skilled Rogue, mostly in the two encounters that were below target over a season. If single Hall battles feel too easy, cost 5 or G − 2 are the levers.
 
 ### Ranger abilities
 

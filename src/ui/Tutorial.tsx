@@ -31,7 +31,10 @@ const PLAYSTYLE: Record<HeroClass, { draft: string; play: string }> = {
   warrior: { draft: 'Rebounders and shot blockers', play: 'Taunts enemies onto itself and soaks hits behind a permanent shield.' },
   ranger: { draft: 'Scorers', play: 'Steady damage, armor-piercing shots, and summoned wolves and bears that fight and absorb hits.' },
   cleric: { draft: 'Playmakers (turnovers hurt twice)', play: 'Heals, revives fallen heroes, empowers allies and weakens dangerous enemies.' },
-  rogue: { draft: 'Pesky defenders who draw fouls', play: 'Poison, crits, and double-damage Backstabs on enemies taunted by someone else.' },
+  rogue: {
+    draft: 'Pesky defenders who draw fouls',
+    play: 'Crits, poison, Flurries that cut through a pack, and double-damage Backstabs on enemies taunted by someone else.',
+  },
   wizard: { draft: 'Volume three-point shooters', play: 'Burst damage: area spells for crowds, big bolts for Champions.' },
 };
 
@@ -167,7 +170,7 @@ function targetText(a: ActionDef): string {
 function damageText(a: ActionDef): string | null {
   for (const e of a.effects) {
     if (e.type === 'damage') {
-      const base = e.amount === 'gear' ? `gear damage${e.bonus ? ` + ${e.bonus}` : ''}` : `${e.amount + (e.bonus ?? 0)}`;
+      const base = e.amount === 'gear' ? `gear damage${e.bonus ? ` ${e.bonus > 0 ? '+' : '−'} ${Math.abs(e.bonus)}` : ''}` : `${e.amount + (e.bonus ?? 0)}`;
       return `${base}${e.pierce ? ', ignores armor' : ''}`;
     }
     if (e.type === 'gearAttack') return `${e.times} gear attacks`;
