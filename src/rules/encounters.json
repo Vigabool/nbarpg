@@ -220,10 +220,15 @@
         "topple"
       ],
       "teamPointsPerMinion": 90,
-      "minionHp": 12,
+      "minionHp": 20,
+      "minionDamage": [
+        4,
+        4,
+        5
+      ],
       "statScale": {
-        "hp": 1.25,
-        "damage": 1.25
+        "hp": 1.15,
+        "damage": 1.15
       },
       "goblinKin": [],
       "monsters": {
@@ -231,8 +236,9 @@
           "name": "Ice Wolf",
           "short": "Wolf",
           "icon": "🐺",
-          "description": "Hunts in pairs: attacks whoever taunted it, then the Warrior, then the lowest-HP hero",
-          "plural": "Ice Wolves"
+          "description": "Hunts the wounded: goes for the most injured hero (unless taunted)",
+          "plural": "Ice Wolves",
+          "behavior": "wolf"
         },
         "ogre": {
           "name": "Stone Giant",

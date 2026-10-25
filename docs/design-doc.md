@@ -348,7 +348,7 @@ A frost giant lord's mead hall. Few foes, each a mountain. A different shape: on
 
 | Role (mirrors) | Mechanics | The Giant's Hall |
 | --- | --- | --- |
-| Minion | Goblin (12 HP, 1 per 90 points) | Ice Wolf |
+| Minion | Goblin (20 HP, 4–5 damage, hunts the most injured hero; 1 per 90 points) | Ice Wolf |
 | Brute (Warrior) | Ogre with Boulder Toss | Stone Giant |
 | Caster (Wizard) | Warlock (Blizzard = Hex) | Rime Witch |
 | Sniper (Ranger) | Hunter with Spear Throw | Giant Huntsman |
@@ -356,7 +356,7 @@ A frost giant lord's mead hall. Few foes, each a mountain. A different shape: on
 | Support (Cleric) | Shaman (War Chant = War Drum) + Rallying Saga | Skald |
 | Boss | Giant Lord (Unshakable, Avalanche) | Giant Lord |
 
-Role Champions get ×1.25 HP and damage here.
+Role Champions get ×1.15 HP and damage here. Ice Wolves are the real minion threat: tough enough to survive a round, they hit for 4–5 and go for the most injured hero (taunts still work).
 
 **Twist · Topple:** deal 50% of a giant's max HP in one round and it's toppled: it loses its next action, and a special about to fire is cancelled. The landing shakes the hall: every hero takes 2 damage, so a topple has a small cost. Each card shows a topple bar ("⛰️ 11/23") that fills live during your turn and empties at the start of each round. Wolves can't be toppled.
 
@@ -367,7 +367,7 @@ Role Champions get ×1.25 HP and damage here.
 - **Skald · Rallying Saga:** while it lives, every giant needs 5 more damage to topple. Kill it first.
 - **Giant Lord · Unshakable:** needs 60% of its max HP to topple, but a toppled Lord loses both actions. **Avalanche:** every hero takes its damage −3 and loses 2 energy. HP 48–96, damage 10–16.
 
-**Balance (bot simulator, 1,000 battles):** 61% bot wins, 7.3 rounds, 1.5 topples per battle (first tuning at 35% gave 3 per battle and felt routine). The bot focuses the giant closest to toppling.
+**Balance (bot simulator, 1,000 battles):** 61% bot wins, 7.4 rounds, 1.3 topples and 1.5 wolf attacks per battle (first tuning at 35% gave 3 per battle and felt routine). The bot focuses the giant closest to toppling.
 
 Encounters without their own boss fall back to the classic Warlord: a boosted copy of the top performer's Champion (double HP, +2 damage).
 

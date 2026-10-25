@@ -216,7 +216,9 @@ export function buildHorde(picks: HeroGamePick[], data: SeasonData, rules: Rules
     const fgm = opp.lines.reduce((s, l) => s + l.fgm, 0);
     const fga = opp.lines.reduce((s, l) => s + l.fga, 0);
     const pct = fga > 0 ? fgm / fga : 0;
-    const damage = m.damageByTeamFgPct.find((b) => pct < b.below)?.damage ?? m.damageByTeamFgPct.at(-1)!.damage;
+    const band = m.damageByTeamFgPct.findIndex((b) => pct < b.below);
+    const bandIndex = band === -1 ? m.damageByTeamFgPct.length - 1 : band;
+    const damage = enc.minionDamage?.[bandIndex] ?? m.damageByTeamFgPct[bandIndex].damage;
     const count = Math.floor(pts / (enc.teamPointsPerMinion ?? m.teamPointsPerGoblin));
     for (let i = 0; i < count; i++) {
       goblins.push({

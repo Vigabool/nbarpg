@@ -23,7 +23,7 @@ export const CLASSES = ['warrior', 'ranger', 'cleric', 'rogue', 'wizard'] as con
 export type HeroClass = (typeof CLASSES)[number];
 export type ChampionKind = 'ogre' | 'warlock' | 'hunter' | 'assassin' | 'shaman';
 export type MonsterKind = 'goblin' | ChampionKind | 'chieftain' | 'lich' | 'phylactery' | 'dragon' | 'giantLord';
-export type Behavior = 'default' | ChampionKind | 'chieftain' | 'lich' | 'wraith' | 'phylactery' | 'dragon' | 'giantLord';
+export type Behavior = 'default' | ChampionKind | 'chieftain' | 'lich' | 'wraith' | 'phylactery' | 'dragon' | 'giantLord' | 'wolf';
 export type Twist = 'packTactics' | 'packGuard' | 'restlessDead' | 'hoardTithe' | 'dragonscale' | 'topple';
 
 export type RatingFormula = Partial<Record<StatKey, number>>;
@@ -168,6 +168,8 @@ export interface EncounterDef {
   teamPointsPerMinion?: number;
   /** Overrides the minion's HP (e.g. fragile kobolds). */
   minionHp?: number;
+  /** Overrides minion damage per team-FG% band (e.g. hard-hitting ice wolves). */
+  minionDamage?: number[];
   /** Scales every role Champion's HP and damage (e.g. the Giant's Hall: few foes, each a mountain). */
   statScale?: { hp: number; damage: number };
   /** Monster kinds that count as goblins for the Chieftain's Command. */

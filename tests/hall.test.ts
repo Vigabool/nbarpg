@@ -102,6 +102,19 @@ describe("Giant's Hall: roles", () => {
     const ogre = (x: typeof h) => x.waves.flat().find((m) => m.kind === 'ogre')!;
     expect(ogre(h).hp).toBe(Math.round(ogre(plain).hp * scale));
     expect(h.warlord.kind).toBe('giantLord');
-    for (const m of h.waves.flat().filter((m) => m.kind === 'goblin')) expect(m.hp).toBe(12);
+    for (const m of h.waves.flat().filter((m) => m.kind === 'goblin')) expect(m.hp).toBe(rules.encounters.encounters[HALL].minionHp);
+  });
+
+  it('Ice Wolves go for the most injured hero, unless taunted', () => {
+    const w = monster({ id: 'W', hp: 99, damage: 4 });
+    let s = battle([[w]], party(), HALL);
+    s = { ...s, heroes: s.heroes.map((h) => (h.id === 'warrior' ? { ...h, hp: 25 } : h.id === 'wizard' ? { ...h, hp: 18 } : h)) };
+    s = endRound(s);
+    // Warrior is missing 15, the Wizard 4: the wolf picks the Warrior despite the Wizard's lower HP.
+    expect(s.log.some((l) => l.actorId === 'W' && l.targetIds?.includes('warrior'))).toBe(true);
+  });
+
+  it('Ice Wolves hit for 4-5 by team shooting', () => {
+    expect(rules.encounters.encounters[HALL].minionDamage).toEqual([4, 4, 5]);
   });
 });

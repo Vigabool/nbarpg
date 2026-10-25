@@ -1082,6 +1082,15 @@ export function chooseEnemyTarget(state: BattleState, enemy: EnemyState, rules: 
     }
     case 'assassin':
       return lowestHp(heroes) ?? lowestHp(all);
+    case 'wolf': {
+      // Pack hunters: the most injured hero (most HP missing), then the lowest HP.
+      const hurt = heroes.reduce<Target | undefined>((best, t) => {
+        const missing = (t.unit as HeroState).maxHp - t.unit.hp;
+        const bestMissing = best ? (best.unit as HeroState).maxHp - best.unit.hp : -1;
+        return missing > bestMissing || (missing === bestMissing && best && t.unit.hp < best.unit.hp) ? t : best;
+      }, undefined);
+      return hurt && (hurt.unit as HeroState).maxHp > hurt.unit.hp ? hurt : lowestHp(heroes) ?? lowestHp(all);
+    }
     case 'warlock': {
       const backline = heroes.filter((t) => t.kind === 'hero' && (t.unit.heroClass === 'wizard' || t.unit.heroClass === 'cleric'));
       if (backline.length) return lowestHp(backline);
