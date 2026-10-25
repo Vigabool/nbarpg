@@ -1,6 +1,6 @@
 import { buy, priceOf, type Purchase } from '../src/app/armory';
 import { autoAssign, bestGames } from '../src/app/autoAssign';
-import { DEFAULT_PICK_WEIGHTS, smartGames, type PickWeights } from '../src/app/smartPick';
+import { smartGames, type PickWeights } from '../src/app/smartPick';
 import { autoDraft, DRAFT_MODES, type DraftMode } from '../src/app/autoDraft';
 import { chapterOf, currentWeek, finishBattle, newGame, nextWeek, readyPicks, startBattle, type SaveGame } from '../src/app/game';
 import type { SeasonData } from '../src/data/types';
@@ -12,6 +12,7 @@ import { CLASSES, rules, type HeroClass } from '../src/rules';
 export type SpendPolicy = 'none' | 'greedy';
 /** How the bot picks each hero's game: the most energy, or the smart-pick score. */
 export type PickPolicy = 'energy' | 'smart';
+// 'smart' uses the encounter's fitted weights unless `weights` is given.
 
 export interface SeasonWeek {
   run: number;
@@ -61,7 +62,7 @@ export function simulateSeasons(
   runs: number,
   policy: SpendPolicy = 'greedy',
   pick: PickPolicy = 'energy',
-  weights: PickWeights = DEFAULT_PICK_WEIGHTS,
+  weights?: PickWeights | ((encounter: string) => PickWeights),
 ): SeasonWeek[] {
   const encounters = encounterIds();
   const out: SeasonWeek[] = [];
@@ -77,7 +78,7 @@ export function simulateSeasons(
     for (let w = 0; game; w++) {
       game = { ...game, assignments: autoAssign(game, data), gamePicks: {} };
       game = { ...game, encounter: encounters[(w + offset) % encounters.length] };
-      game = { ...game, gamePicks: pick === 'smart' ? smartGames(game, data, weights) : bestGames(game, data) };
+      game = { ...game, gamePicks: pick === 'smart' ? smartGames(game, data, typeof weights === 'function' ? weights(game.encounter!) : weights) : bestGames(game, data) };
       if (readyPicks(game, data).length === 0 || !currentWeek(game, data)) {
         game = nextWeek(game, data);
         continue;

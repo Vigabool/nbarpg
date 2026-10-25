@@ -13,6 +13,7 @@
     "data:calibrate": "tsx scripts/calibrate.ts",
     "data:simulate": "tsx scripts/simulate.ts",
     "data:season": "tsx scripts/season.ts",
+    "data:fit-picks": "tsx scripts/fit-pick-weights.ts",
     "data:synthetic": "tsx scripts/make-synthetic-season.ts",
     "build:artifact": "node scripts/build-artifact.mjs"
   },

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_PICK_WEIGHTS, picksValue } from '../src/app/smartPick';
+import { DEFAULT_PICK_WEIGHTS, encounterWeights, picksValue } from '../src/app/smartPick';
 import { computePool } from '../src/engine/rating';
 import { boxLine, season } from './helpers';
 
@@ -21,4 +21,15 @@ describe('smart pick', () => {
     expect(computePool('warrior', aaaHot).pool).toBeGreaterThan(computePool('warrior', aaaWarm).pool);
     expect(v('g2')).toBeGreaterThan(v('g1'));
   });
+
+  it('knows the encounter: what each class and Champion is worth differs by encounter', () => {
+    const horde = encounterWeights('goblin-horde');
+    const crypt = encounterWeights('crypt');
+    // Against goblin packs, Wizard energy (area spells) is worth more than the Warrior's.
+    expect(horde.energy!.wizard!).toBeGreaterThan(horde.energy!.warrior!);
+    // Each encounter weighs its Champion roles differently.
+    expect(horde.championTier).not.toEqual(crypt.championTier);
+    expect(encounterWeights('no-such-encounter')).toEqual(DEFAULT_PICK_WEIGHTS);
+  });
 });
+

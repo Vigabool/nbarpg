@@ -43,7 +43,7 @@ export function SelectGames({ data, game, onChange }: { data: SeasonData; game: 
           <button
             className="btn small"
             onClick={() => onChange({ ...game, gamePicks: { ...game.gamePicks, ...smartGames(game, data) } })}
-            title="Weighs energy, double-doubles and triple-doubles against the Champions, traits, Fumbles and boss each game brings"
+            title="Weighs energy, double-doubles and triple-doubles against the Champions, traits, Fumbles and boss each game brings, tuned to this week's encounter"
           >
             🧠 Smart pick
           </button>
