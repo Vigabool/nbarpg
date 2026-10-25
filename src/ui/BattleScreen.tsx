@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import type { SeasonData } from '../data/types';
 import { finishBattle, type SaveGame } from '../app/game';
 import { endRound, landingWarning, listActions, performAction, spendFumble, nextWaveRound, type ActionOption, type BattleState } from '../engine/combat';
@@ -15,7 +15,8 @@ import { ActionTile } from './battle/ActionTile';
 import { Ticker, LogDrawer } from './battle/BattleLog';
 import { CoachMarks } from './CoachMarks';
 import { roundPreview } from './battle/preview';
-import { BATTLE_TIPS } from './coachTips';
+import { BATTLE_TIPS, pickTip } from './coachTips';
+import { coachUnseen } from '../app/coach';
 
 interface Props {
   data: SeasonData;
@@ -51,6 +52,18 @@ export function BattleScreen({ data, game, onChange, onHelp, onQuit }: Props) {
   const options = hero ? listActions(state, hero.id) : [];
   const targetType = action?.def.target.type;
   const targeting = !!action && (targetType === 'enemy' || targetType === 'enemies' || targetType === 'ally' || targetType === 'fallenAlly');
+
+  // First-battle tips: the screen arranges itself for the tip about to show (e.g. no action sheet
+  // covering the party), and re-checks after each one is dismissed.
+  // Paced one at a time: after a tip is dismissed, the next waits until the player does something
+  // (the log grows), unless it directly continues the one just read (the opening sequence).
+  const [coachGate, setCoachGate] = useState({ logLength: -1, last: '' });
+  const tips = BATTLE_TIPS.filter((t) => state.log.length > coachGate.logLength || t.continues === coachGate.last);
+  const coachCtx = { state, sheetOpen: !!hero, targeting, doomed };
+  const coachTip = state.phase !== 'party' ? undefined : pickTip(tips, coachCtx, coachUnseen, () => true);
+  useEffect(() => {
+    if (coachTip?.sheet === 'open' && !selected) setSelected(firstReady(state));
+  }, [coachTip?.id]);
   const enemyTargeting = targeting && (targetType === 'enemy' || targetType === 'enemies');
 
   // Spending a Fumble is free and undoable, like any action.
@@ -279,7 +292,7 @@ export function BattleScreen({ data, game, onChange, onHelp, onQuit }: Props) {
           ))}
       </div>
 
-      {hero && !over && (
+      {hero && !over && coachTip?.sheet !== 'closed' && (
         <section className="action-sheet" data-coach="actions" aria-label={`${rules.classes[hero.heroClass].name} actions`}>
           <div className="sheet-head">
             {targeting ? (
@@ -371,7 +384,7 @@ export function BattleScreen({ data, game, onChange, onHelp, onQuit }: Props) {
         </section>
       )}
 
-      {!over && <CoachMarks tips={BATTLE_TIPS} ctx={{ state, sheetOpen: !!hero, targeting, doomed }} />}
+      {!over && <CoachMarks tips={tips} ctx={coachCtx} onDismiss={(id) => setCoachGate({ logLength: state.log.length, last: id })} />}
       {logOpen && <LogDrawer log={state.log} onClose={() => setLogOpen(false)} />}
       {detail && (
         <EnemyDetail

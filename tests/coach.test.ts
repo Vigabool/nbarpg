@@ -16,8 +16,16 @@ describe('first-battle walkthrough', () => {
     expect(next(ctxOf(s))).toBe('battle-horde');
     expect(next(ctxOf(s), ['battle-horde'])).toBe('battle-party');
     expect(next(ctxOf(s), ['battle-horde', 'battle-party'])).toBe('battle-actions');
-    // The actions tip waits for the action sheet.
-    expect(next(ctxOf(s, { sheetOpen: false }), ['battle-horde', 'battle-party'])).toBeUndefined();
+  });
+
+  it('each tip says how the screen should look: no action sheet over the horde and party, the sheet open for actions', () => {
+    const tip = (id: string) => BATTLE_TIPS.find((t) => t.id === id)!;
+    expect(tip('battle-horde').sheet).toBe('closed');
+    expect(tip('battle-party').sheet).toBe('closed');
+    expect(tip('battle-doom').sheet).toBe('closed');
+    expect(tip('battle-actions').sheet).toBe('open');
+    // The actions tip comes up with the sheet closed too: the battle screen opens it on a ready hero.
+    expect(next(ctxOf(s, { sheetOpen: false }), ['battle-horde', 'battle-party'])).toBe('battle-actions');
   });
 
   const intro = ['battle-horde', 'battle-party', 'battle-actions'];

@@ -11,10 +11,10 @@ const onScreen = (selector: string) => {
 
 /**
  * Shows the first-time tip that fits the moment: a ring around the element it's about, the rest
- * dimmed, and a short note. Taps still reach the game underneath, so the player can just do the
- * thing; "Got it" retires the tip and "Skip tips" turns them all off.
+ * dimmed, and a short note. The game waits underneath (taps don't reach it) so the screen stays as
+ * the tip describes; "Got it" retires the tip and "Skip tips" turns them all off.
  */
-export function CoachMarks<C>({ tips, ctx }: { tips: CoachTip<C>[]; ctx: C }) {
+export function CoachMarks<C>({ tips, ctx, onDismiss }: { tips: CoachTip<C>[]; ctx: C; onDismiss?: (id: string) => void }) {
   // Bumped to re-pick after a tip is dismissed, and to re-measure on scroll and resize.
   const [tick, setTick] = useState(0);
   const [shown, setShown] = useState<{ tip: CoachTip<C>; rect: DOMRect } | null>(null);
@@ -77,6 +77,7 @@ export function CoachMarks<C>({ tips, ctx }: { tips: CoachTip<C>[]; ctx: C }) {
             onClick={() => {
               skipCoach();
               setTick((t) => t + 1);
+              onDismiss?.(tip.id);
             }}
           >
             Skip tips
@@ -86,6 +87,7 @@ export function CoachMarks<C>({ tips, ctx }: { tips: CoachTip<C>[]; ctx: C }) {
             onClick={() => {
               markCoachSeen(tip.id);
               setTick((t) => t + 1);
+              onDismiss?.(tip.id);
             }}
           >
             Got it

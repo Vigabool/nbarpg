@@ -1810,7 +1810,8 @@ textarea.input.mono {
   position: fixed;
   inset: 0;
   z-index: 60;
-  pointer-events: none;
+  /* Blocks taps on the game while a tip is up, so the screen stays as the tip describes. */
+  pointer-events: auto;
 }
 .coach-ring {
   position: fixed;

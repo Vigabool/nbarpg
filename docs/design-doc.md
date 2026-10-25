@@ -505,7 +505,9 @@ The season runs in chapters of 4 weeks (roster moves happen between chapters). E
 - **Guide** is reference: Classes, Enemies (by encounter), Progression and gold, and a **Glossary** of one-line terms (energy, Fumble, special, trait, wave clock…). It opens from the top bar, the battle menu, and the ? and ⓘ buttons in battle.
 
 **The first battle is the tutorial.** The player's real first battle shows coach marks.
-- **How a tip looks:** a gold ring around one element, the rest dimmed, and a one- or two-sentence note with **Got it** and **Skip tips**. Taps still reach the game, so players can just do the thing.
+- **How a tip looks:** a gold ring around one element, the rest dimmed, and a one- or two-sentence note with **Got it** and **Skip tips**.
+- **The screen matches the tip.** While a tip is up, the game waits (taps don't reach it). Each tip says whether it needs the action sheet closed (the horde, party and ☠ tips, so nothing covers them) or open (the actions tip, on a ready hero), and the battle screen arranges itself.
+- **One at a time:** after a tip is dismissed, the next waits until the player does something. Only the opening sequence chains: horde → party → actions → pick a target.
 - **When a tip shows:** each appears once, the first time its moment comes (`src/ui/coachTips.ts`). The order: the horde → the party → one attack plus utilities (when the action sheet opens) → picking a target → End round (after a hero acts). Then, if they happen: a falling hero (☠), a special a round away (⏳), Fumbles (💫), the next wave. The result screen gets one tip on PP and gold.
 - **Setup screens** (encounter, assign heroes, pick games) each show a one-line banner the first time. In week 1, Goblin Horde is marked "Recommended first".
 - **Memory:** seen tips are stored per browser, not per save (`src/app/coach.ts`), so a new run doesn't repeat them.

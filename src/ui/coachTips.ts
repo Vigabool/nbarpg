@@ -20,11 +20,16 @@ export interface CoachTip<C = CoachContext> {
   text: string;
   /** Only after this tip has been seen (keeps the opening tips in order). */
   after?: string;
+  /** Shows right after this tip is dismissed; other tips wait until the player does something. */
+  continues?: string;
+  /** The action sheet this tip needs: closed so what it points at isn't covered, or open on a ready hero. */
+  sheet?: 'open' | 'closed';
   when: (ctx: C) => boolean;
 }
 
 const live = (ctx: CoachContext) => ctx.state.phase === 'party';
 const heroActed = (s: BattleState) => s.log.some((l) => l.side === 'hero');
+const heroReady = (s: BattleState) => s.heroes.some((h) => h.alive && !h.acted && !h.prone);
 
 /** The first-battle walkthrough, in priority order. */
 export const BATTLE_TIPS: CoachTip[] = [
@@ -33,28 +38,34 @@ export const BATTLE_TIPS: CoachTip[] = [
     target: '[data-coach="horde"]',
     title: 'This is the horde',
     text: 'Each card shows what that enemy will do this round, and to whom. No dice, no surprises: plan around it.',
+    sheet: 'closed',
     when: live,
   },
   {
     id: 'battle-party',
     target: '[data-coach="party"]',
     after: 'battle-horde',
+    continues: 'battle-horde',
     title: 'Your party',
     text: 'Green is HP, blue is energy. Tap a hero to act with them; heroes can go in any order.',
+    sheet: 'closed',
     when: live,
   },
   {
     id: 'battle-actions',
     target: '[data-coach="actions"]',
     after: 'battle-party',
+    continues: 'battle-party',
     title: 'One attack, any utilities',
     text: 'Each hero gets one attack a round, plus any utilities (taunts, heals, armor, buffs) they have energy for. Blue numbers are costs; basic attacks give +2 energy back.',
-    when: (ctx) => live(ctx) && ctx.sheetOpen && !ctx.targeting,
+    sheet: 'open',
+    when: (ctx) => live(ctx) && !ctx.targeting && heroReady(ctx.state),
   },
   {
     id: 'battle-target',
     target: '[data-coach="horde"]',
     after: 'battle-actions',
+    continues: 'battle-actions',
     title: 'Pick a target',
     text: 'Tap a highlighted enemy. Changed your mind? Cancel, or undo (↶) after acting.',
     when: (ctx) => live(ctx) && ctx.targeting,
@@ -65,7 +76,8 @@ export const BATTLE_TIPS: CoachTip[] = [
     after: 'battle-actions',
     title: 'Someone is about to fall',
     text: 'This hero drops if you end the round now. Tap ☠ to see who is hitting them, then heal, shield, taunt or kill the threat.',
-    when: (ctx) => live(ctx) && ctx.doomed.size > 0,
+    sheet: 'closed',
+    when: (ctx) => live(ctx) && !ctx.targeting && ctx.doomed.size > 0,
   },
   {
     id: 'battle-special',
