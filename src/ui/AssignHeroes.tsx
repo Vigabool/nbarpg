@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import type { SeasonData } from '../data/types';
 import { Armory } from './Armory';
+import { autoAssign } from '../app/autoAssign';
 import { currentWeek, type SaveGame } from '../app/game';
 import { gearDamage, seasonTier } from '../engine/rating';
 import { playerGamesInWeek } from '../engine/week';
-import { CLASSES, rules, tierIndex, type HeroClass } from '../rules';
+import { CLASSES, rules, type HeroClass } from '../rules';
 import { ClassName, TierChip, gamesCount } from './common';
 
 export function AssignHeroes({ data, game, onChange }: { data: SeasonData; game: SaveGame; onChange: (g: SaveGame) => void }) {
@@ -25,30 +26,7 @@ export function AssignHeroes({ data, game, onChange }: { data: SeasonData; game:
     onChange({ ...game, assignments: next, gamePicks });
   };
 
-  const autoAssign = () => {
-    const next: Partial<Record<HeroClass, number>> = {};
-    const used = new Set<number>();
-    // Fill the classes with the fewest strong options first.
-    const order = [...CLASSES].sort(
-      (a, b) =>
-        game.roster.filter((id) => tierIndex(seasonTier(a, data.players[id].avg)) >= 2).length -
-        game.roster.filter((id) => tierIndex(seasonTier(b, data.players[id].avg)) >= 2).length,
-    );
-    for (const c of order) {
-      const best = game.roster
-        .filter((id) => !used.has(id))
-        .sort(
-          (a, b) =>
-            Number(games(b) > 0) - Number(games(a) > 0) ||
-            tierIndex(seasonTier(c, data.players[b].avg)) - tierIndex(seasonTier(c, data.players[a].avg)),
-        )[0];
-      if (best !== undefined) {
-        next[c] = best;
-        used.add(best);
-      }
-    }
-    onChange({ ...game, assignments: next, gamePicks: {} });
-  };
+  const suggest = () => onChange({ ...game, assignments: autoAssign(game, data), gamePicks: {} });
 
   const complete = CLASSES.every((c) => game.assignments[c] !== undefined);
   const playing = CLASSES.filter((c) => game.assignments[c] !== undefined && games(game.assignments[c]!) > 0).length;
@@ -63,7 +41,7 @@ export function AssignHeroes({ data, game, onChange }: { data: SeasonData; game:
             sit out.
           </p>
         </div>
-        <button className="btn small" onClick={autoAssign}>
+        <button className="btn small" onClick={suggest}>
           Suggest assignments
         </button>
       </div>

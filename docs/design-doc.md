@@ -437,7 +437,9 @@ All values live in `src/rules/progression.json`. Purchases are permanent (no res
 
 ### Chapters: the horde keeps pace
 
-The season runs in chapters of 4 weeks (roster moves happen between chapters). Each chapter after the first gives Champions and bosses +10% HP and damage (minions unchanged), so upgraded heroes still face a challenge. The pick-games screen shows the current chapter's bonus. Balance targets per chapter will be retuned once upgrade spending can be simulated.
+The season runs in chapters of 4 weeks (roster moves happen between chapters). Each chapter after the first gives Champions and bosses +3% HP and damage (minions unchanged). The pick-games screen shows the current chapter's bonus.
+
+**Tuned with the season simulator** (`npm run data:season`), which plays whole seasons through the real game flow (auto-draft, weekly assignments and game picks, auto-played battles, rewards, greedy Armory spending) next to a baseline that never spends. It showed the real season already gets harder on its own: with no chapter bonus at all, a team that never upgrades falls from 53% bot wins in chapter 1 to about 25% late, while a spending team stays flat around 55%. The first proposal, +10% per chapter, collapsed even spending teams to near 0% by chapter 4. At +3%, bots that spend win 56% → 28–56% across chapters (lowest in chapter 4) and bots that don't fall to near 0%, so upgrades clearly matter. The bot spends greedily and never uses Hunter's Mark or Vanish, so a human should land higher.
 
 ## Multiplayer direction (future)
 

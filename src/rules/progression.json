@@ -10,7 +10,7 @@
   },
   "weapon": { "costs": [100, 200, 300], "damagePerLevel": 1 },
   "shield": { "costs": [150, 300], "armorPerLevel": 1 },
-  "chapterScaling": 0.1,
+  "chapterScaling": 0.03,
   "gear": {
     "plate-armor": { "heroClass": "warrior", "name": "Plate Armor", "icon": "🛡️", "cost": 200, "description": "+1 armor every round, on top of the shield", "armorPerRound": 1 },
     "war-banner": { "heroClass": "warrior", "name": "War Banner", "icon": "🚩", "cost": 150, "description": "+2 starting energy", "startingEnergy": 2 },

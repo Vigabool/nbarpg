@@ -182,15 +182,16 @@ describe('upgrades in battle', () => {
 });
 
 describe('chapter scaling', () => {
-  it('Champions and bosses grow 10% per chapter; minions do not', () => {
+  it('Champions and bosses grow each chapter; minions do not', () => {
     const aaa = [1, 2, 3, 4, 5].map((id) => boxLine(id, 'AAA', { pts: 10, fgm: 4, fga: 9 }));
     const bbb = [101, 102, 103, 104, 105, 106].map((id, i) => boxLine(id, 'BBB', { pts: 30 - i * 4, dreb: 3 + i, ast: 2 + i, stl: i, fgm: 8, fga: 16 }));
     const data = season([{ id: 'g1', date: '2025-10-21', home: 'AAA', away: 'BBB', lines: [...aaa, ...bbb] }]);
     const h = buildHorde([{ heroClass: 'warrior', playerId: 3, gameId: 'g1' }], data);
     const h3 = scaleHorde(h, 3);
     const ogre = (x: typeof h) => x.waves.flat().find((m) => m.kind === 'ogre')!;
-    expect(ogre(h3).hp).toBe(Math.round(ogre(h).hp * 1.2));
-    expect(h3.warlord.damage).toBe(Math.round(h.warlord.damage * 1.2));
+    const f = 1 + 2 * rules.progression.chapterScaling;
+    expect(ogre(h3).hp).toBe(Math.round(ogre(h).hp * f));
+    expect(h3.warlord.damage).toBe(Math.round(h.warlord.damage * f));
     const gob = (x: typeof h) => x.waves.flat().find((m) => m.kind === 'goblin')!;
     expect(gob(h3).hp).toBe(gob(h).hp);
     void specialDue;

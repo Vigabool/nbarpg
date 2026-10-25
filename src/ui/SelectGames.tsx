@@ -1,4 +1,5 @@
 import type { SeasonData } from '../data/types';
+import { bestGames } from '../app/autoAssign';
 import { chapterOf, currentWeek, readyPicks, startBattle, type SaveGame } from '../app/game';
 import { buildHorde, opponentOf, playerLine, type MonsterSpec } from '../engine/horde';
 import { computePool } from '../engine/rating';
@@ -23,16 +24,7 @@ export function SelectGames({ data, game, onChange }: { data: SeasonData; game: 
   const allPicked = playing.every((c) => game.gamePicks[c]);
 
   const pick = (c: HeroClass, gameId: string) => onChange({ ...game, gamePicks: { ...game.gamePicks, [c]: gameId } });
-  const pickBest = () => {
-    const gamePicks = { ...game.gamePicks };
-    for (const c of playing) {
-      const pid = game.assignments[c]!;
-      gamePicks[c] = playerGamesInWeek(data, week, pid)
-        .map((g) => ({ g, pool: computePool(c, playerLine(data, g, pid)!).pool }))
-        .sort((a, b) => b.pool - a.pool)[0].g;
-    }
-    onChange({ ...game, gamePicks });
-  };
+  const pickBest = () => onChange({ ...game, gamePicks: { ...game.gamePicks, ...bestGames(game, data) } });
 
   return (
     <div className="stack">
