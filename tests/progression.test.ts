@@ -45,20 +45,28 @@ describe('earning PP', () => {
 describe('the Armory', () => {
   const rich = (): SaveGame => ({ ...migrateSave(newGame('2025-26', 0)), pp: { warrior: 1000, wizard: 1000, ranger: 1000, rogue: 1000, cleric: 1000 } });
 
-  it('respec is free: gear and feats come back for a full refund, weapon levels stay', () => {
+  it('respec is free: weapon levels, gear and feats all come back for a full refund', () => {
     let g = rich();
     g = buy(g, 'cleric', { kind: 'weapon' });
     g = buy(g, 'cleric', { kind: 'gear', id: 'amulet-of-healing' });
     g = buy(g, 'cleric', { kind: 'feat', id: 'smite' });
     const before = g.pp.cleric;
-    expect(respecRefund(g, 'cleric')).toBe(P.gear['amulet-of-healing'].cost + P.feats.smite.cost);
+    const spent = P.weapon.costs[0] + P.gear['amulet-of-healing'].cost + P.feats.smite.cost;
+    expect(respecRefund(g, 'cleric')).toBe(spent);
     g = respec(g, 'cleric');
-    expect(g.pp.cleric).toBe(before + P.gear['amulet-of-healing'].cost + P.feats.smite.cost);
-    expect(g.progress!.cleric).toEqual({ ...emptyProgress(), weapon: 1 });
+    expect(g.pp.cleric).toBe(before + spent);
+    expect(g.pp.cleric).toBe(1000);
+    expect(g.progress!.cleric).toEqual(emptyProgress());
     // Other heroes are untouched, and the feat can be bought again (or another one).
     expect(g.pp.warrior).toBe(1000);
     expect(priceOf(g, 'cleric', { kind: 'feat', id: 'smite' })).toBe(P.feats.smite.cost);
     expect(respec(g, 'cleric')).toBe(g);
+    // The Warrior's shield levels come back too.
+    let w = buy(buy(rich(), 'warrior', { kind: 'shield' }), 'warrior', { kind: 'shield' });
+    expect(respecRefund(w, 'warrior')).toBe(P.shield.costs[0] + P.shield.costs[1]);
+    w = respec(w, 'warrior');
+    expect(w.pp.warrior).toBe(1000);
+    expect(w.progress!.warrior.shield).toBe(0);
   });
 
   it('weapon levels cost 100, 200, 300 and then max out', () => {

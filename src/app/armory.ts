@@ -1,4 +1,4 @@
-import { rules as defaultRules, type HeroClass, type Rules } from '../rules';
+import { emptyProgress, rules as defaultRules, type HeroClass, type Rules } from '../rules';
 import { progressOf, type SaveGame } from './game';
 
 export type Purchase = { kind: 'weapon' } | { kind: 'shield' } | { kind: 'gear'; id: string } | { kind: 'feat'; id: string };
@@ -36,20 +36,23 @@ export function buy(game: SaveGame, c: HeroClass, p: Purchase, rules: Rules = de
   return { ...game, pp: { ...game.pp, [c]: game.pp[c] - cost }, progress: { ...game.progress!, [c]: prog } };
 }
 
-/** PP a respec would give back: everything the hero spent on gear and feats. */
+/** PP a respec would give back: everything the hero spent in the Armory. */
 export function respecRefund(game: SaveGame, c: HeroClass, rules: Rules = defaultRules): number {
   const prog = progressOf(game, c);
   const r = rules.progression;
-  return prog.gear.reduce((t, id) => t + (r.gear[id]?.cost ?? 0), 0) + prog.feats.reduce((t, id) => t + (r.feats[id]?.cost ?? 0), 0);
+  const levels = (costs: number[], n: number) => costs.slice(0, n).reduce((t, x) => t + x, 0);
+  return (
+    levels(r.weapon.costs, prog.weapon) +
+    levels(r.shield.costs, prog.shield) +
+    prog.gear.reduce((t, id) => t + (r.gear[id]?.cost ?? 0), 0) +
+    prog.feats.reduce((t, id) => t + (r.feats[id]?.cost ?? 0), 0)
+  );
 }
 
-/**
- * Respec, free: returns a hero's gear and feats for a full refund so the PP can go to a different
- * build. Weapon and shield levels stay (they're plain upgrades, with nothing to swap them for).
- */
+/** Respec, free: returns everything a hero bought (weapon and shield levels, gear, feats) for a full refund. */
 export function respec(game: SaveGame, c: HeroClass, rules: Rules = defaultRules): SaveGame {
   const refund = respecRefund(game, c, rules);
   if (!refund) return game;
-  const prog = { ...progressOf(game, c), gear: [], feats: [] };
+  const prog = emptyProgress();
   return { ...game, pp: { ...game.pp, [c]: game.pp[c] + refund }, progress: { ...game.progress!, [c]: prog } };
 }

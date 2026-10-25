@@ -484,7 +484,7 @@ A typical win (three waves, one Elite foe) is about 70 PP per hero; a wave-3 los
 
 All values live in `src/rules/progression.json`. Purchases are permanent (no respec yet). The original plan's talent branches and stat affinities are parked; affinities may return later as a way to widen which players fit a class.
 
-**Respec (free).** In each hero's Armory, Respec returns all their gear and feats for a full refund (two taps), so trying a build costs nothing but the decision. Weapon and shield levels are permanent: they're plain upgrades, with nothing to swap them for.
+**Respec (free).** In each hero's Armory, Respec returns everything they bought (weapon and shield levels, gear, feats) for a full refund (two taps), so trying a build costs nothing but the decision.
 
 ### Smart pick (game selection)
 

@@ -111,7 +111,7 @@ export function Armory({ game, onChange, onClose, initial }: { game: SaveGame; o
               <div style={{ minWidth: 0 }}>
                 <strong className="small">Respec</strong>
                 <p className="tiny muted" style={{ margin: 0 }}>
-                  Free: return this hero's gear and feats for a full refund and choose again. Weapon and shield levels stay.
+                  Free: return everything this hero bought (weapon and shield levels, gear, feats) for a full refund and choose again.
                 </p>
               </div>
               <ConfirmButton className="btn small" confirmLabel={`Refund ${refund}?`} onConfirm={() => onChange(respec(game, c))}>
@@ -120,7 +120,7 @@ export function Armory({ game, onChange, onClose, initial }: { game: SaveGame; o
             </div>
           )}
           <p className="tiny muted" style={{ margin: 0 }}>
-            Purchases belong to the hero, whichever player powers them. Gear and feats can be respecced for free; weapon and shield levels are permanent.
+            Purchases belong to the hero, whichever player powers them. Respec any time for a full refund.
           </p>
         </div>
       </div>

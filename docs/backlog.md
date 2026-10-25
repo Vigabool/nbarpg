@@ -84,7 +84,7 @@ When one more hit this turn could topple a giant, the topple bar turns red and n
 
 ## 5. Respec in the Armory ✅ Done (free)
 
-Shipped free rather than for a fee: each hero's Armory has a Respec that refunds all gear and feats in full (two taps); weapon and shield levels stay. The How to play Progression tab and the Glossary explain it.
+Shipped free rather than for a fee: each hero's Armory has a Respec that refunds everything they bought (weapon and shield levels, gear, feats) in full (two taps). The How to play Progression tab and the Glossary explain it.
 
 
 **Why.** Purchases are permanent. Players change over the season, and a build that fit one player may not fit the next, so permanent choices discourage experimenting with feats.
