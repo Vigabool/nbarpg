@@ -501,7 +501,7 @@ The season runs in chapters of 4 weeks (roster moves happen between chapters). E
 ## Onboarding
 
 **Show, don't tell.** New players learn in two places, kept apart:
-- **How to play** opens on first launch and is meant to be read in order. **Basics** is six short cards (roster, weekly setup, how games build the horde, the fight, big nights, growth). **Sample turn** is a scripted round played by the real engine and drawn with the real battle components, so it always looks like the game. It includes a step aiming Fireball at three goblins. It ends with "Let's play" and offers **Replay the walkthrough**.
+- **How to play** opens on first launch and is meant to be read in order. **Basics** is six short cards (roster, weekly setup, how games build the horde, the fight, big nights, growth). **Sample turn** is a scripted round played by the real engine and drawn with the real battle components, so it always looks like the game. Its nine steps cover a Provoke that pulls the Goblin Hexer off the Wizard; Shield Bash taunting the Ogre; aiming Fireball at three goblins; the big hit (Empower, Ready Crit and Backstab on the taunted Ogre for 60); the horde's turn; and planning around two specials and a ☠ warning. It ends with "Let's play" and offers **Replay the walkthrough**.
 - **Guide** is reference: Classes, Enemies (by encounter), Progression and gold, and a **Glossary** of one-line terms (energy, Fumble, special, trait, wave clock…). It opens from the top bar, the battle menu, and the ? and ⓘ buttons in battle.
 
 **The first battle is the tutorial.** The player's real first battle shows coach marks.

@@ -21,14 +21,18 @@ export function SampleTurn() {
   const step = steps[i];
   const s = step.state;
   const actors = new Set(step.events.map((e) => e.actorId).filter(Boolean));
-  const targets = new Set(step.events.flatMap((e) => e.targetIds ?? []));
+  // Hit this step: enemies a hero or summon acted on, and heroes the horde acted on (not allies a hero buffed).
+  const isEnemy = (id: string) => s.enemies.some((e) => e.id === id);
+  const targets = new Set(
+    step.events.flatMap((e) => (e.targetIds ?? []).filter((id) => (e.side === 'enemy' ? !isEnemy(id) : e.side !== 'system' && isEnemy(id)))),
+  );
   const picked = (id: string) => !!step.aiming?.picked.includes(id);
   const aimable = (id: string) => !!step.aiming?.valid.includes(id);
   const preview = useMemo(() => roundPreview(s), [s]);
   const living = livingEnemies(s);
   const champions = living.filter((e) => e.kind !== 'goblin');
   const goblinGroups = groupGoblins(living.filter((e) => e.kind === 'goblin'));
-  // Enemies this step's actions hit get a red ring.
+  // Whatever was hit this step gets a red ring.
   const hitClass = (id: string) => (targets.has(id) && !actors.has(id) ? 'sample-hit' : undefined);
 
   return (
