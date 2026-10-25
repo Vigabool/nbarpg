@@ -173,7 +173,7 @@
   "dragonSleep": {
     "name": "Asleep",
     "description": "Sleeps on its hoard until the final wave arrives or a hero hits it. While asleep it takes extra damage (an ambush), and attacks that hit every enemy pass it by. A hit wakes it at the end of that round, groggy: one action a round until the final wave arrives",
-    "damageMultiplier": 2
+    "damageMultiplier": 1.5
   },
   "topple": {
     "name": "Topple",

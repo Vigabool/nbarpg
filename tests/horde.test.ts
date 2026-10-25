@@ -78,8 +78,9 @@ describe('horde generation', () => {
     // Its Champion version doubled, +2 damage.
     const def = noBoss.monsters[h.warlord.kind];
     const t = tierIndex(h.warlord.tier!);
-    expect(h.warlord.hp).toBe(def.hpByTier![t] * 2);
-    expect(h.warlord.damage).toBe(def.damageByTier![t] + 2);
+    const scale = noBoss.encounters.encounters['goblin-horde'].statScale?.hp ?? 1;
+    expect(h.warlord.hp).toBe(Math.round(def.hpByTier![t] * scale) * 2);
+    expect(h.warlord.damage).toBe(Math.round(def.damageByTier![t] * scale) + 2);
   });
 
   it('fumbles champions for turnovers (1 per 3)', () => {

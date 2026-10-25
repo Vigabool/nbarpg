@@ -40,7 +40,7 @@ describe("Dragon's Lair: the sleeping Dragon", () => {
   it('an ambush deals double damage, and the Dragon wakes at the end of the round and seals the hoard', () => {
     let s = battle([[dragon(), tank()], [monster()], [monster()]], party(), LAIR);
     s = act(s, 'warrior', 'axe', ['D']);
-    expect(enemy(s, 'D').hp).toBe(60 - 2 * hero(s, 'warrior').gear);
+    expect(enemy(s, 'D').hp).toBe(60 - Math.floor(rules.combat.dragonSleep.damageMultiplier * hero(s, 'warrior').gear));
     expect(enemy(s, 'D').asleep).toBe(true);
     s = endRound(s);
     expect(enemy(s, 'D').asleep).toBe(false);

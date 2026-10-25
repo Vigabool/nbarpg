@@ -60,7 +60,11 @@
       "twists": [
         "packTactics",
         "packGuard"
-      ]
+      ],
+      "statScale": {
+        "hp": 1.15,
+        "damage": 1.15
+      }
     },
     "crypt": {
       "name": "The Crypt",
@@ -70,6 +74,10 @@
       "twists": [
         "restlessDead"
       ],
+      "statScale": {
+        "hp": 1.25,
+        "damage": 1.25
+      },
       "teamPointsPerMinion": 45,
       "goblinKin": [],
       "monsters": {
@@ -219,6 +227,10 @@
       "twists": [
         "topple"
       ],
+      "statScale": {
+        "hp": 1.08,
+        "damage": 1.08
+      },
       "teamPointsPerMinion": 90,
       "minionHp": 20,
       "minionDamage": [
@@ -226,10 +238,6 @@
         4,
         5
       ],
-      "statScale": {
-        "hp": 1.15,
-        "damage": 1.15
-      },
       "goblinKin": [],
       "monsters": {
         "goblin": {

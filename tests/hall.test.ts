@@ -97,7 +97,8 @@ describe("Giant's Hall: roles", () => {
     const bbb = [101, 102, 103, 104, 105, 106].map((id, i) => boxLine(id, 'BBB', { pts: 30 - i * 4, dreb: 3 + i, ast: 2 + i, stl: i, fgm: 8, fga: 16 }));
     const data = season([{ id: 'g1', date: '2025-10-21', home: 'AAA', away: 'BBB', lines: [...aaa, ...bbb] }]);
     const h = buildHorde([{ heroClass: 'warrior', playerId: 3, gameId: 'g1' }], data, undefined, HALL);
-    const plain = buildHorde([{ heroClass: 'warrior', playerId: 3, gameId: 'g1' }], data, undefined, 'goblin-horde');
+    // The Dragon's Lair leaves Champions at normal size.
+    const plain = buildHorde([{ heroClass: 'warrior', playerId: 3, gameId: 'g1' }], data, undefined, 'dragon-lair');
     const scale = rules.encounters.encounters[HALL].statScale!.hp;
     const ogre = (x: typeof h) => x.waves.flat().find((m) => m.kind === 'ogre')!;
     expect(ogre(h).hp).toBe(Math.round(ogre(plain).hp * scale));

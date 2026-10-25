@@ -311,7 +311,7 @@ A necromancer's tomb where the dead won't stay down.
 
 **Lich (boss kit).** Two actions a round and the boss enrage, like the Chieftain, but a frail caster (HP 14–29, damage 6–11). Special · **Death Bolt:** 1.5× damage to the lowest-HP hero, ignoring armor. Passive · **Phylactery:** a ⚱️ Phylactery (6–10 HP, never acts) arrives beside it. While it stands the Lich takes half damage, and it can't be targeted while any skeleton stands (attacks that hit every enemy still land). When the Lich falls the Phylactery shatters, so it's a shortcut, not a requirement.
 
-**Balance (bot simulator, 1,000 battles):** target 60–65% bot wins (the bot ignores traits, Fumbles and the fire/holy puzzle, so players should land higher). Crypt 61%, 7.2 rounds; Goblin Horde 65%, 7.6 rounds.
+**Balance:** tuned so the smart bot (a strong player) wins about 75% (see Simulation bots). Crypt Champions are ×1.25: smart bot 76.5%, heuristic bot 23%. The Crypt is the most skill-dependent encounter: fire and holy against skeletons and handling the Wraith are the puzzle, and no lever narrowed that gap without making it unwinnable for one bot or trivial for the other.
 
 ### The Dragon's Lair
 
@@ -331,16 +331,16 @@ A red dragon's mountain lair, guarded by kobold zealots and drakes. Its puzzle i
 
 **Twist · Dragonscale:** dragonkin (Drake, Wyrmling, Dragon) take half damage from fire. Fireball is for kobolds; Lightning is for dragons. The inverse of the Crypt.
 
-**The sleeping Dragon.** It lies on the field from round 1, asleep (dimmed, 💤), and doesn't act or hold waves back. Attacks that hit every enemy pass it by, so waking it is always deliberate. A hit while it sleeps deals double damage (an ambush), and it wakes at the end of that round, sealing the hoard, groggy: one action a round until the final wave arrives. Otherwise the final wave wakes it at full strength. The choice: ambush early for a weaker, groggy Dragon you fight all battle, or let it sleep and face it last with a fat hoard.
+**The sleeping Dragon.** It lies on the field from round 1, asleep (dimmed, 💤), and doesn't act or hold waves back. Attacks that hit every enemy pass it by, so waking it is always deliberate. A hit while it sleeps deals 1.5× damage (an ambush; 2× let a strong party nearly delete it in round 1), and it wakes at the end of that round, sealing the hoard, groggy: one action a round until the final wave arrives. Otherwise the final wave wakes it at full strength. The choice: ambush early for a weaker, groggy Dragon you fight all battle, or let it sleep and face it last with a fat hoard.
 
 **Role tweaks:**
 - **Magma Drake · Molten Hide:** heroes who hit it with a weapon take 2 burn damage (spells don't). Ground Slam is reskinned Tail Sweep.
 - **Kobold Trapper · Net Shot** (replaces Volley): hits the lowest-armor hero, who can't use an attack next round (utilities still work).
 - **Wyrmling · Shiny Thief:** while the Dragon sleeps, each energy-draining hit adds a coin to the hoard.
 - **Scale Priest · Tithe Blessing** (replaces War Drum): +3 coins; no special once the hoard is sealed.
-- **Dragon:** Fire Breath (every hero takes its full damage, armor applies), Hoard, Dragonscale, Asleep. HP 62–124, damage 8–13.
+- **Dragon:** Fire Breath (every hero takes its full damage, armor applies), Hoard, Dragonscale, Asleep. HP 74–149, damage 8–13.
 
-**Balance (bot simulator, 1,000 battles):** letting it sleep 60% bot wins (7.1 rounds); opening with a full ambush (`--ambush`) 55% (6.2 rounds). Neither choice dominates. The groggy rule matters: without it, an ambush that didn't kill the Dragon outright was a near-certain loss.
+**Balance:** smart bot 78%, heuristic bot 47%, after lowering the ambush to 1.5× and raising Dragon HP 20% (the smart bot had won 96%, mostly through the ambush). The smart bot chooses to ambush in about 40% of battles. The heuristic bot's fixed policies (first tuning): letting it sleep 60% bot wins; opening with a full ambush (`--ambush`) 55%. Neither choice dominates. The groggy rule matters: without it, an ambush that didn't kill the Dragon outright was a near-certain loss.
 
 ### The Giant's Hall
 
@@ -356,7 +356,7 @@ A frost giant lord's mead hall. Few foes, each a mountain. A different shape: on
 | Support (Cleric) | Shaman (War Chant = War Drum) + Rallying Saga | Skald |
 | Boss | Giant Lord (Unshakable, Avalanche) | Giant Lord |
 
-Role Champions get ×1.15 HP and damage here. Ice Wolves are the real minion threat: tough enough to survive a round, they hit for 4–5 and go for the most injured hero (taunts still work).
+Role Champions get ×1.08 HP and damage here. Ice Wolves are the real minion threat: tough enough to survive a round, they hit for 4–5 and go for the most injured hero (taunts still work).
 
 **Twist · Topple:** deal 50% of a giant's max HP in one round and it's toppled: it loses its next action, and a special about to fire is cancelled. The landing shakes the hall: every hero takes 2 damage, so a topple has a small cost. Each card shows a topple bar ("⛰️ 11/23") that fills live during your turn and empties at the start of each round. Wolves can't be toppled.
 
@@ -367,7 +367,7 @@ Role Champions get ×1.15 HP and damage here. Ice Wolves are the real minion thr
 - **Skald · Rallying Saga:** while it lives, every giant needs 5 more damage to topple. Kill it first.
 - **Giant Lord · Unshakable:** needs 60% of its max HP to topple, but a toppled Lord loses both actions. **Avalanche:** every hero takes its damage −3 and loses 2 energy. HP 48–96, damage 10–16.
 
-**Balance (bot simulator, 1,000 battles):** 61% bot wins, 7.4 rounds, 1.3 topples and 1.5 wolf attacks per battle (first tuning at 35% gave 3 per battle and felt routine). The bot focuses the giant closest to toppling.
+**Balance:** smart bot 74%, heuristic bot 66%; the Hall rewards clever play least of the four. Earlier heuristic-bot tuning: 61% bot wins, 7.4 rounds, 1.3 topples and 1.5 wolf attacks per battle (first tuning at 35% gave 3 per battle and felt routine). The bot focuses the giant closest to toppling.
 
 Encounters without their own boss fall back to the classic Warlord: a boosted copy of the top performer's Champion (double HP, +2 damage).
 
@@ -474,7 +474,16 @@ Balance is measured with two bots (`npm run data:simulate -- [--smart]`, `npm ru
 
 Over full seasons (16 runs, upgrades bought greedily), the smart bot wins 78% with most-energy picks, 81% with Smart pick and 83% with encounter-aware Smart pick, against 50% when it never upgrades. Upgrades are worth about 28 points of season win rate to a strong player. By chapter it stays between 69% and 95%, so the +3% chapter scaling barely bites a skilled team. By encounter (encounter-aware picks): Goblin Horde 86%, Crypt 91%, Lair 92%, Hall 62%.
 
-The 60–65% balance targets were set against the heuristic bot, on the assumption that players do better. The smart bot shows how much better a strong player can do, and the gap is uneven: the Lair and the Crypt reward smart play far more than the Giant's Hall does.
+**Balance target: the smart bot wins about 75%** of chapter-1 battles in every encounter (it was 85–96% in three of them before retuning). Each encounter is tuned with its own levers so they don't interfere: Champion scale (`statScale`), and for the Lair the ambush multiplier and Dragon HP.
+
+| Encounter | Retune | Smart bot | Heuristic bot |
+| --- | --- | --- | --- |
+| Goblin Horde | Champions ×1.15 | 76.5% | 48% |
+| Crypt | Champions ×1.25 | 76.5% | 23% |
+| Dragon's Lair | Ambush 2× → 1.5×, Dragon HP +20% | 78% | 47% |
+| Giant's Hall | Champions ×1.15 → ×1.08 | 74% | 66% |
+
+Over full seasons (greedy upgrades, encounter-aware Smart pick, chapter scaling +3%) the smart bot wins 74% (by chapter: 70 · 69 · 86 · 75 · 66 · 81 · 69). +6% per chapter dropped it to 66% with a late-season slide to 44%, and +9% to 50%, so +3% stays. The heuristic bot now wins about 43% of a season with the same picks and 30% with most-energy picks: a casual player will find the game hard, especially the Crypt.
 
 ## Build plan
 
