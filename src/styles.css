@@ -454,6 +454,10 @@ textarea.input.mono {
   gap: 12px;
   padding: 16px;
 }
+/* Only the body scrolls and shrinks; tab bars and headers keep their height (a scrollable tab bar would otherwise get squashed). */
+.modal > :not(.modal-body) {
+  flex-shrink: 0;
+}
 .modal-body {
   overflow: auto;
   min-height: 0;
