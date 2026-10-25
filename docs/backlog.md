@@ -27,8 +27,8 @@ Encounter rules are now mechanic modules in `src/engine/encounters/` ([guide](ad
 Getting the game ready for outside testers, in this order.
 
 1. **Crash safety net ✅ Done.** Any error, while drawing a screen or from a button, shows an error screen instead of a blank page. It offers Try again, Restart this week's battle, Copy error report (build, run position, stack), Download save file, and Start a new run. Each build carries a label (commit and date) for reports.
-2. **Feedback and build number:** show the build in the menu, and add a Feedback button that captures the note plus context (week, encounter, round, optionally the save).
-3. **A link friends can open:** a GitHub Pages deploy from CI, or share the artifact.
+2. **Feedback and build number:** the build now shows on the title screen. For close friends, feedback comes by text; for a broader test, add a Feedback button that captures the note plus context (week, encounter, round, optionally the save).
+3. **A link friends can open ✅ Set up.** Pushing to the `playtest` branch deploys to https://vigabool.github.io/nbarpg/ (`.github/workflows/pages.yml`). It needs Pages enabled once, with Source: GitHub Actions. The title screen shows the build label.
 4. **Normal difficulty:** item 3 below. Casual play currently wins 40–48% (Crypt 23%).
 5. **Weekly encounter choice:** replace the "Testing:" dropdown. This is the smallest part of item 2 below.
 6. **Opt-in result logging:** encounter, outcome, rounds and difficulty per battle, to measure real win rates.

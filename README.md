@@ -59,4 +59,14 @@ npm run build     # type-check + production build
 
 Ability effects are composed from a small set of primitives (`damage`, `poison`, `heal`, `taunt`, `summon`, …) declared in `classes.json`, so new abilities and talent tweaks mostly need no code.
 
+## Playtest site
+
+Friends play the build on the `playtest` branch at https://vigabool.github.io/nbarpg/. Pushing to that branch deploys it (`.github/workflows/pages.yml`); other branches never change what testers see:
+
+```bash
+git push origin HEAD:playtest
+```
+
+The title screen shows the build (commit and date), so reports can name it.
+
 Before and after a refactor, `npm run check:golden` replays a fixed set of battles and seasons and fails if any result changes.

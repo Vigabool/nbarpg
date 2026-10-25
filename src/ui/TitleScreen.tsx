@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { SeasonData } from '../data/types';
 import { newGame, type SaveGame } from '../app/game';
 import { ConfirmButton, weekLabel } from './common';
+import { BUILD } from '../app/build';
 
 export function TitleScreen({
   data,
@@ -53,6 +54,7 @@ export function TitleScreen({
         <button className="btn ghost" onClick={onImport}>
           Import a save file
         </button>
+        <p className="tiny faint">Build {BUILD}</p>
       </div>
     </div>
   );
