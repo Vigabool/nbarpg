@@ -29,7 +29,9 @@ export function TenDayPicker({
   const [c, setC] = useState<HeroClass>(heroClass ?? 'warrior');
   const bodyRef = useScrollToTop<HTMLDivElement>(c);
   const closeRef = useRef<HTMLButtonElement>(null);
-  useEffect(() => closeRef.current?.focus(), []);
+  useEffect(() => {
+    closeRef.current?.focus();
+  }, []);
   const week = currentWeek(game, data);
   const blocked = tenDayBlocked(game);
   const list = useMemo(

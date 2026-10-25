@@ -40,7 +40,11 @@ export default function App() {
   // A new screen starts at the top: the week's steps, battle, results, title. Otherwise it opens
   // wherever the last screen was scrolled to.
   const screen = game ? `${game.phase}:${game.weekIndex}` : 'title';
-  useLayoutEffect(() => window.scrollTo({ top: 0 }), [screen]);
+  // Braces matter: an effect must return nothing or a cleanup, and in some hosts (the claude.ai
+  // artifact frame) scrollTo returns a value React would then try to call.
+  useLayoutEffect(() => {
+    window.scrollTo({ top: 0 });
+  }, [screen]);
 
   if (load.status === 'loading') return <div className="app muted">Loading season…</div>;
   if (load.status === 'missing') return <MissingData />;

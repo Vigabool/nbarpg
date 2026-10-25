@@ -20,7 +20,9 @@ export function SaveFile({
   onClose: () => void;
 }) {
   const closeRef = useRef<HTMLButtonElement>(null);
-  useEffect(() => closeRef.current?.focus(), []);
+  useEffect(() => {
+    closeRef.current?.focus();
+  }, []);
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" role="dialog" aria-modal="true" aria-labelledby="save-title" onClick={(e) => e.stopPropagation()}>
