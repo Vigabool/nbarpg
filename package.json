@@ -14,6 +14,7 @@
     "data:simulate": "tsx scripts/simulate.ts",
     "data:season": "tsx scripts/season.ts",
     "data:fit-picks": "tsx scripts/fit-pick-weights.ts",
+    "check:golden": "tsx scripts/golden.ts",
     "data:synthetic": "tsx scripts/make-synthetic-season.ts",
     "build:artifact": "node scripts/build-artifact.mjs"
   },
