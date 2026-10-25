@@ -27,14 +27,12 @@ Encounter rules are now mechanic modules in `src/engine/encounters/` ([guide](ad
 Getting the game ready for outside testers, in this order.
 
 1. **Crash safety net ✅ Done.** Any error, while drawing a screen or from a button, shows an error screen instead of a blank page. It offers Try again, Restart this week's battle, Copy error report (build, run position, stack), Download save file, and Start a new run. Each build carries a label (commit and date) for reports.
-2. **Feedback and build number:** the build now shows on the title screen. For close friends, feedback comes by text; for a broader test, add a Feedback button that captures the note plus context (week, encounter, round, optionally the save).
-3. **A link friends can open ✅ Set up.** Pushing to the `playtest` branch deploys to https://vigabool.github.io/nbarpg/ (`.github/workflows/pages.yml`). It needs Pages enabled once, with Source: GitHub Actions. The title screen shows the build label.
-4. **Normal difficulty ✅ Done.** It's the default for new runs; the heuristic bot wins about 60% in every encounter.
-5. **Weekly encounter choice ✅ Done (interim).** **Choose your encounter** is now the first step of each week, and players may pick any encounter. Weekly offers come with the season structure (item 2 below).
-6. **Opt-in result logging:** encounter, outcome, rounds and difficulty per battle, to measure real win rates.
-7. **First-battle walkthrough:** three or four contextual tips in the first battle.
-8. **Landing-damage warning and feat tags ✅ Done** (items 4 and 6 below).
-9. **A full chapter on a phone:** play the exact build you'll share before sending it.
+2. **A link friends can open ✅ Set up.** Pushing to the `playtest` branch deploys to https://vigabool.github.io/nbarpg/ (`.github/workflows/pages.yml`). It needs Pages enabled once, with Source: GitHub Actions. The title screen shows the build label.
+3. **Normal difficulty ✅ Done.** It's the default for new runs; the heuristic bot wins about 60% in every encounter.
+4. **Weekly encounter choice ✅ Done (interim).** **Choose your encounter** is now the first step of each week, and players may pick any encounter. Weekly offers come with the season structure (item 2 below).
+5. **First-battle walkthrough:** three or four contextual tips in the first battle.
+6. **Landing-damage warning and feat tags ✅ Done** (items 4 and 6 below).
+7. **A full chapter on a phone:** play the exact build you'll share before sending it.
 
 ## 2. Season structure and encounter use
 
@@ -118,6 +116,13 @@ Hero rows show owned gear and passive feats with their Armory icons; tap one to 
 - **Extra roster moves:** a signing outside the between-chapters window, at a price that rises each time.
 - **Quartermaster consumables:** single-use battle items bought with gold, such as a Healing Potion, a Scroll of Fireball, a Smoke Bomb or War Paint.
 - **Simulator:** let the season simulator make roster moves, so cap room can be weighed against rentals.
+
+## Broader test: feedback and logging
+
+For a wider test beyond close friends, who send feedback by text.
+
+- **Feedback button:** captures the note plus context (build, week, encounter, round, and optionally the save). On an artifact the page can store it in a shared database; on GitHub Pages it would open a prefilled form.
+- **Opt-in result logging:** encounter, outcome, rounds and difficulty per battle, to measure real players' win rates against the bots' estimates.
 
 ## Later / parked
 
