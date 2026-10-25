@@ -3,7 +3,7 @@ import {
   endRound,
   packBonus,
   performAction,
-  specialOf,
+  activeSpecial,
   type BattleState,
   type HeroAction,
   type HeroSetup,
@@ -60,10 +60,16 @@ export function buildSteps(): Step[] {
   };
   const act = (a: HeroAction) => performAction(state, a);
   const pack = packBonus(start, start.enemies[0]);
+  // Name the special the board shows (in the Goblin Horde, Goblin Toss; Ground Slam once no goblins are left).
+  const ogreSpecial = (s: BattleState) =>
+    activeSpecial(
+      s,
+      s.enemies.find((e) => e.id === 'ogre')!,
+    );
 
   steps.push({
     title: 'Round 1 begins',
-    text: `Your heroes act first, in any order. Every enemy shows what it will do this round, so you can react. Each goblin hits harder for every other goblin (Pack Tactics, +${pack} here), and the Ogre's ⚠ means its Ground Slam lands next round.`,
+    text: `Your heroes act first, in any order. Every enemy shows what it will do this round, so you can react. Each goblin hits harder for every other goblin (Pack Tactics, +${pack} here), and the Ogre's ⏳ means its ${ogreSpecial(start)?.name ?? 'special'} lands next round.`,
     state,
     events: [],
   });
@@ -99,8 +105,7 @@ export function buildSteps(): Step[] {
     "Once you end the round, summons act, then the horde. The taunted Ogre hits the Warrior, and the Curse and the Warrior's Shield (+2 armor every round) shrink the blow.",
     endRound(state),
   );
-  const ogre = state.enemies.find((e) => e.id === 'ogre')!;
-  const special = specialOf(ogre);
+  const special = ogreSpecial(state);
   steps.push({
     title: 'Round 2: plan for the special',
     text: `It's the Ogre's ${special?.name ?? 'special'} round: ${special?.description.toLowerCase() ?? ''}. Brace with Shield Wall or Parry, heal ahead of time, or finish it first. Waves also arrive on a clock (rounds ${rules.combat.waveArrivalRounds.join(' and ')}), so new enemies can join mid-fight.`,

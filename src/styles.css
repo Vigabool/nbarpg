@@ -1612,6 +1612,18 @@ textarea.input.mono {
 }
 
 /* ---------- How to play: sample turn ---------- */
+.sample-nav {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 0 8px;
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--line);
+}
 .sample-board {
   display: flex;
   flex-direction: column;

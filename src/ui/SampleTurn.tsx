@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { activeSpecial, enemyDamage, livingEnemies, previewEnemyPhase, specialDue } from '../engine/combat';
 import { rules } from '../rules';
 import { monsterIcon } from '../engine/encounter';
@@ -8,6 +8,12 @@ import { buildSteps } from './sampleTurnScript';
 export function SampleTurn() {
   const steps = useMemo(buildSteps, []);
   const [i, setI] = useState(0);
+  const navRef = useRef<HTMLDivElement>(null);
+  // A new step starts reading from its title: scroll the How to play body back to the top.
+  const go = (k: number) => {
+    setI(k);
+    navRef.current?.closest('.modal-body')?.scrollTo({ top: 0 });
+  };
   const step = steps[i];
   const s = step.state;
   const actors = new Set(step.events.map((e) => e.actorId).filter(Boolean));
@@ -20,14 +26,28 @@ export function SampleTurn() {
 
   return (
     <div className="stack" style={{ gap: 10 }}>
-      <div className="spread">
-        <strong>
-          {i + 1}. {step.title}
-        </strong>
-        <span className="tiny muted num">
-          Round {s.round} · step {i + 1} of {steps.length}
+      {/* Pinned to the top of the scrolling body so the controls are always in reach. */}
+      <div className="sample-nav" ref={navRef}>
+        <button className="btn small" disabled={i === 0} onClick={() => go(i - 1)}>
+          ‹ Back
+        </button>
+        <span className="stack" style={{ gap: 2, alignItems: 'center' }}>
+          <span className="sample-dots" aria-hidden>
+            {steps.map((_, k) => (
+              <span key={k} className={k === i ? 'on' : ''} />
+            ))}
+          </span>
+          <span className="tiny muted num">
+            Round {s.round} · step {i + 1} of {steps.length}
+          </span>
         </span>
+        <button className="btn small" disabled={i === steps.length - 1} onClick={() => go(i + 1)}>
+          Next step ›
+        </button>
       </div>
+      <strong>
+        {i + 1}. {step.title}
+      </strong>
       <p className="small" style={{ margin: 0 }}>
         {step.text}
       </p>
@@ -79,20 +99,6 @@ export function SampleTurn() {
           ))}
         </div>
       )}
-
-      <div className="spread">
-        <button className="btn small" disabled={i === 0} onClick={() => setI(i - 1)}>
-          ‹ Back
-        </button>
-        <span className="sample-dots" aria-hidden>
-          {steps.map((_, k) => (
-            <span key={k} className={k === i ? 'on' : ''} />
-          ))}
-        </span>
-        <button className="btn small" disabled={i === steps.length - 1} onClick={() => setI(i + 1)}>
-          Next step ›
-        </button>
-      </div>
     </div>
   );
 }
