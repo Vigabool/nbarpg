@@ -58,7 +58,9 @@ export function BattleScreen({ data, game, onChange, onHelp, onQuit }: Props) {
   // Paced one at a time: after a tip is dismissed, the next waits until the player does something
   // (the log grows), unless it directly continues the one just read (the opening sequence).
   const [coachGate, setCoachGate] = useState({ logLength: -1, last: '' });
-  const tips = BATTLE_TIPS.filter((t) => state.log.length > coachGate.logLength || t.continues === coachGate.last);
+  // A replayed walkthrough (the dismissed tip is unseen again) starts fresh, without waiting.
+  const gated = coachGate.last !== '' && !coachUnseen(coachGate.last);
+  const tips = BATTLE_TIPS.filter((t) => !gated || state.log.length > coachGate.logLength || t.continues === coachGate.last);
   const coachCtx = { state, sheetOpen: !!hero, targeting, doomed };
   const coachTip = state.phase !== 'party' ? undefined : pickTip(tips, coachCtx, coachUnseen, () => true);
   useEffect(() => {

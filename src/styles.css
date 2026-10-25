@@ -1853,3 +1853,8 @@ textarea.input.mono {
   white-space: nowrap;
   flex-shrink: 0;
 }
+.walkthrough-toggle {
+  gap: 6px;
+  margin-bottom: 6px;
+  cursor: pointer;
+}

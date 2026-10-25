@@ -53,3 +53,19 @@ export function coachStarted(): boolean {
   const v = read();
   return v.off || v.seen.length > 0;
 }
+
+/** Battle walkthrough tips (and the rewards tip) by id prefix. */
+const isBattleTip = (id: string) => id.startsWith('battle-') || id.startsWith('result-');
+
+/** The battle walkthrough will show (some battle tip unseen, tips not switched off). */
+export function walkthroughOn(battleTipIds: string[]): boolean {
+  const v = read();
+  return !v.off && battleTipIds.some((id) => !v.seen.includes(id));
+}
+
+/** Turns the battle walkthrough on (from the start) or off, leaving the setup banners as they are. */
+export function setWalkthrough(on: boolean, battleTipIds: string[]) {
+  const v = read();
+  const others = v.seen.filter((id) => !isBattleTip(id));
+  write(on ? { seen: others, off: false } : { seen: [...others, ...battleTipIds], off: v.off });
+}

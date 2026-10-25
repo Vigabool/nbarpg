@@ -22,7 +22,8 @@ export function CoachMarks<C>({ tips, ctx, onDismiss }: { tips: CoachTip<C>[]; c
   // Pick and measure after the screen is drawn (the tip's element may be new in this render), keeping
   // the old value when nothing changed so this doesn't loop.
   useLayoutEffect(() => {
-    const t = pickTip(tips, ctx, coachUnseen, onScreen);
+    // Wait while a pop-up (How to play, the Guide, a detail sheet) is open: a tip on top would block it.
+    const t = document.querySelector('.modal-backdrop') ? undefined : pickTip(tips, ctx, coachUnseen, onScreen);
     const r = t ? document.querySelector(t.target)?.getBoundingClientRect() : undefined;
     setShown((old) => {
       if (!t || !r) return null;

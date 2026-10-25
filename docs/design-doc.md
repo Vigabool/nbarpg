@@ -511,6 +511,7 @@ The season runs in chapters of 4 weeks (roster moves happen between chapters). E
 - **When a tip shows:** each appears once, the first time its moment comes (`src/ui/coachTips.ts`). The order: the horde → the party → one attack plus utilities (when the action sheet opens) → picking a target → End round (after a hero acts). Then, if they happen: a falling hero (☠), a special a round away (⏳), Fumbles (💫), the next wave. The result screen gets one tip on PP and gold.
 - **Setup screens** (encounter, assign heroes, pick games) each show a one-line banner the first time. In week 1, Goblin Horde is marked "Recommended first".
 - **Memory:** seen tips are stored per browser, not per save (`src/app/coach.ts`), so a new run doesn't repeat them.
+- **Turning it back on:** the pick-games screen has a **🎓 Walkthrough tips in battle** checkbox (ticked while tips remain; ticking restarts them from the first). How to play → Basics also has **Replay the walkthrough**. Tips wait while any pop-up is open, so they never cover How to play or the Guide.
 
 ## Multiplayer direction (future)
 

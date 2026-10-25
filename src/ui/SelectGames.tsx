@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { SeasonData } from '../data/types';
 import { bestGames } from '../app/autoAssign';
 import { smartGames } from '../app/smartPick';
@@ -9,6 +10,10 @@ import { CLASSES, rules, type HeroClass } from '../rules';
 import { encounterOf, monsterIcon, monsterName } from '../engine/encounter';
 import { DifficultyChip } from './DifficultyPicker';
 import { SetupBanner } from './SetupBanner';
+import { setWalkthrough, walkthroughOn } from '../app/coach';
+import { BATTLE_TIPS, RESULT_TIPS } from './coachTips';
+
+const TIP_IDS = [...BATTLE_TIPS, ...RESULT_TIPS].map((t) => t.id);
 import { ClassName, TierChip, formatDate, statLine } from './common';
 
 function mirrorFor(c: HeroClass, playerId: number, gameId: string, data: SeasonData, encounter?: string): MonsterSpec | undefined {
@@ -17,6 +22,7 @@ function mirrorFor(c: HeroClass, playerId: number, gameId: string, data: SeasonD
 }
 
 export function SelectGames({ data, game, onChange }: { data: SeasonData; game: SaveGame; onChange: (g: SaveGame) => void }) {
+  const [walkthrough, setWalkthroughState] = useState(() => walkthroughOn(TIP_IDS));
   const week = currentWeek(game, data)!;
   const heroes = CLASSES.filter((c) => game.assignments[c] !== undefined);
   const picks = readyPicks(game, data);
@@ -182,6 +188,17 @@ export function SelectGames({ data, game, onChange }: { data: SeasonData; game: 
       )}
 
       <div className="sticky-bottom">
+        <label className="row small muted walkthrough-toggle">
+          <input
+            type="checkbox"
+            checked={walkthrough}
+            onChange={(e) => {
+              setWalkthrough(e.target.checked, TIP_IDS);
+              setWalkthroughState(e.target.checked);
+            }}
+          />
+          🎓 Walkthrough tips in battle
+        </label>
         <div className="spread">
           <button className="btn ghost small" onClick={() => onChange({ ...game, phase: 'assign' })}>
             ← Heroes
