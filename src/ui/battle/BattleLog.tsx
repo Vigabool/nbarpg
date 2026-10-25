@@ -6,7 +6,7 @@ export const isRoundStart = (l: LogEntry) => l.side === 'system' && /^Round \d+ 
 export function Ticker({ log, onOpen }: { log: LogEntry[]; onOpen: () => void }) {
   const last = [...log].reverse().find((l) => !isRoundStart(l));
   return (
-    <button className="ticker" onClick={onOpen} aria-label="Open battle log">
+    <button className="ticker" onClick={onOpen} aria-label="Open battle log" data-coach="log">
       <span className={`ticker-text ${last?.side ?? ''}`}>{last ? last.text : 'The battle begins.'}</span>
       <span className="ticker-more">Log ›</span>
     </button>

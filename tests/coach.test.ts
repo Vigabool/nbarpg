@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { performAction, type BattleState } from '../src/engine/combat';
+import { endRound, performAction, type BattleState } from '../src/engine/combat';
 import { BATTLE_TIPS, pickTip, type CoachContext } from '../src/ui/coachTips';
 import { battle, monster } from './helpers';
 
@@ -45,6 +45,12 @@ describe('first-battle walkthrough', () => {
     const acted = performAction(tricky, { heroId: 'warrior', actionId: 'axe', targetIds: ['C'] });
     expect(next(ctxOf(acted), intro)).toBe('battle-end-round');
     expect(next(ctxOf(acted), [...intro, 'battle-end-round'])).not.toBe('battle-trait');
+  });
+
+  it('points out the battle log once the horde has acted', () => {
+    const seen = BATTLE_TIPS.map((t) => t.id).filter((id) => id !== 'battle-log');
+    expect(next(ctxOf(s), seen)).toBeUndefined();
+    expect(next(ctxOf(endRound(s)), seen)).toBe('battle-log');
   });
 
   it('explains traits when a Champion has one', () => {

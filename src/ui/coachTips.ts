@@ -88,6 +88,14 @@ export const BATTLE_TIPS: CoachTip[] = [
     when: (ctx) => live(ctx) && !ctx.targeting && heroActed(ctx.state),
   },
   {
+    id: 'battle-log',
+    target: '[data-coach="log"]',
+    after: 'battle-end-round',
+    title: 'The battle log',
+    text: 'This line shows the latest event. Tap Log › for everything so far: who hit whom, for how much, and what each special did.',
+    when: (ctx) => live(ctx) && !ctx.targeting && ctx.state.round >= 2,
+  },
+  {
     id: 'battle-special',
     target: '[data-coach="special-soon"]',
     after: 'battle-actions',
