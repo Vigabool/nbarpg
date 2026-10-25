@@ -29,7 +29,8 @@ interface Props {
 
 export function BattleScreen({ data, game, onChange, onHelp, onQuit }: Props) {
   const state = game.battle!;
-  const [selected, setSelected] = useState<HeroClass | null>(() => firstReady(state));
+  // No hero is preselected: the player taps the hero they want to act with.
+  const [selected, setSelected] = useState<HeroClass | null>(null);
   const [action, setAction] = useState<ActionOption | null>(null);
   const [multi, setMulti] = useState<string[]>([]);
   const [undo, setUndo] = useState<BattleState[]>([]);
@@ -84,8 +85,11 @@ export function BattleScreen({ data, game, onChange, onHelp, onQuit }: Props) {
       setAction(null);
       setMulti([]);
       setError(null);
-      // After an attack, move on to the next hero; after a utility, stay to allow more.
-      if (opt.attack) setSelected(firstReady(next));
+      // After an attack, close the sheet. A buff on an ally's next attack (Empower) opens that ally,
+      // ready to use it. Other utilities stay on this hero to allow more.
+      const buffedAlly = opt.def.effects.some((e) => e.type === 'nextAttackMultiplier') && opt.def.target.type === 'ally' ? targetIds[0] : undefined;
+      if (opt.attack) setSelected(null);
+      else if (buffedAlly && buffedAlly !== hero!.id) setSelected(buffedAlly as HeroClass);
     } catch (e) {
       setError((e as Error).message);
     }
@@ -113,7 +117,7 @@ export function BattleScreen({ data, game, onChange, onHelp, onQuit }: Props) {
     setAction(null);
     setMulti([]);
     setBattle(next);
-    setSelected(firstReady(next));
+    setSelected(null);
   };
 
   const over = state.phase !== 'party';
@@ -144,7 +148,7 @@ export function BattleScreen({ data, game, onChange, onHelp, onQuit }: Props) {
         </div>
         <div className="row" style={{ gap: 6, flexWrap: 'nowrap' }}>
           <button
-            className="btn small icon-only"
+            className="btn small undo-btn"
             aria-label="Undo last action"
             title="Undo last action"
             disabled={undo.length === 0 || over}
@@ -154,10 +158,10 @@ export function BattleScreen({ data, game, onChange, onHelp, onQuit }: Props) {
               setBattle(prev);
               setAction(null);
               setMulti([]);
-              setSelected(firstReady(prev));
+              setSelected(null);
             }}
           >
-            ↶
+            ↶ Undo
           </button>
           <button className="btn primary small" disabled={over} onClick={doEndRound} data-coach="end-round">
             End round{waiting > 0 && <span className="badge">{waiting}</span>}

@@ -1858,3 +1858,14 @@ textarea.input.mono {
   margin-bottom: 6px;
   cursor: pointer;
 }
+
+/* Undo: visible, not an icon you have to find. */
+.undo-btn:not(:disabled) {
+  color: var(--info);
+  border-color: var(--info);
+  background: rgb(106 164 240 / 0.12);
+  font-weight: 650;
+}
+.undo-btn:disabled {
+  opacity: 0.45;
+}

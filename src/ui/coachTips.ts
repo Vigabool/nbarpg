@@ -67,7 +67,7 @@ export const BATTLE_TIPS: CoachTip[] = [
     after: 'battle-actions',
     continues: 'battle-actions',
     title: 'Pick a target',
-    text: 'Tap a highlighted enemy. Changed your mind? Cancel, or undo (↶) after acting.',
+    text: 'Tap a highlighted enemy. Changed your mind? Cancel, or tap ↶ Undo after acting.',
     when: (ctx) => live(ctx) && ctx.targeting,
   },
   {
