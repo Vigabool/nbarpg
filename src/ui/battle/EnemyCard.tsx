@@ -79,7 +79,12 @@ export function TraitChips({ e, state }: { e: EnemyState; state: BattleState }) 
       {(e.traits ?? []).map((id) => {
         const s = traitStatus(e, id, state);
         return (
-          <span key={id} className={`tag static trait${s.spent ? ' spent' : ''}`} aria-label={`${rules.traits[id].name}: ${rules.traits[id].description}`}>
+          <span
+            key={id}
+            className={`tag static trait${s.spent ? ' spent' : ''}`}
+            data-coach="trait"
+            aria-label={`${rules.traits[id].name}: ${rules.traits[id].description}`}
+          >
             {s.text}
           </span>
         );

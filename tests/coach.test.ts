@@ -40,6 +40,20 @@ describe('first-battle walkthrough', () => {
     expect(next(ctxOf(acted), intro)).toBe('battle-end-round');
   });
 
+  it('after the first action, End round comes before the situational tips', () => {
+    const tricky = battle([[monster({ id: 'C', kind: 'ogre', hp: 50, damage: 3, fumbles: 1, traits: ['swat'] })], [monster()], [monster()]]);
+    const acted = performAction(tricky, { heroId: 'warrior', actionId: 'axe', targetIds: ['C'] });
+    expect(next(ctxOf(acted), intro)).toBe('battle-end-round');
+    expect(next(ctxOf(acted), [...intro, 'battle-end-round'])).not.toBe('battle-trait');
+  });
+
+  it('explains traits when a Champion has one', () => {
+    const traited = battle([[monster({ id: 'C', kind: 'ogre', hp: 50, damage: 3, traits: ['swat'] })], [monster()], [monster()]]);
+    const seen = BATTLE_TIPS.map((t) => t.id).filter((id) => id !== 'battle-trait');
+    expect(next(ctxOf(traited), seen)).toBe('battle-trait');
+    expect(next(ctxOf(s), seen)).toBeUndefined();
+  });
+
   it('warns about a falling hero before anything else', () => {
     expect(next(ctxOf(s, { doomed: new Set(['wizard']) }), intro)).toBe('battle-doom');
   });

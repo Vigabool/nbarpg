@@ -80,6 +80,14 @@ export const BATTLE_TIPS: CoachTip[] = [
     when: (ctx) => live(ctx) && !ctx.targeting && ctx.doomed.size > 0,
   },
   {
+    id: 'battle-end-round',
+    target: '[data-coach="end-round"]',
+    after: 'battle-actions',
+    title: 'End the round',
+    text: 'The badge counts heroes who can still act. When you’re done, end the round: summons act, then the horde does what its cards said.',
+    when: (ctx) => live(ctx) && !ctx.targeting && heroActed(ctx.state),
+  },
+  {
     id: 'battle-special',
     target: '[data-coach="special-soon"]',
     after: 'battle-actions',
@@ -96,12 +104,12 @@ export const BATTLE_TIPS: CoachTip[] = [
     when: (ctx) => live(ctx) && !ctx.targeting && ctx.state.enemies.some((e) => canFumble(ctx.state, e)),
   },
   {
-    id: 'battle-end-round',
-    target: '[data-coach="end-round"]',
+    id: 'battle-trait',
+    target: '[data-coach="trait"]',
     after: 'battle-actions',
-    title: 'End the round',
-    text: 'The badge counts heroes who can still act. When you’re done, end the round: summons act, then the horde does what its cards said.',
-    when: (ctx) => live(ctx) && !ctx.targeting && heroActed(ctx.state),
+    title: 'Traits',
+    text: 'A Champion whose player had a big night gets a trait, like ✋ Swat for 4+ blocks or 📣 Floor General for 10+ assists. Tap its card to see what the trait does and how to beat it.',
+    when: (ctx) => live(ctx) && !ctx.targeting && ctx.state.enemies.some((e) => e.alive && !e.asleep && (e.traits?.length ?? 0) > 0),
   },
   {
     id: 'battle-wave',
