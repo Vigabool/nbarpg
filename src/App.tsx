@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useState } from 'react';
 import { decodeSeason, type CompactSeason } from './data/format';
 import type { SeasonData } from './data/types';
 import { localSaveStore } from './app/storage';
@@ -36,6 +36,11 @@ export default function App() {
     if (g) localSaveStore.save(g);
     else localSaveStore.clear();
   };
+
+  // A new screen starts at the top: the week's steps, battle, results, title. Otherwise it opens
+  // wherever the last screen was scrolled to.
+  const screen = game ? `${game.phase}:${game.weekIndex}` : 'title';
+  useLayoutEffect(() => window.scrollTo({ top: 0 }), [screen]);
 
   if (load.status === 'loading') return <div className="app muted">Loading season…</div>;
   if (load.status === 'missing') return <MissingData />;

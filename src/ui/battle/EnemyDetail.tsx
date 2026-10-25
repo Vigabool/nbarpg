@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useScrollToTop } from '../scroll';
 import {
   enemyArmor,
   justArrived,
@@ -45,6 +46,7 @@ export function EnemyDetail({
       groups.findIndex((g) => g.some((e) => e.id === initialId)),
     ),
   );
+  const bodyRef = useScrollToTop<HTMLDivElement>(idx);
   useEffect(() => {
     const onKey = (ev: KeyboardEvent) => ev.key === 'Escape' && onClose();
     window.addEventListener('keydown', onKey);
@@ -113,7 +115,7 @@ export function EnemyDetail({
             </button>
           ))}
         </div>
-        <div className="modal-body class-panel">
+        <div className="modal-body class-panel" ref={bodyRef}>
           <EnemyHead
             icon={foeIcon(e, state.encounter)}
             name={`${foeName(e, state.encounter)}${enemies.length > 1 ? ` ×${enemies.length}` : ''}`}

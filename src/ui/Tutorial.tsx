@@ -7,6 +7,7 @@ import { SampleTurn } from './SampleTurn';
 import { behaviorOf, encounterIds, encounterOf, hasTwist, monsterDescription, monsterIcon, monsterName, monsterShort, specialFor } from '../engine/encounter';
 import { CLASS_ICON, money } from './common';
 import { coachStarted, resetCoach } from '../app/coach';
+import { useScrollToTop } from './scroll';
 
 const SEEN_KEY = 'nbarpg.tutorialSeen';
 
@@ -76,6 +77,7 @@ export function Tutorial({ onClose, topic }: { onClose: () => void; topic?: Tuto
   }, []);
 
   const howTo = isHowToPlay(topic ?? { tab: 'basics' });
+  const bodyRef = useScrollToTop<HTMLDivElement>(tab);
   const TABS = howTo ? HOW_TO_PLAY : GUIDE;
   const nextTab = TABS[TABS.findIndex((t) => t.id === tab) + 1];
   return (
@@ -95,7 +97,7 @@ export function Tutorial({ onClose, topic }: { onClose: () => void; topic?: Tuto
           ))}
         </div>
 
-        <div className="modal-body">
+        <div className="modal-body" ref={bodyRef}>
           {tab === 'basics' && <BasicsTab />}
           {tab === 'glossary' && <GlossaryTab />}
 
@@ -220,6 +222,7 @@ function AbilityDetail({ a, kind }: { a: ActionDef; kind: string }) {
 
 function ClassesTab({ initialClass, initialOpen }: { initialClass?: HeroClass; initialOpen?: string }) {
   const [c, setC] = useState<HeroClass>(initialClass ?? 'warrior');
+  const topRef = useScrollToTop<HTMLDivElement>(c);
   const [open, setOpen] = useState<string | null>(initialOpen ?? null);
   const cls = rules.classes[c];
   const mods = cls.modifiers.map((m) => (m.type === 'percentage' ? `${m.label} bonus/penalty` : 'every turnover costs energy'));
@@ -234,7 +237,7 @@ function ClassesTab({ initialClass, initialOpen }: { initialClass?: HeroClass; i
   const openItem = groups.flatMap((g) => g.items).find((x) => x.a.id === open);
 
   return (
-    <div className="stack" style={{ gap: 12 }}>
+    <div className="stack" style={{ gap: 12 }} ref={topRef}>
       <div className="class-picker" role="tablist" aria-label="Classes">
         {CLASSES.map((k) => (
           <button
@@ -342,6 +345,7 @@ function range(arr?: number[]): string {
 function EnemiesTab({ initial, initialEncounter }: { initial?: EnemyPage; initialEncounter?: string }) {
   const [page, setPage] = useState<EnemyPage>(initial ?? 'goblin');
   const [encId, setEncId] = useState<string>(initialEncounter ?? rules.encounters.default);
+  const enemiesRef = useScrollToTop<HTMLDivElement>(`${encId}:${page}`);
   const c = rules.combat;
   const w = rules.horde.warlord;
   const every = c.specialEveryNRounds === 2 ? 'every other round' : `every ${c.specialEveryNRounds} rounds`;
@@ -474,7 +478,7 @@ function EnemiesTab({ initial, initialEncounter }: { initial?: EnemyPage; initia
   }
 
   return (
-    <div className="stack" style={{ gap: 12 }}>
+    <div ref={enemiesRef} className="stack" style={{ gap: 12 }}>
       <div className="stack" style={{ gap: 2 }}>
         <span className="section-label">Encounter</span>
         <div className="row" style={{ gap: 6 }}>

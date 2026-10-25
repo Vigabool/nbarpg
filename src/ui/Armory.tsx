@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useScrollToTop } from './scroll';
 import { buy, priceOf, type Purchase } from '../app/armory';
 import { progressOf, type SaveGame } from '../app/game';
 import { CLASSES, rules, type HeroClass } from '../rules';
@@ -7,6 +8,7 @@ import { CLASS_ICON, ConfirmButton } from './common';
 /** Spend each hero's progression points: weapon and shield levels, gear, feats. */
 export function Armory({ game, onChange, onClose, initial }: { game: SaveGame; onChange: (g: SaveGame) => void; onClose: () => void; initial?: HeroClass }) {
   const [c, setC] = useState<HeroClass>(initial ?? 'warrior');
+  const bodyRef = useScrollToTop<HTMLDivElement>(c);
   const closeRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     closeRef.current?.focus();
@@ -43,7 +45,7 @@ export function Armory({ game, onChange, onClose, initial }: { game: SaveGame; o
           ))}
         </div>
 
-        <div className="modal-body class-panel stack" style={{ gap: 10 }}>
+        <div ref={bodyRef} className="modal-body class-panel stack" style={{ gap: 10 }}>
           <div className="spread">
             <strong>
               {CLASS_ICON[c]} {rules.classes[c].name}

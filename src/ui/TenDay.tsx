@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useScrollToTop } from './scroll';
 import type { SeasonData } from '../data/types';
 import { currentWeek, type SaveGame } from '../app/game';
 import { signTenDay, tenDayBlocked, tenDayCandidates, tenDayFee } from '../app/gold';
@@ -26,6 +27,7 @@ export function TenDayPicker({
   onClose: () => void;
 }) {
   const [c, setC] = useState<HeroClass>(heroClass ?? 'warrior');
+  const bodyRef = useScrollToTop<HTMLDivElement>(c);
   const closeRef = useRef<HTMLButtonElement>(null);
   useEffect(() => closeRef.current?.focus(), []);
   const week = currentWeek(game, data);
@@ -75,7 +77,7 @@ export function TenDayPicker({
             ))}
           </div>
         )}
-        <div className="modal-body stack" style={{ gap: 6 }}>
+        <div ref={bodyRef} className="modal-body stack" style={{ gap: 6 }}>
           {list.length === 0 && <p className="muted small">No free agents play this week.</p>}
           {list.map(({ id, p, fee, tier }) => (
             <div key={id} className="spread card flat" style={{ padding: '8px 10px' }}>
