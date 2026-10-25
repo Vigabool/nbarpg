@@ -1009,7 +1009,7 @@ function EnemyDetail({
           {special && <Feature title={`⚠ Special · ${special.name} (${when})`} text={`${special.description}.`} warn />}
           {e.isWarlord && (
             <Feature
-              title={`Boss · enrages below ${Math.round(rage.atHpFraction * 100)}% HP`}
+              title={`🔥 Boss · enrages below ${Math.round(rage.atHpFraction * 100)}% HP`}
               text={
                 isClassicWarlord(e)
                   ? `Double HP, +${rules.horde.warlord.damageBonus} damage and two actions a round. Enraged, it hits +${rage.damageBonus} harder.`
@@ -1018,7 +1018,7 @@ function EnemyDetail({
             />
           )}
           {monsterPassives(e.kind, state.encounter).map((p) => (
-            <Feature key={p.title} title={`Passive · ${p.title}`} text={p.text} />
+            <Feature key={p.title} title={`${p.icon ? `${p.icon} ` : ''}Passive · ${p.title}`} text={p.text} />
           ))}
           <button className="btn small" style={{ alignSelf: 'flex-start' }} onClick={() => onHelp((e.isWarlord || e.kind === 'phylactery' ? 'warlord' : e.kind) as EnemyPage)}>
             More in How to play →

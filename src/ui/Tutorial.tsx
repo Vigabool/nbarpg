@@ -393,7 +393,7 @@ function EnemiesTab({ initial, initialEncounter }: { initial?: EnemyPage; initia
         </div>
         <p className="small">{monsterBehavior('goblin', encId)}.</p>
         {monsterPassives('goblin', encId).map((p) => (
-          <Feature key={p.title} title={`Passive · ${p.title}`} text={p.text} />
+          <Feature key={p.title} title={`${p.icon ? `${p.icon} ` : ''}Passive · ${p.title}`} text={p.text} />
         ))}
       </>
     );
@@ -415,10 +415,10 @@ function EnemiesTab({ initial, initialEncounter }: { initial?: EnemyPage; initia
         </p>
         {sp && <Feature title={`⚠ Special · ${sp.name}`} text={`${sp.description}. Fires ${every} on the field, starting its 2nd round. Its card shows ⏳ the round before, then a red ⚠ NOW banner when it's about to fire.`} warn />}
         {monsterPassives(enc.boss, encId).map((p) => (
-          <Feature key={p.title} title={`Passive · ${p.title}`} text={p.text} />
+          <Feature key={p.title} title={`${p.icon ? `${p.icon} ` : ''}Passive · ${p.title}`} text={p.text} />
         ))}
         <Feature
-          title={`Enrage · below ${Math.round(c.warlordEnrage.atHpFraction * 100)}% HP`}
+          title={`🔥 Enrage · below ${Math.round(c.warlordEnrage.atHpFraction * 100)}% HP`}
           text={`+${c.warlordEnrage.damageBonus} damage for the rest of the battle. Save burst for the finish.`}
         />
         <Feature title="Picking games" text="Your hero's best night against a team whose star also went off can build your own final boss." />
@@ -438,7 +438,7 @@ function EnemiesTab({ initial, initialEncounter }: { initial?: EnemyPage; initia
           player's Champion, with its behavior and special. It arrives in the last wave.
         </p>
         <Feature
-          title={`Enrage · below ${Math.round(c.warlordEnrage.atHpFraction * 100)}% HP`}
+          title={`🔥 Enrage · below ${Math.round(c.warlordEnrage.atHpFraction * 100)}% HP`}
           text={`+${c.warlordEnrage.damageBonus} damage for the rest of the battle. Save burst for the finish.`}
         />
         <Feature title="Picking games" text="Your hero's best night against a team whose star also went off can build your own final boss." />
@@ -468,7 +468,7 @@ function EnemiesTab({ initial, initialEncounter }: { initial?: EnemyPage; initia
         <p className="small">{behavior}.</p>
         {sp && <Feature title={`⚠ Special · ${sp.name}`} text={`${sp.description}. Fires ${every} on the field, starting its 2nd round. Its card shows ⏳ the round before, then a red ⚠ NOW banner when it's about to fire.`} warn />}
         {passives.map((p) => (
-          <Feature key={p.title} title={`Passive · ${p.title}`} text={p.text} />
+          <Feature key={p.title} title={`${p.icon ? `${p.icon} ` : ''}Passive · ${p.title}`} text={p.text} />
         ))}
       </>
     );
@@ -517,33 +517,47 @@ export function monsterBehavior(kind: MonsterKind, encounter?: string): string {
 }
 
 /** A monster's standing rules, as titled cards. */
-export function monsterPassives(kind: MonsterKind, encounter?: string): { title: string; text: string }[] {
+/** A monster's standing rules. `icon` matches the symbol its card shows for that rule, when it has one. */
+export function monsterPassives(kind: MonsterKind, encounter?: string): { title: string; text: string; icon?: string }[] {
   const c = rules.combat;
   const m = rules.monsters[kind];
   const behavior = behaviorOf(kind, encounter);
-  const out: { title: string; text: string }[] = [];
+  const out: { title: string; text: string; icon?: string }[] = [];
   if (kind === 'goblin' && hasTwist('packTactics', encounter))
-    out.push({ title: c.packTactics.name, text: `${c.packTactics.description}. Thin the pack and every goblin hits softer.` });
-  if (kind === 'goblin' && hasTwist('restlessDead', encounter)) out.push({ title: c.restlessDead.name, text: `${c.restlessDead.description}.` });
+    out.push({ icon: '🐺', title: c.packTactics.name, text: `${c.packTactics.description}. Thin the pack and every goblin hits softer.` });
+  if (kind === 'goblin' && hasTwist('restlessDead', encounter)) out.push({ icon: '🦴', title: c.restlessDead.name, text: `${c.restlessDead.description}.` });
   if (behavior === 'wraith') {
-    out.push({ title: 'Intangible', text: 'Weapon attacks pass through it. Spells and Cleric attacks can hit it, and the first such hit makes it solid.' });
+    out.push({ icon: '👻', title: 'Intangible', text: 'Weapon attacks pass through it. Spells and Cleric attacks can hit it, and the first such hit makes it solid.' });
     out.push({
+      icon: '💧',
       title: 'Life drain',
       text: `Instead of attacking, it drains every hero for ${range(Object.values(c.wraith.drainByTier))} (by tier), ignoring armor, and heals itself.`,
     });
   }
   if (behavior === 'lich' || behavior === 'phylactery')
     out.push({
+      icon: '⚱️',
       title: `${c.phylactery.name} · ${range(rules.monsters.phylactery.hpByTier)} HP`,
       text: `${c.phylactery.description}. When the Lich falls, the Phylactery shatters.`,
     });
   const ov = encounterOf(encounter).monsters[kind];
-  for (const p of [ov?.aura, ov?.poisonOnHit, ov?.boneHarvest, ov?.restless, ov?.moltenHide, ov?.shinyThief, ov?.regenerate, ov?.rallyingSaga]) if (p) out.push({ title: p.name, text: `${p.description}.` });
-  if (kind === 'goblin' && hasTwist('hoardTithe', encounter)) out.push({ title: c.hoardTithe.name, text: `${c.hoardTithe.description}.` });
+  const icons: [{ name: string; description: string } | undefined, string][] = [
+    [ov?.aura, monsterIcon(kind, encounter)],
+    [ov?.poisonOnHit, '☣'],
+    [ov?.boneHarvest, '🦴'],
+    [ov?.restless, '🦴'],
+    [ov?.moltenHide, '🌋'],
+    [ov?.shinyThief, '💰'],
+    [ov?.regenerate, '♻️'],
+    [ov?.rallyingSaga, '🎶'],
+  ];
+  for (const [p, icon] of icons) if (p) out.push({ icon, title: p.name, text: `${p.description}.` });
+  if (kind === 'goblin' && hasTwist('hoardTithe', encounter)) out.push({ icon: '💰', title: c.hoardTithe.name, text: `${c.hoardTithe.description}.` });
   if (kind !== 'goblin' && hasTwist('topple', encounter)) {
     const boss = !!encounterOf(encounter).boss && encounterOf(encounter).boss === kind;
     const pct = Math.round((boss ? c.topple.bossThreshold : c.topple.threshold) * 100);
     out.push({
+      icon: '⛰️',
       title: boss ? 'Unshakable' : c.topple.name,
       text: boss
         ? `Takes ${pct}% of its max HP in one round to topple, but a toppled Lord loses both actions. Landing deals ${c.topple.crashDamage} to every hero.`
@@ -551,13 +565,13 @@ export function monsterPassives(kind: MonsterKind, encounter?: string): { title:
     });
   }
   if (behavior === 'dragon') {
-    out.push({ title: c.dragonSleep.name, text: `${c.dragonSleep.description}.` });
-    out.push({ title: 'Hoard', text: `+1 damage per ${c.hoardTithe.coinsPerDamage} coins in its hoard (up to +${c.hoardTithe.maxBonus}).` });
+    out.push({ icon: '💤', title: c.dragonSleep.name, text: `${c.dragonSleep.description}.` });
+    out.push({ icon: '💰', title: 'Hoard', text: `+1 damage per ${c.hoardTithe.coinsPerDamage} coins in its hoard (up to +${c.hoardTithe.maxBonus}).` });
   }
-  if (ov?.dragonkin && hasTwist('dragonscale', encounter)) out.push({ title: c.dragonscale.name, text: `${c.dragonscale.description}. Lightning hits it at full strength.` });
-  if (behavior === 'chieftain') out.push({ title: c.chieftainCommand.name, text: `${c.chieftainCommand.description}: minions and the goblin Champions, not the Ogre. Kill the Chieftain and the buff ends.` });
-  if (m.ignoresTaunt) out.push({ title: 'Ignores taunts', text: "Provoke, Bulwark and the Bear don't work on it." });
-  if (hasTwist('packGuard', encounter) && c.packGuard.guarded.includes(behavior)) out.push({ title: c.packGuard.name, text: `${c.packGuard.description}.` });
+  if (ov?.dragonkin && hasTwist('dragonscale', encounter)) out.push({ icon: '🔥½', title: c.dragonscale.name, text: `${c.dragonscale.description}. Lightning hits it at full strength.` });
+  if (behavior === 'chieftain') out.push({ icon: '👑', title: c.chieftainCommand.name, text: `${c.chieftainCommand.description}: minions and the goblin Champions, not the Ogre. Kill the Chieftain and the buff ends.` });
+  if (m.ignoresTaunt) out.push({ icon: '⊘⚑', title: 'Ignores taunts', text: "Provoke, Bulwark and the Bear don't work on it." });
+  if (hasTwist('packGuard', encounter) && c.packGuard.guarded.includes(behavior)) out.push({ icon: '🔒', title: c.packGuard.name, text: `${c.packGuard.description}.` });
   if (behavior === 'assassin') out.push({ title: 'Energy drain', text: `Each hit drains ${c.assassinDrain} energy from its target.` });
   return out;
 }
