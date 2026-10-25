@@ -15,6 +15,7 @@ import {
   type EnemyState,
   type HeroAction,
 } from './combat';
+import { mechanicsFor } from './encounters';
 
 /** One thing the party can do right now. */
 type Step = { kind: 'action'; action: HeroAction } | { kind: 'fumble'; enemyId: string };
@@ -33,12 +34,6 @@ const W = {
   enemyDamage: 1,
   /** A sleeping Dragon is less of a threat until it wakes. */
   asleepFactor: 0.5,
-  /** Bone piles come back: count part of what they'll return with. */
-  pileHp: 3,
-  /** Hoard coins make the Dragon hit harder later. */
-  coin: 1.5,
-  /** Topple progress this round, squared so piling onto one giant beats spreading out. */
-  topple: 3,
 };
 
 /**
@@ -52,19 +47,13 @@ export function evaluate(state: BattleState, rules: Rules = defaultRules): numbe
   let v = 0;
   for (const h of after.heroes) if (h.alive) v += W.heroAlive + W.heroHp * h.hp + W.energy * h.pool;
   for (const e of after.enemies) {
-    if (e.pile) v -= W.pileHp;
     if (!e.alive) continue;
     const poison = e.poison ? e.poison.perRound * e.poison.rounds : 0;
     const threat = enemyDamage(after, e, rules) * actionsThisRound(e) * (e.asleep ? W.asleepFactor : 1);
     v -= W.enemyHp * Math.max(0, e.hp - poison) + W.enemyDamage * threat;
   }
-  if (after.hoard && !after.hoard.sealed) v -= W.coin * after.hoard.coins;
-  // Topple needs several heroes in one round: credit partial progress so the bot builds toward it.
-  for (const e of state.enemies) {
-    const t = toppleThreshold(state, e, rules);
-    if (t === null || !e.alive || e.toppled || !e.toppleDamage) continue;
-    v += W.topple * (e.toppleDamage / t) ** 2 * enemyDamage(state, e, rules) * actionsThisRound(e);
-  }
+  // Encounter rules add their own terms (bone piles, hoard coins, topple progress).
+  for (const m of mechanicsFor(state, rules)) if (m.botScore) v = m.botScore(state, after, v, rules);
   return v;
 }
 

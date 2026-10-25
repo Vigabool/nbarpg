@@ -1,6 +1,13 @@
 import { CLASSES, emptyProgress, rules as defaultRules, type ActionDef, type Effect, type HeroClass, type HeroProgress, type Rules, type SummonKind, type TraitId } from '../rules';
-import { behaviorOf, encounterOf, hasTwist, isGoblinKin, monsterIcon, monsterName, specialFor, type SpecialInfo } from './encounter';
+import { behaviorOf, encounterOf, monsterName, specialFor, type SpecialInfo } from './encounter';
+import { behaviorHandler, mechanicsFor, specialHandler, type BuffSource, type DamageSource } from './encounters';
 import type { MonsterSpec } from './horde';
+
+// Encounter rules live in ./encounters; these are part of the combat API.
+export { packBonus } from './encounters/goblinHorde';
+export { phylactery } from './encounters/crypt';
+export { hoardBonus } from './encounters/dragonLair';
+export { toppleThreshold } from './encounters/giantsHall';
 import type { PoolBreakdown } from './rating';
 
 /**
@@ -197,7 +204,7 @@ export interface ActionOption {
 
 const clone = <T>(v: T): T => structuredClone(v);
 
-function makeEnemy(spec: MonsterSpec, arrivedRound: number, wave: number): EnemyState {
+export function makeEnemy(spec: MonsterSpec, arrivedRound: number, wave: number): EnemyState {
   return {
     arrivedRound,
     wave,
@@ -271,7 +278,7 @@ export function createBattle(heroes: HeroSetup[], waves: MonsterSpec[][], rules:
     nextSummonId: 1,
     stats: { wavesCleared: 0, warlordDefeated: false, anyHeroFell: false, signaturesUsed: 0 },
   };
-  if (hasTwist('hoardTithe', encounter, rules)) state.hoard = { coins: 0, sealed: false };
+  for (const m of mechanicsFor(state, rules)) m.initBattle?.(state, rules);
   for (const e of state.enemies) initEnemy(state, e, rules);
   log(state, 'system', `Wave 1 of ${waves.length}: ${describeWave(state.enemies, state.encounter, rules)}`);
   startRound(state, rules);
@@ -287,20 +294,14 @@ function describeWave(enemies: EnemyState[], encounter: string | undefined, rule
   return [n ? `${n} ${(n > 1 ? many : one).toLowerCase()}` : '', ...named].filter(Boolean).join(', ');
 }
 
-function log(state: BattleState, side: LogEntry['side'], text: string, actorId?: string, targetIds?: string[], short?: string) {
+export function log(state: BattleState, side: LogEntry['side'], text: string, actorId?: string, targetIds?: string[], short?: string) {
   const hits = state.pendingHits;
   delete state.pendingHits;
   state.log.push({ round: state.round, side, text, actorId, targetIds, short, ...(hits && { hits }) });
 }
 
 /** The behavior an enemy uses in this battle's encounter. */
-const behaviorFor = (state: BattleState, e: EnemyState, rules: Rules = defaultRules) => behaviorOf(e.kind, state.encounter, rules);
-
-/** Damage kinds that matter to the Crypt: fire and holy destroy skeletons for good. */
-interface DamageSource {
-  fire?: boolean;
-  holy?: boolean;
-}
+export const behaviorFor = (state: BattleState, e: EnemyState, rules: Rules = defaultRules) => behaviorOf(e.kind, state.encounter, rules);
 
 /** Spells and Cleric (holy) attacks can touch intangible enemies; all Cleric damage is holy. */
 function touchesIntangible(hero: HeroState, def: ActionDef): boolean {
@@ -311,43 +312,14 @@ function damageSource(hero: HeroState, def: ActionDef): DamageSource {
   return { fire: !!def.tags?.includes('fire'), holy: hero.heroClass === 'cleric' };
 }
 
-/** Sets per-encounter starting state (the Wraith starts intangible). */
+/** Sets per-encounter starting state (the Wraith starts intangible, the Dragon asleep). */
 function initEnemy(state: BattleState, e: EnemyState, rules: Rules) {
-  if (behaviorFor(state, e, rules) === 'wraith') e.intangible = true;
-  // A sleeping boss lies on the field from the start but belongs to the final wave.
-  if (e.spec.sleeps) {
-    e.asleep = true;
-    e.wave = state.waveCount - 1;
-  }
-}
-
-/** Wakes a sleeping Dragon and seals its hoard. */
-function wake(state: BattleState, e: EnemyState, arrivedRound: number, why: string) {
-  e.asleep = false;
-  e.waking = false;
-  e.arrivedRound = arrivedRound;
-  if (state.hoard) state.hoard.sealed = true;
-  log(state, 'system', `🐉 ${e.name} wakes ${why}! The hoard is sealed at ${state.hoard?.coins ?? 0} coins.`, e.id);
-}
-
-/** Topple: damage a giant must take in one round to fall, or null if it can't be toppled. */
-export function toppleThreshold(state: BattleState, e: EnemyState, rules: Rules = defaultRules): number | null {
-  if (!hasTwist('topple', state.encounter, rules) || e.kind === 'goblin') return null;
-  const t = rules.combat.topple;
-  const enc = encounterOf(state.encounter, rules);
-  const saga = state.enemies.reduce((sum, x) => sum + (x.alive ? enc.monsters[x.kind]?.rallyingSaga?.bonus ?? 0 : 0), 0);
-  return Math.ceil(e.maxHp * (e.isWarlord ? t.bossThreshold : t.threshold)) + saga;
-}
-
-/** Hoard Tithe: the Dragon's bonus damage from its hoard. */
-export function hoardBonus(state: BattleState, e: EnemyState, rules: Rules = defaultRules): number {
-  if (!state.hoard || behaviorFor(state, e, rules) !== 'dragon') return 0;
-  const h = rules.combat.hoardTithe;
-  return Math.min(h.maxBonus, Math.floor(state.hoard.coins / h.coinsPerDamage));
+  behaviorHandler(behaviorFor(state, e, rules))?.init?.(state, e, rules);
+  for (const m of mechanicsFor(state, rules)) m.initEnemy?.(state, e, rules);
 }
 
 /** Enemies that are awake and fighting: a sleeping Dragon doesn't count. */
-const awake = (state: BattleState) => state.enemies.filter((e) => e.alive && !e.asleep);
+export const awake = (state: BattleState) => state.enemies.filter((e) => e.alive && !e.asleep);
 
 /** No living enemies and no bone piles about to rise. */
 function fieldEmpty(state: BattleState): boolean {
@@ -355,7 +327,7 @@ function fieldEmpty(state: BattleState): boolean {
 }
 
 /** "Ogre · Anthony Davis" → "Ogre". */
-const shortName = (name: string) => name.split(' · ')[0];
+export const shortName = (name: string) => name.split(' · ')[0];
 
 /** Round a wave (0-based index) arrives on the clock, or null if it only comes when the field is clear. */
 export function waveArrivalRound(wave: number, rules: Rules = defaultRules): number | null {
@@ -382,37 +354,12 @@ function spawnNextWave(state: BattleState, arrivedRound: number, rules: Rules) {
   state.enemies.push(...fresh);
   const label = `Wave ${state.waveIndex + 1} of ${state.waveCount}`;
   log(state, 'system', `${label} arrives: ${describeWave(fresh, state.encounter, rules)}.`);
-  // The final wave wakes a sleeping Dragon.
-  if (state.pendingWaves.length === 0)
-    for (const e of state.enemies) {
-      if (e.alive && e.asleep) wake(state, e, arrivedRound, 'as the final wave arrives');
-      if (e.groggy) {
-        e.groggy = false;
-        log(state, 'system', `🐉 ${e.name} shakes off its grogginess: two actions a round from now on.`, e.id);
-      }
-    }
-}
-
-/** Each time a skeleton reassembles it comes back with half its last HP: 8, 4, 2. */
-function riseHp(e: EnemyState): number {
-  return Math.floor(e.maxHp / 2 ** ((e.rises ?? 0) + 1));
+  for (const m of mechanicsFor(state, rules)) m.onWaveArrived?.(state, arrivedRound, rules);
 }
 
 function startRound(state: BattleState, rules: Rules) {
   if (state.round > 1) log(state, 'system', `Round ${state.round} begins. Every hero can act again.`);
-  for (const e of state.enemies) e.toppleDamage = 0;
-  // Restless Dead: bone piles reassemble at half HP and fight this round.
-  const rising = state.enemies.filter((e) => e.pile);
-  for (const e of rising) {
-    e.pile = false;
-    e.alive = true;
-    e.hp = riseHp(e);
-    e.rises = (e.rises ?? 0) + 1;
-    e.arrivedRound = state.round - 1;
-    e.poison = null;
-    e.weaken = null;
-  }
-  if (rising.length) log(state, 'system', `🦴 ${rising.length} ${rising.length > 1 ? 'skeletons reassemble' : 'skeleton reassembles'}.`, undefined, rising.map((e) => e.id));
+  for (const m of mechanicsFor(state, rules)) m.onRoundStart?.(state, rules);
   // Waves on the clock arrive at the start of their round, before the party acts, and fight this round.
   // An empty field also brings the next wave in now.
   while (state.pendingWaves.length > 0) {
@@ -452,14 +399,9 @@ function findUnit(state: BattleState, id: string): HeroState | SummonState | Ene
   return state.heroes.find((h) => h.id === id) ?? state.summons.find((s) => s.id === id) ?? state.enemies.find((e) => e.id === id);
 }
 
-/** Guarded by the Pack: can't be targeted while enough goblins are alive. */
+/** Can't be targeted by single-target attacks right now (guarded by the Pack, a Phylactery behind its skeletons). */
 export function isGuarded(state: BattleState, e: EnemyState, rules: Rules = defaultRules): boolean {
-  // The Phylactery hides behind any skeleton still standing.
-  if (behaviorFor(state, e, rules) === 'phylactery') return state.enemies.some((x) => x.alive && x.kind === 'goblin');
-  const g = rules.combat.packGuard;
-  if (!hasTwist('packGuard', state.encounter, rules)) return false;
-  if (!g.guarded.includes(behaviorFor(state, e, rules))) return false;
-  return state.enemies.filter((x) => x.alive && x.kind === 'goblin').length >= g.minGoblins;
+  return mechanicsFor(state, rules).some((m) => m.guarded?.(state, e, rules));
 }
 
 /** Enemies that weapon attacks and summons can pick: not guarded, not intangible. */
@@ -605,49 +547,12 @@ function damageEnemy(
       return 0;
     }
   }
-  // Ambush: a sleeping Dragon takes double damage, and wakes at the end of the round.
-  if (enemy.asleep && amount > 0) {
-    amount *= rules.combat.dragonSleep.damageMultiplier;
-    enemy.waking = true;
-  }
-  // Dragonscale: dragonkin shrug off half of any fire.
-  if (source.fire && hasTwist('dragonscale', state.encounter, rules) && encounterOf(state.encounter, rules).monsters[enemy.kind]?.dragonkin)
-    amount *= rules.combat.dragonscale.fireMultiplier;
-  // Phylactery: the Lich takes reduced damage while its soul is safe.
-  if (behaviorFor(state, enemy, rules) === 'lich' && phylactery(state, rules)) amount *= rules.combat.phylactery.damageTaken;
+  const mechanics = mechanicsFor(state, rules);
+  for (const m of mechanics) if (m.incomingDamage) amount = m.incomingDamage(state, enemy, amount, source, rules);
   const dealt = Math.max(0, Math.floor(amount) - (pierce ? 0 : enemyArmor(enemy)));
   enemy.hp = Math.max(0, enemy.hp - dealt);
   if (source.fire && dealt > 0) enemy.burnedRound = state.round;
-  // Topple: enough damage in one round knocks a giant down.
-  const topple = toppleThreshold(state, enemy, rules);
-  if (topple !== null && enemy.hp > 0 && !enemy.toppled && dealt > 0) {
-    enemy.toppleDamage = (enemy.toppleDamage ?? 0) + dealt;
-    if (enemy.toppleDamage >= topple) {
-      enemy.toppled = true;
-      enemy.toppledRound = state.round;
-      // The hall shakes as it lands: every hero takes a little damage.
-      const crash = rules.combat.topple.crashDamage;
-      const shaken: string[] = [];
-      for (const h of state.heroes) {
-        if (!h.alive) continue;
-        const dealt = Math.min(crash, h.hp - (h.lastStand ? 1 : 0));
-        if (dealt <= 0) continue;
-        h.hp -= dealt;
-        if (h.hp <= 0) {
-          h.hp = 0;
-          h.alive = false;
-          state.stats.anyHeroFell = true;
-          shaken.push(`the ${rules.classes[h.heroClass].name} falls`);
-        }
-      }
-      log(
-        state,
-        'system',
-        `⛰️ ${enemy.name} is toppled and loses its next ${enemy.extraActions ? 'turn' : 'action'}! The hall shakes: ${crash} damage to every hero${shaken.length ? `; ${shaken.join(', ')}` : ''}.`,
-        enemy.id,
-      );
-    }
-  }
+  for (const m of mechanics) m.afterEnemyHit?.(state, enemy, dealt, rules);
   if (enemy.hp === 0 && enemy.alive && hasTrait(enemy, 'secondChance') && !enemy.secondChanceUsed) {
     // Second Chance: back up once, at a fraction of its HP.
     enemy.secondChanceUsed = true;
@@ -657,24 +562,7 @@ function damageEnemy(
   if (enemy.hp === 0 && enemy.alive) {
     enemy.alive = false;
     if (enemy.isWarlord) state.stats.warlordDefeated = true;
-    // Restless Dead: skeletons (and other restless dead, like the Skeletal Archer) leave a bone pile,
-    // halving each time, unless fire or holy damage ended them.
-    const restless = encounterOf(state.encounter, rules).monsters[enemy.kind]?.restless;
-    if ((enemy.kind === 'goblin' || restless) && hasTwist('restlessDead', state.encounter, rules)) {
-      if (source.fire || source.holy) enemy.destroyed = true;
-      else if (enemy.kind === 'goblin' ? riseHp(enemy) >= rules.combat.restlessDead.minHp : (enemy.rises ?? 0) < restless!.rises) enemy.pile = true;
-      if (enemy.kind === 'goblin' && !enemy.destroyed) boneHarvest(state, rules);
-    }
-    const behavior = behaviorFor(state, enemy, rules);
-    if (behavior === 'lich') {
-      const p = phylactery(state, rules);
-      if (p) {
-        p.alive = false;
-        p.hp = 0;
-        log(state, 'system', `With the Lich gone, ${p.name} shatters.`, p.id);
-      }
-    }
-    if (behavior === 'phylactery') log(state, 'system', `${enemy.name} shatters: the Lich takes full damage now!`, enemy.id);
+    for (const m of mechanics) m.onEnemyDefeated?.(state, enemy, source, rules);
   }
   const rage = rules.combat.warlordEnrage;
   if (enemy.isWarlord && enemy.alive && !enemy.enraged && enemy.hp <= enemy.maxHp * rage.atHpFraction) {
@@ -684,39 +572,11 @@ function damageEnemy(
   return dealt;
 }
 
-/** Bone Harvest: a skeleton crumbling from weapon hits feeds any living Bone Giant. */
-function boneHarvest(state: BattleState, rules: Rules) {
-  const enc = encounterOf(state.encounter, rules);
-  for (const x of state.enemies) {
-    const bh = enc.monsters[x.kind]?.boneHarvest;
-    if (!bh || !x.alive || x.hp >= x.maxHp) continue;
-    const healed = Math.min(bh.heal, x.maxHp - x.hp);
-    x.hp += healed;
-    log(state, 'system', `🦴 ${x.name} absorbs the bones and heals ${healed}.`, x.id);
-  }
-}
-
 /** The special this enemy would use now: Goblin Toss needs a goblin to throw, else it's Ground Slam. */
 export function activeSpecial(state: BattleState, e: EnemyState, rules: Rules = defaultRules): SpecialInfo | null {
   const sp = specialOf(e, state.encounter, rules);
-  if (sp?.key === 'titheBlessing' && (!state.hoard || state.hoard.sealed)) return null;
-  if (sp?.key === 'goblinToss' && !state.enemies.some((x) => x.alive && x.kind === 'goblin')) {
-    const slam = rules.combat.specials.ogre;
-    return { key: 'ogre', name: slam.name, short: slam.short, description: slam.description };
-  }
-  return sp;
-}
-
-/** The Lich's Phylactery, while it stands. */
-export function phylactery(state: BattleState, rules: Rules = defaultRules): EnemyState | undefined {
-  return state.enemies.find((x) => x.alive && behaviorFor(state, x, rules) === 'phylactery');
-}
-
-/** Pack Tactics: bonus damage a goblin gets from the other goblins on the field. */
-export function packBonus(state: BattleState, e: EnemyState, rules: Rules = defaultRules): number {
-  if (e.kind !== 'goblin' || !hasTwist('packTactics', state.encounter, rules)) return 0;
-  const others = state.enemies.filter((x) => x.alive && x.kind === 'goblin' && x.id !== e.id).length;
-  return others * rules.combat.packTactics.bonusPerOtherGoblin;
+  const resolve = specialHandler(sp?.key)?.resolve;
+  return sp && resolve ? resolve(state, e, sp, rules) : sp;
 }
 
 /** Chieftain's Command: bonus damage for every goblin while a Chieftain lives. */
@@ -724,32 +584,27 @@ export function commandBonus(state: BattleState, e: EnemyState, rules: Rules = d
   return commandSources(state, e, rules).reduce((t, s) => t + s.bonus, 0);
 }
 
-/** Who is buffing this enemy: the Chieftain (every goblin) or a minion aura such as the Wight's Unholy Vigor. */
-export function commandSources(state: BattleState, e: EnemyState, rules: Rules = defaultRules): { icon: string; name: string; bonus: number }[] {
-  const out: { icon: string; name: string; bonus: number }[] = [];
-  const living = awake(state);
-  if (isGoblinKin(e.kind, state.encounter, rules) && living.some((x) => behaviorFor(state, x, rules) === 'chieftain'))
-    out.push({ icon: '👑', name: rules.combat.chieftainCommand.name, bonus: rules.combat.chieftainCommand.bonus });
-  for (const x of living)
+/** Who is buffing this enemy: the Chieftain (every goblin), a minion aura such as the Wight's Unholy Vigor, a Floor General. */
+export function commandSources(state: BattleState, e: EnemyState, rules: Rules = defaultRules): BuffSource[] {
+  const out: BuffSource[] = [];
+  for (const m of mechanicsFor(state, rules)) if (m.buffSources) out.push(...m.buffSources(state, e, rules));
+  for (const x of awake(state))
     if (x.id !== e.id && hasTrait(x, 'floorGeneral')) {
       const t = rules.traits.floorGeneral;
       out.push({ icon: t.icon, name: `${t.name} (${x.name.split(' · ')[0]})`, bonus: t.bonus! });
     }
-  if (e.kind === 'goblin') {
-    const enc = encounterOf(state.encounter, rules);
-    for (const kind of new Set(living.map((x) => x.kind))) {
-      const aura = enc.monsters[kind]?.aura;
-      if (aura) out.push({ icon: monsterIcon(kind, state.encounter, rules), name: aura.name, bonus: aura.bonus });
-    }
-  }
   return out;
 }
 
-/** What an enemy hits for this round, after enrage, War Drum, Pack Tactics, the Chieftain and curses. */
-/** What one hit from this enemy deals; for a Wraith, the drain each hero takes. */
+/**
+ * What one hit from this enemy deals this round, after enrage, War Drum, encounter bonuses (Pack
+ * Tactics, the hoard), the Chieftain and curses; for a Wraith, the drain each hero takes.
+ */
 export function enemyDamage(state: BattleState, e: EnemyState, rules: Rules = defaultRules): number {
-  if (behaviorFor(state, e, rules) === 'wraith') return wraithDrain(e, rules);
-  const rage = (e.enraged ? rules.combat.warlordEnrage.damageBonus : 0) + packBonus(state, e, rules) + commandBonus(state, e, rules) + (e.hotStacks ?? 0) + hoardBonus(state, e, rules);
+  const own = behaviorHandler(behaviorFor(state, e, rules))?.damage;
+  if (own) return own(state, e, rules);
+  let rage = (e.enraged ? rules.combat.warlordEnrage.damageBonus : 0) + commandBonus(state, e, rules) + (e.hotStacks ?? 0);
+  for (const m of mechanicsFor(state, rules)) if (m.damageBonus) rage += m.damageBonus(state, e, rules);
   const drum = e.drum && e.drum.round === state.round ? e.drum.amount : 0;
   const weaken = e.weaken && e.weaken.rounds > 0 ? e.weaken.amount : 0;
   return Math.max(0, e.damage + rage + drum - weaken);
@@ -758,11 +613,6 @@ export function enemyDamage(state: BattleState, e: EnemyState, rules: Rules = de
 /** The champion's every-few-rounds special move in this encounter, if it has one. */
 export function specialOf(e: EnemyState, encounter?: string, rules: Rules = defaultRules): SpecialInfo | null {
   return specialFor(e.kind, encounter, rules);
-}
-
-function wraithDrain(e: EnemyState, rules: Rules): number {
-  const weaken = e.weaken && e.weaken.rounds > 0 ? e.weaken.amount : 0;
-  return Math.max(0, rules.combat.wraith.drainByTier[e.tier ?? 'cold'] - weaken);
 }
 
 /**
@@ -828,8 +678,7 @@ function armoryDamage(hero: HeroState, def: ActionDef, rules: Rules): number {
 function featDamageVs(state: BattleState, hero: HeroState, e: EnemyState, rules: Rules): number {
   let bonus = 0;
   if (hero.heroClass === 'cleric' && hasFeat(hero, 'smite')) {
-    const undead = hasTwist('restlessDead', state.encounter, rules);
-    if (undead || encounterOf(state.encounter, rules).monsters[e.kind]?.dragonkin) bonus += 3;
+    if (mechanicsFor(state, rules).some((m) => m.smiteVulnerable?.(state, e, rules))) bonus += 3;
   }
   if (hero.heroClass === 'rogue' && hasFeat(hero, 'opportunist') && (e.toppled || e.tauntedBy || (e.weaken && e.weaken.rounds > 0))) bonus += 3;
   return bonus;
@@ -911,22 +760,6 @@ function nameOf(state: BattleState, id: string, rules: Rules): string {
   return u.name;
 }
 
-/** Molten Hide: a hero who strikes it with a weapon (not a spell) gets burned. */
-function moltenHide(state: BattleState, hero: HeroState, e: EnemyState, def: ActionDef, parts: string[], rules: Rules) {
-  const mh = encounterOf(state.encounter, rules).monsters[e.kind]?.moltenHide;
-  if (!mh || def.tags?.includes('spell') || !hero.alive) return;
-  const burn = Math.min(mh.damage, hero.hp - (hero.lastStand ? 1 : 0));
-  if (burn <= 0) return;
-  hero.hp -= burn;
-  const name = rules.classes[hero.heroClass].name;
-  if (hero.hp <= 0) {
-    hero.hp = 0;
-    hero.alive = false;
-    state.stats.anyHeroFell = true;
-  }
-  parts.push(`the ${name} is burned for ${burn}${hero.alive ? '' : ` and falls`}`);
-}
-
 function applyEffect(
   state: BattleState,
   hero: HeroState,
@@ -973,7 +806,7 @@ function applyEffect(
         const amount = heroHitAmount(hero, base);
         const dealt = damageEnemy(state, e, amount, !!effect.pierce, rules, source);
         parts.push(`${dealt} to ${e.name}${solidified ? ' (now solid)' : ''}${endText(e)}`);
-        moltenHide(state, hero, e, def, parts, rules);
+        for (const m of mechanicsFor(state, rules)) m.afterHeroStrike?.(state, hero, e, def, parts, rules);
         // Cleave: the Axe also hits a second enemy for half.
         if (def.id === 'axe' && hasFeat(hero, 'cleave')) {
           const second = pickableEnemies(state, rules).filter((x) => x.id !== e.id).sort((a, b) => a.hp - b.hp)[0];
@@ -996,7 +829,7 @@ function applyEffect(
         if (!e) break;
         const dealt = damageEnemy(state, e, heroHitAmount(hero, gearBase + featDamageVs(state, hero, e, rules)), false, rules, source);
         parts.push(`${dealt} to ${e.name}${endText(e)}`);
-        moltenHide(state, hero, e, def, parts, rules);
+        for (const m of mechanicsFor(state, rules)) m.afterHeroStrike?.(state, hero, e, def, parts, rules);
       }
       return true;
     }
@@ -1151,7 +984,7 @@ function afterDamage(state: BattleState) {
 
 const HERO_ORDER: HeroClass[] = [...CLASSES];
 
-type Target = { kind: 'hero'; unit: HeroState } | { kind: 'summon'; unit: SummonState };
+export type Target = { kind: 'hero'; unit: HeroState } | { kind: 'summon'; unit: SummonState };
 
 function targetable(state: BattleState): Target[] {
   const heroes: Target[] = state.heroes
@@ -1162,7 +995,7 @@ function targetable(state: BattleState): Target[] {
   return [...heroes, ...summons];
 }
 
-function lowestHp(list: Target[]): Target | undefined {
+export function lowestHp(list: Target[]): Target | undefined {
   return list.reduce<Target | undefined>((best, t) => (!best || t.unit.hp < best.unit.hp ? t : best), undefined);
 }
 
@@ -1176,33 +1009,8 @@ export function chooseEnemyTarget(state: BattleState, enemy: EnemyState, rules: 
     const taunter = all.find((t) => t.unit.id === enemy.tauntedBy);
     if (taunter) return taunter;
   }
-  switch (behavior) {
-    case 'hunter': {
-      const pick = heroes.reduce<Target | undefined>((best, t) => {
-        if (!best) return t;
-        const a = (t.unit as HeroState).armor;
-        const b = (best.unit as HeroState).armor;
-        return a < b || (a === b && t.unit.hp < best.unit.hp) ? t : best;
-      }, undefined);
-      return pick ?? lowestHp(all);
-    }
-    case 'assassin':
-      return lowestHp(heroes) ?? lowestHp(all);
-    case 'wolf': {
-      // Pack hunters: the most injured hero (most HP missing), then the lowest HP.
-      const hurt = heroes.reduce<Target | undefined>((best, t) => {
-        const missing = (t.unit as HeroState).maxHp - t.unit.hp;
-        const bestMissing = best ? (best.unit as HeroState).maxHp - best.unit.hp : -1;
-        return missing > bestMissing || (missing === bestMissing && best && t.unit.hp < best.unit.hp) ? t : best;
-      }, undefined);
-      return hurt && (hurt.unit as HeroState).maxHp > hurt.unit.hp ? hurt : lowestHp(heroes) ?? lowestHp(all);
-    }
-    case 'warlock': {
-      const backline = heroes.filter((t) => t.kind === 'hero' && (t.unit.heroClass === 'wizard' || t.unit.heroClass === 'cleric'));
-      if (backline.length) return lowestHp(backline);
-      break;
-    }
-  }
+  const own = behaviorHandler(behavior)?.target?.(state, enemy, all, heroes, rules);
+  if (own) return own;
   const warrior = heroes.find((t) => t.kind === 'hero' && t.unit.heroClass === 'warrior');
   if (warrior) return warrior;
   const pool = rules.combat.summonsAppearInLowestHpTargeting ? all : heroes.length ? heroes : all;
@@ -1215,7 +1023,7 @@ interface Hit {
   short: string;
 }
 
-function hitHero(state: BattleState, enemy: EnemyState, h: HeroState, raw: number, rules: Rules, ignoreArmor = false): Hit {
+export function hitHero(state: BattleState, enemy: EnemyState, h: HeroState, raw: number, rules: Rules, ignoreArmor = false): Hit {
   // Shadow Cloak: the first enemy hit on the Rogue each battle misses.
   if (raw > 0 && !h.cloakUsed && h.progress?.gear.includes('shadow-cloak')) {
     h.cloakUsed = true;
@@ -1228,25 +1036,13 @@ function hitHero(state: BattleState, enemy: EnemyState, h: HeroState, raw: numbe
   if (h.lastStand && h.hp < 1) h.hp = 1;
   if (!h.attackedByThisRound.includes(enemy.id)) h.attackedByThisRound.push(enemy.id);
   let text = `${dealt} to ${rules.classes[h.heroClass].name}`;
-  if (behaviorFor(state, enemy, rules) === 'assassin') {
-    const drained = Math.min(h.pool, rules.combat.assassinDrain);
-    h.pool -= drained;
-    if (drained) text += `, drains ${drained} energy`;
-    if (drained && state.hoard && !state.hoard.sealed && encounterOf(state.encounter, rules).monsters[enemy.kind]?.shinyThief) {
-      state.hoard.coins += 1;
-      text += ' (+1 coin to the hoard)';
-    }
-  }
+  text += behaviorHandler(behaviorFor(state, enemy, rules))?.onHit?.(state, enemy, h, rules) ?? '';
   if (hasTrait(enemy, 'pickpocket')) {
     const stolen = Math.min(h.pool, rules.traits.pickpocket.energy!);
     h.pool -= stolen;
     if (stolen) text += `, steals ${stolen} energy`;
   }
-  const dirty = encounterOf(state.encounter, rules).monsters[enemy.kind]?.poisonOnHit;
-  if (dirty && dealt > 0 && h.hp > 0) {
-    h.poison = { perRound: dirty.perRound, rounds: dirty.rounds, sourceId: enemy.id };
-    text += `, poisoned`;
-  }
+  for (const m of mechanicsFor(state, rules)) if (m.onHeroHit) text += m.onHeroHit(state, enemy, h, dealt, rules);
   if (h.hp <= 0) {
     h.hp = 0;
     h.alive = false;
@@ -1256,7 +1052,7 @@ function hitHero(state: BattleState, enemy: EnemyState, h: HeroState, raw: numbe
   return { text, short: `${rules.classes[h.heroClass].name} ${dealt}${h.alive ? '' : ' 💀'}` };
 }
 
-function hitTarget(state: BattleState, enemy: EnemyState, target: Target, rules: Rules, raw = enemyDamage(state, enemy, rules)): Hit {
+export function hitTarget(state: BattleState, enemy: EnemyState, target: Target, rules: Rules, raw = enemyDamage(state, enemy, rules)): Hit {
   if (target.kind === 'summon') {
     const s = target.unit;
     s.hp = Math.max(0, s.hp - raw);
@@ -1274,227 +1070,28 @@ function hitTarget(state: BattleState, enemy: EnemyState, target: Target, rules:
   return hitHero(state, enemy, target.unit, raw, rules);
 }
 
-function targetableHeroes(state: BattleState): HeroState[] {
+export function targetableHeroes(state: BattleState): HeroState[] {
   return state.heroes
     .filter((h) => h.alive && h.untargetableRounds <= 0)
     .sort((a, b) => HERO_ORDER.indexOf(a.heroClass) - HERO_ORDER.indexOf(b.heroClass));
 }
 
-/** Champion specials on the every-Nth-round beat. Returns true if the special replaced the action. */
+/** Champion specials on the every-Nth-round beat (see SpecialHandler). Returns true if the special replaced the action. */
 function doSpecial(state: BattleState, enemy: EnemyState, rules: Rules): boolean {
-  const sp = rules.combat.specials;
-  const dmg = enemyDamage(state, enemy, rules);
-  switch (activeSpecial(state, enemy, rules)?.key) {
-    case 'boulderToss': {
-      // Over the front line: the lowest-HP hero who isn't the Warrior, if there is one.
-      const heroes = targetableHeroes(state);
-      const target = [...(heroes.some((h) => h.heroClass !== 'warrior') ? heroes.filter((h) => h.heroClass !== 'warrior') : heroes)].sort((a, b) => a.hp - b.hp)[0];
-      if (!target) return false;
-      const hit = hitHero(state, enemy, target, Math.round(dmg * sp.boulderToss.multiplier), rules);
-      const name = rules.classes[target.heroClass].name;
-      if (target.alive) target.skipNextTurn = true;
-      log(state, 'enemy', `${enemy.name} hurls a boulder: ${hit.text}${target.alive ? `; the ${name} is knocked prone` : ''}.`, enemy.id, [target.id], `⚠ ${sp.boulderToss.short} → ${hit.short}`);
-      return true;
-    }
-    case 'spearThrow': {
-      const target = [...targetableHeroes(state)].sort((a, b) => a.armor - b.armor || a.hp - b.hp)[0];
-      if (!target) return false;
-      const hit = hitHero(state, enemy, target, Math.round(dmg * sp.spearThrow.multiplier), rules);
-      log(state, 'enemy', `${enemy.name} throws a spear: ${hit.text}.`, enemy.id, [target.id], `⚠ ${sp.spearThrow.short} → ${hit.short}`);
-      return true;
-    }
-    case 'giantLord': {
-      const a = sp.giantLord;
-      const hits = targetableHeroes(state).map((h) => {
-        const hit = hitHero(state, enemy, h, Math.max(0, dmg - a.penalty), rules);
-        const lost = Math.min(h.pool, a.energyLoss);
-        h.pool -= lost;
-        return `${hit.text}${lost ? `, −${lost} energy` : ''}`;
-      });
-      if (!hits.length) return false;
-      log(state, 'enemy', `${enemy.name} brings down an ${a.name}: ${hits.join('; ')}.`, enemy.id, undefined, `⚠ ${a.short}: all heroes ${Math.max(0, dmg - a.penalty)}, −${a.energyLoss} energy`);
-      return true;
-    }
-    case 'netShot': {
-      const target = [...targetableHeroes(state)].sort((a, b) => a.armor - b.armor || a.hp - b.hp)[0];
-      if (!target) return false;
-      const hit = hitHero(state, enemy, target, dmg, rules);
-      if (target.alive) target.nettedRound = state.round + 1;
-      const name = rules.classes[target.heroClass].name;
-      log(state, 'enemy', `${enemy.name} fires a ${sp.netShot.name}: ${hit.text}${target.alive ? `; the ${name} is netted and can't attack next round` : ''}.`, enemy.id, [target.id], `⚠ ${sp.netShot.short} → ${hit.short}`);
-      return true;
-    }
-    case 'titheBlessing': {
-      state.hoard!.coins += sp.titheBlessing.coins;
-      log(state, 'enemy', `${enemy.name} offers a ${sp.titheBlessing.name}: +${sp.titheBlessing.coins} coins to the hoard (${state.hoard!.coins}).`, enemy.id, undefined, `⚠ ${sp.titheBlessing.short}: +${sp.titheBlessing.coins} coins`);
-      return true;
-    }
-    case 'dragon': {
-      const hits = targetableHeroes(state).map((h) => hitHero(state, enemy, h, dmg, rules).text);
-      if (!hits.length) return false;
-      log(state, 'enemy', `${enemy.name} breathes fire: ${hits.join('; ')}.`, enemy.id, undefined, `⚠ ${sp.dragon.short}: all heroes ${dmg}`);
-      return true;
-    }
-    case 'goblinToss': {
-      // The weakest goblin is spent as the projectile; taunts can't stop a throw.
-      const goblin = state.enemies.filter((x) => x.alive && x.kind === 'goblin').sort((a, b) => a.hp - b.hp)[0];
-      const target = [...targetableHeroes(state)].sort((a, b) => a.hp - b.hp)[0];
-      if (!goblin || !target) return false;
-      goblin.alive = false;
-      goblin.hp = 0;
-      const hit = hitHero(state, enemy, target, Math.round(dmg * sp.goblinToss.multiplier), rules);
-      log(state, 'enemy', `${enemy.name} hurls ${goblin.name} at the ${rules.classes[target.heroClass].name}: ${hit.text}.`, enemy.id, [target.id, goblin.id], `⚠ ${sp.goblinToss.short} → ${hit.short}`);
-      return true;
-    }
-    case 'warlock': {
-      const c = rules.combat.warlockCurse;
-      const hits: string[] = [];
-      for (const h of targetableHeroes(state)) {
-        h.curse = { amount: c.damageReduction, rounds: c.rounds };
-        hits.push(hitHero(state, enemy, h, sp.warlock.damage, rules, true).text);
-      }
-      log(state, 'enemy', `${enemy.name} casts ${sp.warlock.name}: −${c.damageReduction} damage for ${c.rounds} turns; ${hits.join('; ')}.`, enemy.id, undefined, `⚠ ${sp.warlock.short}: all heroes`);
-      return true;
-    }
-    case 'ogre': {
-      const target = chooseEnemyTarget(state, enemy, rules);
-      const hits = targetableHeroes(state).map((h) => hitHero(state, enemy, h, Math.max(0, dmg - sp.ogre.splashPenalty), rules).text);
-      let text = `${enemy.name} uses ${sp.ogre.name}: ${hits.join('; ')}`;
-      if (target?.kind === 'hero' && target.unit.alive) {
-        target.unit.skipNextTurn = true;
-        text += `; ${rules.classes[target.unit.heroClass].name} knocked prone`;
-      }
-      log(state, 'enemy', `${text}.`, enemy.id, undefined, `⚠ ${sp.ogre.short}: all heroes`);
-      return true;
-    }
-    case 'hunter': {
-      const picks = [...targetableHeroes(state)].sort((a, b) => a.armor - b.armor || a.hp - b.hp).slice(0, sp.hunter.targets);
-      if (!picks.length) return false;
-      const hits = picks.map((h) => hitHero(state, enemy, h, dmg, rules));
-      log(
-        state,
-        'enemy',
-        `${enemy.name} fires a ${sp.hunter.name}: ${hits.map((x) => x.text).join('; ')}.`,
-        enemy.id,
-        picks.map((h) => h.id),
-        `⚠ ${sp.hunter.short} → ${hits.map((x) => x.short).join(', ')}`,
-      );
-      return true;
-    }
-    case 'assassin': {
-      const target = chooseEnemyTarget(state, enemy, rules);
-      if (!target) return false;
-      const low = target.kind === 'hero' && target.unit.hp < target.unit.maxHp * sp.assassin.belowHpFraction;
-      const raw = low ? dmg * sp.assassin.multiplier : dmg;
-      const hit = hitTarget(state, enemy, target, rules, raw);
-      log(
-        state,
-        'enemy',
-        `${enemy.name} attempts an ${sp.assassin.name}${low ? '' : ' (no effect above half HP)'}: ${hit.text}.`,
-        enemy.id,
-        [target.unit.id],
-        low ? `⚠ ${sp.assassin.short} → ${hit.short}` : `→ ${hit.short}`,
-      );
-      return true;
-    }
-    case 'fade': {
-      if (enemy.intangible) return false;
-      enemy.intangible = true;
-      log(state, 'enemy', `${enemy.name} fades: only spells and Cleric attacks can touch it again.`, enemy.id, undefined, '⚠ Fade: intangible');
-      return true;
-    }
-    case 'raiseDead': {
-      // Skeletons that crumbled from weapon hits; bone piles rise on their own, fire and holy kills stay down.
-      const dead = state.enemies.filter((e) => e.kind === 'goblin' && !e.alive && !e.pile && !e.destroyed);
-      if (!dead.length) return false;
-      for (const e of dead) {
-        e.alive = true;
-        e.hp = Math.min(e.maxHp, rules.combat.restlessDead.minHp);
-        e.arrivedRound = state.round;
-        e.poison = null;
-        e.weaken = null;
-      }
-      const sp = specialOf(enemy, state.encounter, rules)!;
-      log(state, 'enemy', `${enemy.name} casts ${sp.name}: ${dead.length} skeletons reassemble and fight from next round.`, enemy.id, dead.map((e) => e.id), `⚠ ${sp.short}: +${dead.length} skeletons`);
-      return true;
-    }
-    case 'lich': {
-      const target = [...targetableHeroes(state)].sort((a, b) => a.hp - b.hp)[0];
-      if (!target) return false;
-      const raw = Math.round(dmg * sp.lich.multiplier);
-      const hit = hitHero(state, enemy, target, raw, rules, true);
-      log(state, 'enemy', `${enemy.name} hurls a ${sp.lich.name}: ${hit.text}.`, enemy.id, [target.id], `⚠ ${sp.lich.short} → ${hit.short}`);
-      return true;
-    }
-    case 'chieftain': {
-      const n = sp.chieftain.goblins;
-      const fresh: string[] = [];
-      for (let i = 0; i < n; i++) {
-        const spec: MonsterSpec = {
-          id: `${enemy.id}-r${state.round}-${i + 1}`,
-          kind: 'goblin',
-          name: monsterName('goblin', state.encounter, rules),
-          hp: rules.monsters.goblin.hp!,
-          damage: rules.horde.minions.damageByTeamFgPct[1].damage,
-          isWarlord: false,
-          extraActions: 0,
-          fumbles: 0,
-        };
-        // They join now and fight from next round.
-        state.enemies.push(makeEnemy(spec, state.round, enemy.wave));
-        fresh.push(spec.id);
-      }
-      log(state, 'enemy', `${enemy.name} uses ${sp.chieftain.name}: ${n} goblins join the fight.`, enemy.id, fresh, `⚠ ${sp.chieftain.short}: +${n} goblins`);
-      return true;
-    }
-    case 'shaman': {
-      for (const e of livingEnemies(state)) e.drum = { amount: sp.shaman.bonus, round: state.round };
-      log(state, 'enemy', `${enemy.name} beats the ${sp.shaman.name}: the horde deals +${sp.shaman.bonus} damage this round.`, enemy.id, undefined, `⚠ ${sp.shaman.short}: horde +${sp.shaman.bonus}`);
-      return true;
-    }
-  }
-  return false;
+  const run = specialHandler(activeSpecial(state, enemy, rules)?.key)?.run;
+  return !!run && run(state, enemy, enemyDamage(state, enemy, rules), rules);
 }
 
 function enemyAct(state: BattleState, enemy: EnemyState, actionNumber: number, rules: Rules) {
-  if (!enemy.alive || behaviorFor(state, enemy, rules) === 'phylactery') return;
+  const behavior = behaviorHandler(behaviorFor(state, enemy, rules));
+  if (!enemy.alive || behavior?.idle) return;
   if (enemy.fumbled) {
     enemy.fumbled = false;
     log(state, 'enemy', `${enemy.name} fumbles and loses its action.`, enemy.id, undefined, '💫 Fumbles');
     return;
   }
-  const behavior = behaviorFor(state, enemy, rules);
   if (actionNumber === 0 && specialDue(enemy, state.round, rules) && doSpecial(state, enemy, rules)) return;
-  if (behavior === 'wraith') {
-    // Life drain: every hero loses a little, ignoring armor, and the Wraith heals.
-    const w = rules.combat.wraith;
-    const amount = wraithDrain(enemy, rules);
-    const heroes = targetableHeroes(state);
-    const hits = heroes.map((h) => hitHero(state, enemy, h, amount, rules, true).text);
-    const healed = Math.min(enemy.maxHp - enemy.hp, Math.floor(amount * heroes.length * w.healFraction));
-    enemy.hp += healed;
-    log(state, 'enemy', `${enemy.name} drains the party: ${hits.join('; ')}${healed ? `; heals ${healed}` : ''}.`, enemy.id, heroes.map((h) => h.id), `Drain: all heroes ${amount}`);
-    return;
-  }
-  if (behavior === 'shaman') {
-    const injured = livingEnemies(state)
-      .filter((e) => e.hp < e.maxHp)
-      .sort((a, b) => b.maxHp - b.hp - (a.maxHp - a.hp))[0];
-    if (injured) {
-      const heal = Math.min(rules.combat.shaman.healByTier[enemy.tier ?? 'cold'], injured.maxHp - injured.hp);
-      injured.hp += heal;
-      for (const e of livingEnemies(state)) e.shield = { armor: rules.combat.shaman.shieldArmor, rounds: 2 };
-      log(
-        state,
-        'enemy',
-        `${enemy.name} heals ${injured.name} for ${heal} and shields the horde (+${rules.combat.shaman.shieldArmor} armor).`,
-        enemy.id,
-        [injured.id],
-        `✚ ${shortName(injured.name)} +${heal}, ⛨ horde`,
-      );
-      return;
-    }
-  }
+  if (behavior?.act?.(state, enemy, rules)) return;
   const target = chooseEnemyTarget(state, enemy, rules);
   if (!target) {
     log(state, 'enemy', `${enemy.name} finds no target.`, enemy.id, undefined, 'No target');
@@ -1554,17 +1151,13 @@ export function endRound(prev: BattleState, rules: Rules = defaultRules): Battle
   afterDamage(state);
   if (state.phase !== 'party') return state;
 
-  // A Shaman beating the War Drum goes first so the whole horde hits with it this round.
-  const drummer = (e: EnemyState) => specialOf(e, state.encounter, rules)?.key === 'shaman' && specialDue(e, state.round, rules);
-  const order = [...awake(state)].sort((a, b) => Number(drummer(b)) - Number(drummer(a)));
+  // A special that acts first (the Shaman's War Drum) goes before the rest so the whole horde hits with it this round.
+  const first = (e: EnemyState) => !!specialHandler(specialOf(e, state.encounter, rules)?.key)?.actsFirst && specialDue(e, state.round, rules);
+  const order = [...awake(state)].sort((a, b) => Number(first(b)) - Number(first(a)));
+  const mechanics = mechanicsFor(state, rules);
   for (const enemy of order) {
     if (justArrived(state, enemy)) continue;
-    if (enemy.toppled) {
-      // A toppled giant spends its whole turn getting up (the Giant Lord loses both actions).
-      enemy.toppled = false;
-      log(state, 'enemy', `${enemy.name} is down and loses its turn.`, enemy.id, undefined, '⛰️ Toppled');
-      continue;
-    }
+    if (mechanics.some((m) => m.skipsTurn?.(state, enemy, rules))) continue;
     for (let a = 0; a < actionsThisRound(enemy); a++) enemyAct(state, enemy, a, rules);
   }
 
@@ -1592,28 +1185,8 @@ export function endRound(prev: BattleState, rules: Rules = defaultRules): Battle
     return state;
   }
 
-  // Round end. A Dragon hit in its sleep wakes now; otherwise the kobolds tithe to its hoard.
-  for (const e of state.enemies)
-    if (e.alive && e.asleep && e.waking) {
-      wake(state, e, state.round, 'with a roar');
-      // Rudely awakened before the final wave, it's groggy: one action a round until then.
-      if (state.pendingWaves.length > 0) e.groggy = true;
-    }
-  if (state.hoard && !state.hoard.sealed && state.enemies.some((e) => e.alive && e.asleep)) {
-    const n = state.enemies.filter((e) => e.alive && e.kind === 'goblin').length;
-    if (n > 0) {
-      state.hoard.coins += n;
-      log(state, 'system', `💰 ${n} kobold${n > 1 ? 's tithe' : ' tithes'} to the hoard (${state.hoard.coins} coins).`);
-    }
-  }
-  // Regenerate: a Frost Troll heals unless it was toppled or burned this round.
-  for (const e of state.enemies) {
-    const regen = encounterOf(state.encounter, rules).monsters[e.kind]?.regenerate;
-    if (!regen || !e.alive || e.hp >= e.maxHp || e.toppledRound === state.round || e.burnedRound === state.round) continue;
-    const healed = Math.min(regen.amount, e.maxHp - e.hp);
-    e.hp += healed;
-    log(state, 'system', `♻️ ${e.name} regenerates ${healed} HP.`, e.id);
-  }
+  // Round end: encounter rules (the Dragon wakes or the hoard grows, trolls regenerate), then durations tick down.
+  for (const m of mechanics) m.onRoundEnd?.(state, rules);
   const hot = rules.traits.hotHand;
   for (const e of state.enemies) {
     if (e.alive && hasTrait(e, 'hotHand') && e.hitRound !== state.round) e.hotStacks = Math.min(hot.max!, (e.hotStacks ?? 0) + hot.bonus!);

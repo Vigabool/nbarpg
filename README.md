@@ -51,9 +51,12 @@ npm run build     # type-check + production build
 | `src/rules/index.ts` | Types for the rule files. |
 | `src/data/` | Season data types, raw-log ingestion, and the compact file format. |
 | `src/engine/` | Pure game logic: `rating` (Rating → tier → pool, salaries, gear), `horde` (mirrors, Warlord, goblins, waves), `combat` (deterministic battle state machine), `rewards`, `calibration`, `autoplay` (baseline bot). |
+| `src/engine/encounters/` | Each encounter's rules as mechanics that plug into combat's hooks (see [Adding an encounter](docs/adding-an-encounter.md)). |
 | `src/app/` | Save-game state and the storage boundary (localStorage now, accounts later). |
 | `src/ui/` | React screens. |
 | `scripts/` | Data fetch (Python), build, calibration and simulation. |
 | `tests/` | Engine tests and the synthetic season fixture. |
 
 Ability effects are composed from a small set of primitives (`damage`, `poison`, `heal`, `taunt`, `summon`, …) declared in `classes.json`, so new abilities and talent tweaks mostly need no code.
+
+Before and after a refactor, `npm run check:golden` replays a fixed set of battles and seasons and fails if any result changes.
