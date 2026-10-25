@@ -2,7 +2,10 @@
 
 Planned work, roughly in priority order. Each item says why it matters, what to build, and when it's done. Design details live in [design-doc.md](design-doc.md); balance numbers come from the simulators (`npm run data:simulate`, `npm run data:season`, `--smart` / `--smart-bot` for the lookahead bot).
 
-## 1. Code health before new encounters
+## 1. Code health before new encounters ✅ Done
+
+Encounter rules are now mechanic modules in `src/engine/encounters/` ([guide](adding-an-encounter.md)), and the battle screen is split into `src/ui/battle/`. CI runs the type-check, Prettier, tests, the build and the golden baseline. Saves are versioned, with step-by-step migrations and Save file / Import. Simulator results are unchanged.
+
 
 **Why.** Each encounter's mechanics (Restless Dead, the hoard and the sleeping Dragon, Topple, Phylactery, Molten Hide…) are special cases woven through `src/engine/combat.ts` (about 1,500 lines). `src/ui/BattleScreen.tsx` is about 1,100 lines. Every new encounter makes both harder to change safely.
 

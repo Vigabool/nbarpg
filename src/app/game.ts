@@ -6,6 +6,7 @@ import { computeRewards, type Rewards } from '../engine/rewards';
 import { computeSalary } from '../engine/rating';
 import { playerGamesInWeek, prepareBattle } from '../engine/week';
 import { CLASSES, emptyProgress, type HeroClass, type HeroProgress } from '../rules';
+import { SAVE_VERSION } from './saves';
 
 export type Phase = 'roster' | 'assign' | 'select' | 'battle' | 'result';
 
@@ -17,7 +18,8 @@ export interface WeekResult {
 }
 
 export interface SaveGame {
-  version: 1;
+  /** Save format version (see saves.ts). */
+  version: typeof SAVE_VERSION;
   season: string;
   weekIndex: number;
   phase: Phase;
@@ -42,7 +44,7 @@ export const MOVES_PER_CHAPTER = 3;
 
 export function newGame(season: string, weekIndex: number): SaveGame {
   return {
-    version: 1,
+    version: SAVE_VERSION,
     season,
     weekIndex,
     phase: 'roster',
@@ -56,13 +58,6 @@ export function newGame(season: string, weekIndex: number): SaveGame {
     progress: Object.fromEntries(CLASSES.map((c) => [c, emptyProgress()])) as Record<HeroClass, HeroProgress>,
     history: [],
   };
-}
-
-/** Brings an older save up to date: whole-number PP and an empty Armory. */
-export function migrateSave(game: SaveGame): SaveGame {
-  const pp = Object.fromEntries(CLASSES.map((c) => [c, Math.round(game.pp?.[c] ?? 0)])) as Record<HeroClass, number>;
-  const progress = Object.fromEntries(CLASSES.map((c) => [c, { ...emptyProgress(), ...(game.progress?.[c] ?? {}) }])) as Record<HeroClass, HeroProgress>;
-  return { ...game, pp, progress };
 }
 
 export function progressOf(game: SaveGame, c: HeroClass): HeroProgress {

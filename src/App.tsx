@@ -11,6 +11,7 @@ import { AssignHeroes } from './ui/AssignHeroes';
 import { SelectGames } from './ui/SelectGames';
 import { BattleScreen } from './ui/BattleScreen';
 import { ResultScreen } from './ui/ResultScreen';
+import { SaveFile } from './ui/SaveFile';
 
 const SEASON = '2025-26';
 
@@ -20,6 +21,7 @@ export default function App() {
   const [load, setLoad] = useState<Load>({ status: 'loading' });
   const [game, setGame] = useState<SaveGame | null>(() => localSaveStore.load());
   const [tutorial, setTutorial] = useState<TutorialTopic | null>(() => (tutorialSeen() ? null : { tab: 'basics' }));
+  const [saveFile, setSaveFile] = useState<'export' | 'import' | null>(null);
 
   useEffect(() => {
     fetch(`${import.meta.env.BASE_URL}data/${SEASON}.json`)
@@ -50,12 +52,29 @@ export default function App() {
               How to play
             </button>
             {active && (
+              <button className="btn ghost small" onClick={() => setSaveFile('export')}>
+                Save file
+              </button>
+            )}
+            {active && (
               <ConfirmButton className="btn ghost small" confirmLabel="Tap again to abandon run" onConfirm={() => update(null)}>
                 Quit
               </ConfirmButton>
             )}
           </div>
         </header>
+      )}
+      {saveFile && (
+        <SaveFile
+          data={data}
+          game={active}
+          mode={saveFile}
+          onImport={(g) => {
+            setSaveFile(null);
+            update(g);
+          }}
+          onClose={() => setSaveFile(null)}
+        />
       )}
       {tutorial && <Tutorial key={JSON.stringify(tutorial)} topic={tutorial} onClose={() => setTutorial(null)} />}
       {data.synthetic && (
@@ -64,7 +83,7 @@ export default function App() {
         </p>
       )}
       {!active ? (
-        <TitleScreen data={data} saved={game} onStart={update} />
+        <TitleScreen data={data} saved={game} onStart={update} onImport={() => setSaveFile('import')} />
       ) : active.phase === 'roster' ? (
         <RosterBuilder data={data} game={active} onChange={update} />
       ) : active.phase === 'assign' ? (

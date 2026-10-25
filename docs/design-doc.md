@@ -259,7 +259,7 @@ Turnovers work separately, as Fumbles the party spends (see Monster behaviors).
 
 ## Encounters
 
-**Each battle is an encounter: a themed horde that re-skins the monster roles and brings its own boss and twist.** The roles stay mechanical building blocks (Brute, Caster, Sniper, Stalker, Support, each mirroring a hero class), so new encounters are mostly configuration in `src/rules/encounters.json`. How a week's encounter is chosen (rotation, random, scaling through the season) is still open; for now the Goblin Horde is the default, and a "Testing:" selector on the pick-games screen switches the week's encounter.
+**Each battle is an encounter: a themed horde that re-skins the monster roles and brings its own boss and twist.** The roles stay mechanical building blocks (Brute, Caster, Sniper, Stalker, Support, each mirroring a hero class), so new encounters are mostly configuration in `src/rules/encounters.json`. Rules that need code (twists, specials, behaviors) live as mechanics in `src/engine/encounters/`, one module per encounter, plugged into combat's hooks; see [Adding an encounter](adding-an-encounter.md). How a week's encounter is chosen (rotation, random, scaling through the season) is still open; for now the Goblin Horde is the default, and a "Testing:" selector on the pick-games screen switches the week's encounter.
 
 ### Goblin Horde
 
@@ -506,6 +506,8 @@ Over full seasons (greedy upgrades, encounter-aware Smart pick, chapter scaling 
 - **Sandbox mode first:** replay any week of 2025–26. The live weekly mode comes later.
 - **Rules as data:** classes, abilities, costs, tiers, monsters and PP values live in config files, so tuning is a data edit, not a code change.
 - **Accounts:** a single local user for the MVP; storage designed to move to accounts later.
+- **Saves:** one run in the browser's storage. Each save records its format version, and older saves are upgraded step by step on load (`src/app/saves.ts`). **Save file** (top bar) downloads or copies the run; **Import a save file** (title screen) loads it back, so a run survives clearing site data or moving devices.
+- **Checks:** CI (GitHub Actions) runs the type-check, Prettier, tests, the build and the golden baseline (`npm run check:golden`, which replays fixed battles and seasons and fails if any result changes) on every push.
 - **Source of truth:** this doc, exported to markdown into the repo and kept current as decisions change.
 
 ### Milestones

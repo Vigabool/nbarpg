@@ -234,6 +234,11 @@ h3 {
 select.input {
   appearance: auto;
 }
+textarea.input.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  resize: vertical;
+  word-break: break-all;
+}
 
 .chip {
   display: inline-flex;

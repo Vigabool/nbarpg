@@ -3,7 +3,18 @@ import type { SeasonData } from '../data/types';
 import { newGame, type SaveGame } from '../app/game';
 import { ConfirmButton, weekLabel } from './common';
 
-export function TitleScreen({ data, saved, onStart }: { data: SeasonData; saved: SaveGame | null; onStart: (g: SaveGame) => void }) {
+export function TitleScreen({
+  data,
+  saved,
+  onStart,
+  onImport,
+}: {
+  data: SeasonData;
+  saved: SaveGame | null;
+  onStart: (g: SaveGame) => void;
+  /** Opens the import dialog to load a save file. */
+  onImport: () => void;
+}) {
   const [week, setWeek] = useState(data.weeks[0]?.index ?? 1);
   return (
     <div className="title-screen">
@@ -39,6 +50,9 @@ export function TitleScreen({ data, saved, onStart }: { data: SeasonData; saved:
             Build your roster
           </ConfirmButton>
         </div>
+        <button className="btn ghost" onClick={onImport}>
+          Import a save file
+        </button>
       </div>
     </div>
   );

@@ -1,4 +1,5 @@
-import { migrateSave, type SaveGame } from './game';
+import type { SaveGame } from './game';
+import { migrateSave } from './saves';
 
 /**
  * Persistence boundary. The MVP keeps one local save in localStorage; an
@@ -16,7 +17,7 @@ export const localSaveStore: SaveStore = {
   load() {
     try {
       const raw = localStorage.getItem(KEY);
-      return raw ? migrateSave(JSON.parse(raw) as SaveGame) : null;
+      return raw ? migrateSave(JSON.parse(raw)) : null;
     } catch {
       return null;
     }

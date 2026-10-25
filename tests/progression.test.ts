@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buy, priceOf } from '../src/app/armory';
-import { chapterOf, migrateSave, newGame, type SaveGame } from '../src/app/game';
+import { chapterOf, newGame, type SaveGame } from '../src/app/game';
+import { migrateSave } from '../src/app/saves';
 import { endRound, listActions, performAction, specialDue, type BattleState, type HeroSetup } from '../src/engine/combat';
 import { buildHorde } from '../src/engine/horde';
 import { computeRewards } from '../src/engine/rewards';
@@ -34,7 +35,7 @@ describe('earning PP', () => {
   });
 
   it('old saves round to whole PP and get an empty Armory', () => {
-    const old = { ...newGame('2025-26', 0), pp: { warrior: 4.6, wizard: 1.2, ranger: 0, rogue: 0, cleric: 0 }, progress: undefined } as SaveGame;
+    const old = { ...newGame('2025-26', 0), version: 1, pp: { warrior: 4.6, wizard: 1.2, ranger: 0, rogue: 0, cleric: 0 }, progress: undefined };
     const g = migrateSave(old);
     expect(g.pp.warrior).toBe(5);
     expect(g.progress!.wizard).toEqual(emptyProgress());
