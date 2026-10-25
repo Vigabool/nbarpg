@@ -22,6 +22,20 @@ Encounter rules are now mechanic modules in `src/engine/encounters/` ([guide](ad
 - Saves from the current version load through a migration test.
 - Simulator results are unchanged after the refactor (same seeds, same win rates).
 
+## Before friends playtest
+
+Getting the game ready for outside testers, in this order.
+
+1. **Crash safety net ✅ Done.** Any error, while drawing a screen or from a button, shows an error screen instead of a blank page. It offers Try again, Restart this week's battle, Copy error report (build, run position, stack), Download save file, and Start a new run. Each build carries a label (commit and date) for reports.
+2. **Feedback and build number:** show the build in the menu, and add a Feedback button that captures the note plus context (week, encounter, round, optionally the save).
+3. **A link friends can open:** a GitHub Pages deploy from CI, or share the artifact.
+4. **Normal difficulty:** item 3 below. Casual play currently wins 40–48% (Crypt 23%).
+5. **Weekly encounter choice:** replace the "Testing:" dropdown. This is the smallest part of item 2 below.
+6. **Opt-in result logging:** encounter, outcome, rounds and difficulty per battle, to measure real win rates.
+7. **First-battle walkthrough:** three or four contextual tips in the first battle.
+8. **Landing-damage warning and feat tags:** items 4 and 6 below.
+9. **A full chapter on a phone:** play the exact build you'll share before sending it.
+
 ## 2. Season structure and encounter use
 
 **Why.** The encounter is still a "Testing:" dropdown, and the season simply stops when the data runs out. The pieces (encounters, chapters, progression, Smart pick) need a frame that makes a season feel like a campaign.

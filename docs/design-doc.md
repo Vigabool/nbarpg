@@ -535,6 +535,7 @@ Over full seasons (greedy upgrades, encounter-aware Smart pick, chapter scaling 
 - **Rules as data:** classes, abilities, costs, tiers, monsters and PP values live in config files, so tuning is a data edit, not a code change.
 - **Accounts:** a single local user for the MVP; storage designed to move to accounts later.
 - **Saves:** one run in the browser's storage. Each save records its format version, and older saves are upgraded step by step on load (`src/app/saves.ts`). **Save file** (top bar) downloads or copies the run; **Import a save file** (title screen) loads it back, so a run survives clearing site data or moving devices.
+- **Crash safety net:** an error boundary (`src/ui/ErrorScreen.tsx`) catches render errors and errors thrown from buttons. It shows recovery options (try again, restart the week's battle, download the save, start over) and a copyable report with the build label, where in the run it happened, and the stack.
 - **Checks:** CI (GitHub Actions) runs the type-check, Prettier, tests, the build and the golden baseline (`npm run check:golden`, which replays fixed battles and seasons and fails if any result changes) on every push.
 - **Source of truth:** this doc, exported to markdown into the repo and kept current as decisions change.
 
