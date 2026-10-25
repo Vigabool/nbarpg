@@ -4,6 +4,7 @@ import {
   packBonus,
   performAction,
   activeSpecial,
+  listActions,
   type BattleState,
   type HeroAction,
   type HeroSetup,
@@ -44,6 +45,8 @@ export interface Step {
   state: BattleState;
   /** Log entries this step produced. */
   events: LogEntry[];
+  /** An action waiting for its targets, shown the way the battle screen shows it. */
+  aiming?: { heroId: HeroClass; actionName: string; max: number; valid: string[]; picked: string[] };
 }
 
 export function buildSteps(): Step[] {
@@ -83,6 +86,15 @@ export function buildSteps(): Step[] {
     'Each hero gets one attack per round. A basic weapon attack is free and gains +2 energy, which you spend later on bigger moves.',
     act({ heroId: 'warrior', actionId: 'axe', targetIds: ['g1'] }),
   );
+  const fireball = listActions(state, 'wizard').find((o) => o.def.id === 'fireball')!;
+  const max = fireball.def.target.type === 'enemies' ? fireball.def.target.count : 1;
+  steps.push({
+    title: 'Aim: pick Fireball targets',
+    text: `Some attacks hit several enemies. Fireball hits up to ${max}: tap each target. Enemies you can pick glow blue; picked ones turn gold. Then tap Cast. Here the Wizard picks all three goblins.`,
+    state,
+    events: [],
+    aiming: { heroId: 'wizard', actionName: fireball.def.name, max, valid: fireball.validTargets, picked: ['g1', 'g2', 'g3'] },
+  });
   push(
     'Attack: Fireball',
     "Spells hit harder but cost more energy. The Wizard's Fireball clears all three goblins, and with them Pack Tactics.",

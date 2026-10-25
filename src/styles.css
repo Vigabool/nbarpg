@@ -1668,6 +1668,30 @@ textarea.input.mono {
 .sample-intent {
   color: #ffb3a3;
 }
+.sample-row.aimable {
+  border-color: var(--info);
+  box-shadow: 0 0 0 1px var(--info);
+}
+.sample-row.picked {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1px var(--gold);
+  background: color-mix(in srgb, var(--gold) 8%, transparent);
+}
+.sample-check {
+  color: var(--gold);
+}
+.sample-aim {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--info);
+  border-radius: 10px;
+}
+.sample-aim .btn {
+  pointer-events: none;
+}
 .sample-row.acted {
   border-color: var(--gold);
   background: color-mix(in srgb, var(--gold) 8%, transparent);

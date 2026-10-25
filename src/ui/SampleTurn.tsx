@@ -18,6 +18,8 @@ export function SampleTurn() {
   const s = step.state;
   const actors = new Set(step.events.map((e) => e.actorId).filter(Boolean));
   const targets = new Set(step.events.flatMap((e) => e.targetIds ?? []));
+  const picked = (id: string) => !!step.aiming?.picked.includes(id);
+  const aimable = (id: string) => !!step.aiming?.valid.includes(id);
   const intents = useMemo(() => {
     const map: Record<string, string[]> = {};
     for (const l of previewEnemyPhase(s)) if (l.actorId) (map[l.actorId] ??= []).push(l.short ?? l.text);
@@ -52,6 +54,16 @@ export function SampleTurn() {
         {step.text}
       </p>
 
+      {step.aiming && (
+        <div className="sample-aim">
+          <span className="small" style={{ color: 'var(--info)' }}>
+            {CLASS_ICON[step.aiming.heroId]} {step.aiming.actionName}: pick up to {step.aiming.max} targets
+          </span>
+          <span className="btn primary small" aria-hidden>
+            Cast on {step.aiming.picked.length}
+          </span>
+        </div>
+      )}
       <div className="sample-board">
         <div className="section-label">Horde</div>
         {livingEnemies(s).length === 0 && <div className="tiny muted">No goblins left.</div>}
@@ -59,9 +71,13 @@ export function SampleTurn() {
           const hit = targets.has(e.id);
           const sp = activeSpecial(s, e);
           return (
-            <div key={e.id} className={`sample-row${hit ? ' hit' : ''}${actors.has(e.id) ? ' acted' : ''}`}>
+            <div
+              key={e.id}
+              className={`sample-row${hit ? ' hit' : ''}${actors.has(e.id) ? ' acted' : ''}${picked(e.id) ? ' picked' : aimable(e.id) ? ' aimable' : ''}`}
+            >
               <span className="sample-name">
                 {monsterIcon(e.kind)} {e.name}
+                {picked(e.id) && <span className="sample-check"> ✓</span>}
               </span>
               <SampleMeter value={e.hp} max={e.maxHp} kind="hp" />
               <span className="sample-note">
