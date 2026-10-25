@@ -36,4 +36,6 @@ export function HoardTag({ state }: { state: BattleState }) {
 }
 
 export const sleepText = (e: EnemyState) =>
-  e.waking ? '💢 Stirring: wakes at the end of this round' : `💤 Asleep · hits deal ×${rules.combat.dragonSleep.damageMultiplier} and wake it`;
+  e.waking
+    ? `💢 Stirring: wakes at the end of this round and breathes fire (${rules.combat.dragonSleep.rudeAwakening.name})`
+    : `💤 Asleep · hits deal ×${rules.combat.dragonSleep.damageMultiplier} and wake it`;

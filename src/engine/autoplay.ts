@@ -41,8 +41,10 @@ export function chooseAction(state: BattleState, hero: HeroState, rules: Rules =
   // Weapon attacks: spend on the advanced one while energy is comfortable, else build energy.
   const gear = () => {
     const advanced = opts.find((o) => o.source === 'gear' && o.def.cost !== undefined);
-    if (advanced && hero.pool >= 10) {
-      const target = [...advanced.validTargets].sort((a, b) => hpOf(a) - hpOf(b))[0];
+    // Never by accident on a sleeping Dragon: waking it is a choice (see ambush()).
+    const awakeTargets = advanced?.validTargets.filter((id) => !state.enemies.find((e) => e.id === id)?.asleep) ?? [];
+    if (advanced && hero.pool >= 10 && awakeTargets.length) {
+      const target = awakeTargets.sort((a, b) => hpOf(a) - hpOf(b))[0];
       return act(advanced, [target]);
     }
     const g = opts.find((o) => o.source === 'gear' && o.def.cost === undefined && o.validTargets.length);

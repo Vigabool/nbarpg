@@ -18,7 +18,8 @@
     "data:synthetic": "tsx scripts/make-synthetic-season.ts",
     "build:artifact": "node scripts/build-artifact.mjs",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "data:lair-combo": "tsx scripts/lair-combo.ts"
   },
   "dependencies": {
     "react": "^19.3.1",

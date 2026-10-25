@@ -331,7 +331,7 @@ A red dragon's mountain lair, guarded by kobold zealots and drakes. Its puzzle i
 
 **Twist · Dragonscale:** dragonkin (Drake, Wyrmling, Dragon) take half damage from fire. Fireball is for kobolds; Lightning is for dragons. The inverse of the Crypt.
 
-**The sleeping Dragon.** It lies on the field from round 1, asleep (dimmed, 💤), and doesn't act or hold waves back. Attacks that hit every enemy pass it by, so waking it is always deliberate. A hit while it sleeps deals 1.5× damage (an ambush; 2× let a strong party nearly delete it in round 1), and it wakes at the end of that round, sealing the hoard, groggy: one action a round until the final wave arrives. Otherwise the final wave wakes it at full strength. The choice: ambush early for a weaker, groggy Dragon you fight all battle, or let it sleep and face it last with a fat hoard.
+**The sleeping Dragon.** It lies on the field from round 1, asleep (dimmed, 💤), and doesn't act or hold waves back. Attacks that hit every enemy pass it by, so waking it is always deliberate. A hit while it sleeps deals 1.28× damage (an ambush), and it wakes at the end of that round, sealing the hoard. If it survives, it answers at once with **Rude Awakening**: Fire Breath over the whole party at 1.5× damage. After that it's groggy: one action a round until the final wave arrives. Otherwise the final wave wakes it at full strength. The choice: ambush early for a weaker, groggy Dragon you fight all battle, or let it sleep and face it last with a fat hoard.
 
 **Role tweaks:**
 - **Magma Drake · Molten Hide:** heroes who hit it with a weapon take 2 burn damage (spells don't). Ground Slam is reskinned Tail Sweep.
@@ -341,6 +341,14 @@ A red dragon's mountain lair, guarded by kobold zealots and drakes. Its puzzle i
 - **Dragon:** Fire Breath (every hero takes its full damage, armor applies), Hoard, Dragonscale, Asleep. HP 74–149, damage 8–13.
 
 **Balance:** smart bot 78%, heuristic bot 47%, after lowering the ambush to 1.5× and raising Dragon HP 20% (the smart bot had won 96%, mostly through the ambush). The smart bot chooses to ambush in about 40% of battles. The heuristic bot's fixed policies (first tuning): letting it sleep 60% bot wins; opening with a full ambush (`--ambush`) 55%. Neither choice dominates. The groggy rule matters: without it, an ambush that didn't kill the Dragon outright was a near-certain loss.
+
+**Ambush retune (round-1 kills).** A full round-1 combo (Provoke, then Empower + Ready Crit + Backstab, then everyone's biggest hit) killed the Dragon in 72% of lineups at 1.5×, so ambushing was free. Now:
+- **Ambush:** 1.28×, and Dragon HP is ×0.86 (now 64/81/96/112/128) so that letting it sleep doesn't get harder.
+- **Rude Awakening:** a Dragon that survives an ambush breathes fire at once.
+- **Results:** the same combo now kills in 12% of lineups, more with Armory upgrades, Hunter's Mark or Shadowstep, and leaves it at about 5% HP otherwise. Those failed attempts win about 80% (smart bot playing on). Letting it sleep wins 57% (smart bot) and 48% (heuristic bot).
+- **Careless pokes are punished:** the heuristic bot's all-in ambush with no setup never wins.
+- **The cliff:** at 1.3× the same combo kills 72%, because party damage and Dragon HP both scale with tier. Treat 1.28 as a fine edge.
+- **Checking it:** `npm run data:lair-combo -- 100 --full` replays the combo.
 
 ### The Giant's Hall
 
@@ -480,7 +488,7 @@ Over full seasons (16 runs, upgrades bought greedily), the smart bot wins 78% wi
 | --- | --- | --- | --- |
 | Goblin Horde | Champions ×1.15 | 76.5% | 48% |
 | Crypt | Champions ×1.25 | 76.5% | 23% |
-| Dragon's Lair | Ambush 2× → 1.5×, Dragon HP +20% | 78% | 47% |
+| Dragon's Lair | Ambush 2× → 1.5× → 1.28×, Dragon HP +20% then ×0.86, Rude Awakening | 57% letting it sleep (the bot can't plan the combo; ~80% with it) | 48% |
 | Giant's Hall | Champions ×1.15 → ×1.08 | 74% | 66% |
 
 Over full seasons (greedy upgrades, encounter-aware Smart pick, chapter scaling +3%) the smart bot wins 74% (by chapter: 70 · 69 · 86 · 75 · 66 · 81 · 69). +6% per chapter dropped it to 66% with a late-season slide to 44%, and +9% to 50%, so +3% stays. The heuristic bot now wins about 43% of a season with the same picks and 30% with most-energy picks: a casual player will find the game hard, especially the Crypt.

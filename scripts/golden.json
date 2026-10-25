@@ -20,13 +20,13 @@
     "battles": 8
   },
   "dragon-lair/fast": {
-    "fingerprint": "3b83afd9d792f4fc",
-    "wins": 60,
+    "fingerprint": "20a802f648991c1a",
+    "wins": 65,
     "battles": 120
   },
   "dragon-lair/smart": {
-    "fingerprint": "0e21c775afebeaf6",
-    "wins": 4,
+    "fingerprint": "8376b516d96c6ed2",
+    "wins": 5,
     "battles": 8
   },
   "giants-hall/fast": {
@@ -40,8 +40,8 @@
     "battles": 8
   },
   "seasons/fast": {
-    "fingerprint": "4c6c7bb09c8b8010",
-    "wins": 43,
+    "fingerprint": "bcebc79fc4e9fb00",
+    "wins": 44,
     "battles": 100
   }
 }

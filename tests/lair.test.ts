@@ -37,7 +37,7 @@ describe("Dragon's Lair: the sleeping Dragon", () => {
     expect(s.enemies.some((e) => e.id === 'W2')).toBe(true);
   });
 
-  it('an ambush deals double damage, and the Dragon wakes at the end of the round and seals the hoard', () => {
+  it('an ambush deals extra damage, and the Dragon wakes at the end of the round and seals the hoard', () => {
     let s = battle([[dragon(), tank()], [monster()], [monster()]], party(), LAIR);
     s = act(s, 'warrior', 'axe', ['D']);
     expect(enemy(s, 'D').hp).toBe(60 - Math.floor(rules.combat.dragonSleep.damageMultiplier * hero(s, 'warrior').gear));
@@ -47,6 +47,29 @@ describe("Dragon's Lair: the sleeping Dragon", () => {
     expect(s.hoard!.sealed).toBe(true);
     s = endRound(s);
     expect(s.log.some((l) => l.actorId === 'D' && l.round === s.round - 1)).toBe(true);
+  });
+
+  it('a Dragon that survives an ambush answers at once with Rude Awakening, then stays groggy', () => {
+    let s = battle([[dragon(), tank()], [monster()], [monster()]], party(), LAIR);
+    s = act(s, 'warrior', 'axe', ['D']);
+    const before = s.heroes.map((h) => h.hp);
+    s = endRound(s);
+    const r = rules.combat.dragonSleep.rudeAwakening;
+    const breath = s.log.find((l) => l.actorId === 'D' && l.text.includes(r.name))!;
+    expect(breath).toBeDefined();
+    expect(breath.round).toBe(1);
+    // Every hero takes the breath (minus armor): 10 damage × the multiplier.
+    expect(breath.text).toContain(`${Math.round(10 * r.damageMultiplier)} to`);
+    expect(s.heroes.every((h, i) => h.hp < before[i])).toBe(true);
+    expect(enemy(s, 'D').groggy).toBe(r.groggy);
+  });
+
+  it('a Dragon killed in its sleep never breathes', () => {
+    let s = battle([[dragon(), tank()], [monster()], [monster()]], party(), LAIR);
+    s = { ...s, enemies: s.enemies.map((e) => (e.id === 'D' ? { ...e, hp: 1 } : e)) };
+    s = act(s, 'warrior', 'axe', ['D']);
+    s = endRound(s);
+    expect(s.log.some((l) => l.actorId === 'D')).toBe(false);
   });
 
   it('the final wave wakes it', () => {

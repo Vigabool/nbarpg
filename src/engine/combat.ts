@@ -426,6 +426,7 @@ function aimable(state: BattleState, hero: HeroState, def: ActionDef, rules: Rul
 }
 
 export function ignoresTaunt(e: EnemyState, rules: Rules = defaultRules): boolean {
+  // A sleeping boss can't be provoked: there's nothing to taunt.
   return !!rules.monsters[e.kind].ignoresTaunt || hasTrait(e, 'deepRange');
 }
 
@@ -1130,6 +1131,15 @@ function summonsAct(state: BattleState) {
   }
 }
 
+/** Ends the battle in defeat if every hero has fallen. */
+function partyFallen(state: BattleState): boolean {
+  if (state.heroes.some((h) => h.alive)) return false;
+  state.phase = 'lost';
+  state.outcomeReason = 'Every hero has fallen.';
+  log(state, 'system', 'Defeat. Every hero has fallen.');
+  return true;
+}
+
 /** Ends the party phase: summons act, then the horde, then the round wraps up. */
 export function endRound(prev: BattleState, rules: Rules = defaultRules): BattleState {
   const state = clone(prev);
@@ -1191,15 +1201,10 @@ export function endRound(prev: BattleState, rules: Rules = defaultRules): Battle
     h.poison = --p.rounds > 0 && h.alive ? p : null;
   }
 
-  if (state.heroes.every((h) => !h.alive)) {
-    state.phase = 'lost';
-    state.outcomeReason = 'Every hero has fallen.';
-    log(state, 'system', 'Defeat. Every hero has fallen.');
-    return state;
-  }
-
+  if (partyFallen(state)) return state;
   // Round end: encounter rules (the Dragon wakes or the hoard grows, trolls regenerate), then durations tick down.
   for (const m of mechanics) m.onRoundEnd?.(state, rules);
+  if (partyFallen(state)) return state;
   const hot = rules.traits.hotHand;
   for (const e of state.enemies) {
     if (e.alive && hasTrait(e, 'hotHand') && e.hitRound !== state.round) e.hotStacks = Math.min(hot.max!, (e.hotStacks ?? 0) + hot.bonus!);

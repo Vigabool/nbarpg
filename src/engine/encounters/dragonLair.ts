@@ -1,5 +1,5 @@
 import { rules as defaultRules, type Rules } from '../../rules';
-import { behaviorFor, hitHero, log, targetableHeroes, type BattleState, type EnemyState } from '../combat';
+import { behaviorFor, enemyDamage, hitHero, log, targetableHeroes, type BattleState, type EnemyState } from '../combat';
 import { encounterOf } from '../encounter';
 import type { Mechanic } from './types';
 
@@ -41,12 +41,27 @@ const sleepingBoss: Mechanic = {
       }
     }
   },
-  onRoundEnd(state) {
+  onRoundEnd(state, rules) {
     for (const e of state.enemies)
       if (e.alive && e.asleep && e.waking) {
         wake(state, e, state.round, 'with a roar');
+        // Rude Awakening: an ambush that doesn't finish it is answered with fire at once.
+        const r = rules.combat.dragonSleep.rudeAwakening;
+        const dmg = Math.round(enemyDamage(state, e, rules) * r.damageMultiplier);
+        const heroes = targetableHeroes(state);
+        if (heroes.length) {
+          const hits = heroes.map((h) => hitHero(state, e, h, dmg, rules));
+          log(
+            state,
+            'enemy',
+            `${e.name} answers the ambush with fire (${r.name}): ${hits.map((h) => h.text).join('; ')}.`,
+            e.id,
+            heroes.map((h) => h.id),
+            `⚠ ${r.name}: all heroes ${dmg}`,
+          );
+        }
         // Rudely awakened before the final wave, it's groggy: one action a round until then.
-        if (state.pendingWaves.length > 0) e.groggy = true;
+        if (state.pendingWaves.length > 0 && r.groggy) e.groggy = true;
       }
   },
 };
