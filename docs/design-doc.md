@@ -421,6 +421,25 @@ Specials are telegraphed: the Champion's card shows a dashed amber ⏳ "Slam nex
 
 **Reading the enemy turn.** Every enemy card shows what it will do if the round ends now ("→ Wizard 16"), and summoned Wolves and Bears show their target too. A hero who would fall gets a pulsing ☠; tapping it outlines the enemies that hit them, with each one's damage, and lists the breakdown under the hero.
 
+## Difficulty
+
+**Two levels, chosen at New game and changeable between chapters (on the roster-moves screen):**
+- **Normal** (the default) is a forgiving horde for learning the game and casual play.
+- **Hard** is the full-strength tuning that every encounter was balanced at, where the smart bot wins about 75%.
+
+The run's difficulty shows on the encounter and pick-games screens. Saves from before difficulty existed were played at full strength, so they load as Hard.
+
+**How Normal works:** per encounter, Champions and bosses get an HP and damage multiplier (`src/rules/difficulty.json`). Minions can be scaled too, but currently aren't. It's applied when a battle is prepared, after chapter scaling, and the horde preview shows the same numbers. The multipliers are tuned so the heuristic (casual) bot wins about 60% of single battles:
+
+| Encounter | Normal multiplier | Heuristic bot, Hard → Normal |
+| --- | --- | --- |
+| Goblin Horde | ×0.93 | ~50% → 63% |
+| The Crypt | ×0.85 | 23% → 60% |
+| Dragon's Lair | ×0.96 | ~48% → 61% |
+| Giant's Hall | none (already ~65% on Hard) | 65% |
+
+Win rates are very sensitive to these multipliers: Goblin Horde goes from 63% at ×0.93 to 82% at ×0.85. Over full seasons with upgrades and the encounter-aware Smart pick, Normal wins 61% against 45% on Hard. The simulators take `--difficulty normal`, and both default to Hard so the golden baseline stays at full strength.
+
 ## Progression
 
 **Progress belongs to heroes, not players.** A hero keeps their upgrades, gear and feats no matter which NBA player powers them this week. Heroes earn whole-number progression points (PP) each battle and spend their own PP in the **🛠️ Armory**, reached from the result screen and from each hero card when assigning players. Over a 25-week season a hero earns roughly 1,200–1,500 PP: enough to max their weapon and buy both gear items plus a feat or two, not everything.

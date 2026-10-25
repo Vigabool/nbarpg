@@ -11,6 +11,7 @@ import summonsJson from './summons.json';
 import monstersJson from './monsters.json';
 import hordeJson from './horde.json';
 import encountersJson from './encounters.json';
+import difficultyJson from './difficulty.json';
 
 /**
  * All game rules live in the JSON files next to this one, so tuning is a data
@@ -157,6 +158,20 @@ export interface HordeConfig {
   /** Champions that always join a specific wave (1-based), e.g. the Shaman in wave 1. */
   championWave?: Partial<Record<ChampionKind, number>>;
   turnoversPerFumble: number;
+}
+
+export type Difficulty = 'normal' | 'hard';
+export const DIFFICULTIES: Difficulty[] = ['normal', 'hard'];
+/** HP and damage multipliers for part of the horde. */
+export interface StatScale {
+  hp: number;
+  damage: number;
+}
+/** A difficulty level: per-encounter scaling of the horde (Champions and bosses, and optionally minions). */
+export interface DifficultyDef {
+  name: string;
+  description: string;
+  encounters: Record<string, { champions?: StatScale; minions?: StatScale }>;
 }
 
 /** An encounter re-skins the monster roles and supplies its boss and twist. */
@@ -312,6 +327,7 @@ export interface Rules {
   monsters: Record<MonsterKind, MonsterDef>;
   horde: HordeConfig;
   encounters: { default: string; encounters: Record<string, EncounterDef> };
+  difficulty: { default: Difficulty; levels: Record<Difficulty, DifficultyDef> };
 }
 
 export const rules: Rules = {
@@ -327,6 +343,7 @@ export const rules: Rules = {
   monsters: monstersJson as unknown as Record<MonsterKind, MonsterDef>,
   horde: hordeJson as unknown as HordeConfig,
   encounters: encountersJson as unknown as Rules['encounters'],
+  difficulty: difficultyJson as Rules['difficulty'],
 };
 
 export function tierIndex(t: Tier): number {

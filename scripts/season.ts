@@ -1,10 +1,10 @@
 /**
  * Plays full seasons with the auto-play bot, buying Armory upgrades as it goes, and
  * reports win rate by chapter next to a baseline that never spends:
- *   npm run data:season -- [--runs 16] [--smart-bot]
+ *   npm run data:season -- [--runs 16] [--smart-bot] [--difficulty normal]
  * Also compares picking games by most energy with the smart-pick score.
  */
-import { rules } from '../src/rules';
+import { rules, type Difficulty } from '../src/rules';
 import { loadSeasonFile } from './load-season';
 import { simulateSeasons, type SeasonWeek } from './season-lib';
 import { DEFAULT_PICK_WEIGHTS } from '../src/app/smartPick';
@@ -14,12 +14,13 @@ const data = loadSeasonFile();
 const runs = arg('--runs', 16);
 // The lookahead bot plays like a strong human but is ~50x slower than the heuristic bot.
 const bot = process.argv.includes('--smart-bot') ? 'smart' : 'fast';
+const difficulty = (process.argv.includes('--difficulty') ? process.argv[process.argv.indexOf('--difficulty') + 1] : 'hard') as Difficulty;
 
-const spending = simulateSeasons(data, runs, 'greedy', 'energy', undefined, bot);
-const smart = simulateSeasons(data, runs, 'greedy', 'smart', DEFAULT_PICK_WEIGHTS, bot);
-const aware = simulateSeasons(data, runs, 'greedy', 'smart', undefined, bot);
-const renting = simulateSeasons(data, runs, 'greedy', 'smart', undefined, bot, 'rent');
-const baseline = simulateSeasons(data, runs, 'none', 'energy', undefined, bot);
+const spending = simulateSeasons(data, runs, 'greedy', 'energy', undefined, bot, 'none', difficulty);
+const smart = simulateSeasons(data, runs, 'greedy', 'smart', DEFAULT_PICK_WEIGHTS, bot, 'none', difficulty);
+const aware = simulateSeasons(data, runs, 'greedy', 'smart', undefined, bot, 'none', difficulty);
+const renting = simulateSeasons(data, runs, 'greedy', 'smart', undefined, bot, 'rent', difficulty);
+const baseline = simulateSeasons(data, runs, 'none', 'energy', undefined, bot, 'none', difficulty);
 
 const pct = (ws: SeasonWeek[]) => (ws.length ? `${((ws.filter((w) => w.won).length / ws.length) * 100).toFixed(0)}%` : '–');
 const chapters = [...new Set(spending.map((w) => w.chapter))].sort((a, b) => a - b);

@@ -7,7 +7,7 @@ import type { SaveGame } from './game';
  * bump SAVE_VERSION, add a step that turns the previous version into the new one, and add a
  * test that loads a save of the previous version (tests/saves.test.ts).
  */
-export const SAVE_VERSION = 3;
+export const SAVE_VERSION = 4;
 
 /** A save of any version, as read from storage or a file. */
 type AnySave = Record<string, unknown> & { version?: number };
@@ -27,6 +27,8 @@ const MIGRATIONS: Record<number, (save: AnySave) => AnySave> = {
   },
   // 2 → 3, gold: the starting purse, no extra cap room, no ten-day contracts.
   2: (save) => ({ ...save, version: 3, gold: rules.salary.gold.starting, capBonus: 0, tenDay: [] }),
+  // 3 → 4, difficulty: runs from before it existed were played at full strength, which is now Hard.
+  3: (save) => ({ ...save, version: 4, difficulty: 'hard' }),
 };
 
 export class SaveError extends Error {}

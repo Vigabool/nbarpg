@@ -4,9 +4,10 @@ import { smartGames } from '../app/smartPick';
 import { chapterOf, currentWeek, readyPicks, startBattle, type SaveGame } from '../app/game';
 import { buildHorde, opponentOf, playerLine, type MonsterSpec } from '../engine/horde';
 import { computePool } from '../engine/rating';
-import { playerGamesInWeek, scaleHorde } from '../engine/week';
+import { difficultyHorde, playerGamesInWeek, scaleHorde } from '../engine/week';
 import { CLASSES, rules, type HeroClass } from '../rules';
 import { encounterOf, monsterIcon, monsterName } from '../engine/encounter';
+import { DifficultyChip } from './DifficultyPicker';
 import { ClassName, TierChip, formatDate, statLine } from './common';
 
 function mirrorFor(c: HeroClass, playerId: number, gameId: string, data: SeasonData, encounter?: string): MonsterSpec | undefined {
@@ -20,7 +21,9 @@ export function SelectGames({ data, game, onChange }: { data: SeasonData; game: 
   const picks = readyPicks(game, data);
   const playing = heroes.filter((c) => playerGamesInWeek(data, week, game.assignments[c]!).length > 0);
   const chapter = chapterOf(game);
-  const horde = picks.length ? scaleHorde(buildHorde(picks, data, undefined, game.encounter), chapter) : null;
+  const horde = picks.length
+    ? difficultyHorde(scaleHorde(buildHorde(picks, data, undefined, game.encounter), chapter), game.encounter ?? rules.encounters.default, game.difficulty)
+    : null;
   const enc = encounterOf(game.encounter);
   const allPicked = playing.every((c) => game.gamePicks[c]);
 
@@ -131,7 +134,10 @@ export function SelectGames({ data, game, onChange }: { data: SeasonData; game: 
                 Change
               </button>
             </div>
-            <h2>{enc.name}</h2>
+            <div className="row" style={{ gap: 8 }}>
+              <h2>{enc.name}</h2>
+              <DifficultyChip difficulty={game.difficulty} />
+            </div>
             {chapter > 1 && (
               <span className="small warn">
                 Chapter {chapter}: Champions and bosses have +{Math.round(rules.progression.chapterScaling * (chapter - 1) * 100)}% HP and damage

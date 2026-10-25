@@ -7,7 +7,7 @@ import type { SeasonData } from '../src/data/types';
 import { autoplay } from '../src/engine/autoplay';
 import { smartAutoplay } from '../src/engine/smartBot';
 import { encounterIds } from '../src/engine/encounter';
-import { CLASSES, rules, tierIndex, type HeroClass } from '../src/rules';
+import { CLASSES, rules, tierIndex, type Difficulty, type HeroClass } from '../src/rules';
 import { signTenDay, tenDayBlocked, tenDayCandidates, tenDayFee } from '../src/app/gold';
 import { seasonTier } from '../src/engine/rating';
 import { playerGamesInWeek } from '../src/engine/week';
@@ -102,6 +102,7 @@ export function simulateSeasons(
   weights?: PickWeights | ((encounter: string) => PickWeights),
   bot: 'fast' | 'smart' = 'fast',
   gold: GoldPolicy = 'none',
+  difficulty: Difficulty = 'hard',
 ): SeasonWeek[] {
   const encounters = encounterIds();
   const out: SeasonWeek[] = [];
@@ -109,7 +110,7 @@ export function simulateSeasons(
     const mode: DraftMode = DRAFT_MODES[run % DRAFT_MODES.length].id;
     const offset = Math.floor(run / DRAFT_MODES.length) % encounters.length;
     const first = data.weeks[0];
-    let game: SaveGame | null = newGame(data.season, first.index);
+    let game: SaveGame | null = newGame(data.season, first.index, difficulty);
     const draft = autoDraft(data, first, mode);
     if (!draft) continue;
     game = { ...game, roster: [...CLASSES.map((c) => draft.slots[c]), ...draft.reserves], assignments: draft.slots, phase: 'assign' };

@@ -10,6 +10,7 @@ import { eligiblePlayers } from '../src/engine/calibration';
 import type { HeroGamePick } from '../src/engine/horde';
 import { computePool, seasonTier } from '../src/engine/rating';
 import { playerGamesInWeek, prepareBattle } from '../src/engine/week';
+import type { Difficulty } from '../src/rules';
 import { tierIndex } from '../src/rules';
 import type { SeasonData } from '../src/data/types';
 
@@ -30,7 +31,14 @@ export interface SimResult {
   topplesPerBattle: number;
 }
 
-export function simulate(data: SeasonData, battles: number, seedIn = 1, encounter?: string, policy: BotPolicy = {}): SimResult {
+export function simulate(
+  data: SeasonData,
+  battles: number,
+  seedIn = 1,
+  encounter?: string,
+  policy: BotPolicy = {},
+  difficulty: Difficulty = 'hard',
+): SimResult {
   let seed = seedIn;
   const rand = () => (seed = (seed * 1103515245 + 12345) % 2 ** 31) / 2 ** 31;
   const pool = eligiblePlayers(data);
@@ -72,7 +80,7 @@ export function simulate(data: SeasonData, battles: number, seedIn = 1, encounte
       picks.push({ heroClass: c, playerId: best.id, gameId });
     }
     if (picks.length === 0) continue;
-    const prepared = prepareBattle(picks, data, undefined, encounter);
+    const prepared = prepareBattle(picks, data, undefined, encounter, { difficulty });
     r.horde += prepared.horde.waves.flat().length;
     r.goblins += prepared.horde.waves.flat().filter((m) => m.kind === 'goblin').length;
     for (const p of Object.values(prepared.pools)) r.pools.push(p!.pool);

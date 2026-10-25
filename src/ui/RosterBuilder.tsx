@@ -8,6 +8,7 @@ import { playerGamesInWeek } from '../engine/week';
 import { CLASSES, rules, tierIndex, type HeroClass } from '../rules';
 import { teamName } from '../data/teams';
 import { capOf, raiseCap } from '../app/gold';
+import { DifficultyPicker } from './DifficultyPicker';
 import { Bar, CLASS_ICON, TierChip, gamesCount, money } from './common';
 
 type Sort = 'salary' | 'salary-asc' | 'name' | HeroClass;
@@ -232,6 +233,11 @@ export function RosterBuilder({ data, game, onChange }: { data: SeasonData; game
             ? `Release and sign up to ${MOVES_PER_CHAPTER} players under the cap. Hero progress stays with the heroes.`
             : `Sign one player for each hero and ${RESERVES} reserves, under the ${money(cap)} cap. Tap a class chip on a player to put them in that hero's slot. You can reshuffle heroes every week.`}
         </p>
+        {isChapterMove && (
+          <div className="card flat">
+            <DifficultyPicker value={game.difficulty} onChange={(difficulty) => onChange({ ...game, difficulty })} />
+          </div>
+        )}
       </div>
 
       <div className="card stack">

@@ -3,6 +3,8 @@ import type { SeasonData } from '../data/types';
 import { newGame, type SaveGame } from '../app/game';
 import { ConfirmButton, weekLabel } from './common';
 import { BUILD } from '../app/build';
+import { rules, type Difficulty } from '../rules';
+import { DifficultyPicker } from './DifficultyPicker';
 
 export function TitleScreen({
   data,
@@ -17,6 +19,7 @@ export function TitleScreen({
   onImport: () => void;
 }) {
   const [week, setWeek] = useState(data.weeks[0]?.index ?? 1);
+  const [difficulty, setDifficulty] = useState<Difficulty>(rules.difficulty.default);
   return (
     <div className="title-screen">
       <div className="stack" style={{ maxWidth: 520, width: '100%' }}>
@@ -42,11 +45,12 @@ export function TitleScreen({
               ))}
             </select>
           </label>
+          <DifficultyPicker value={difficulty} onChange={setDifficulty} />
           <ConfirmButton
             className="btn primary"
             needsConfirm={!!saved}
             confirmLabel="Tap again: this replaces your saved run"
-            onConfirm={() => onStart(newGame(data.season, week))}
+            onConfirm={() => onStart(newGame(data.season, week, difficulty))}
           >
             Build your roster
           </ConfirmButton>

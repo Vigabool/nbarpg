@@ -1,0 +1,19 @@
+{
+  "default": "normal",
+  "levels": {
+    "normal": {
+      "name": "Normal",
+      "description": "A forgiving horde for learning the game and casual play. Recommended for a first run.",
+      "encounters": {
+        "goblin-horde": { "champions": { "hp": 0.93, "damage": 0.93 } },
+        "crypt": { "champions": { "hp": 0.85, "damage": 0.85 } },
+        "dragon-lair": { "champions": { "hp": 0.96, "damage": 0.96 } }
+      }
+    },
+    "hard": {
+      "name": "Hard",
+      "description": "The full-strength horde, tuned for players who know the classes and plan every round.",
+      "encounters": {}
+    }
+  }
+}

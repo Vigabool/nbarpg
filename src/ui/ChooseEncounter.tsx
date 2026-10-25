@@ -4,6 +4,7 @@ import { encounterIds, encounterOf, monsterIcon, monsterName } from '../engine/e
 import { rules, type MonsterKind } from '../rules';
 import type { TutorialTopic } from './Tutorial';
 import { weekLabel } from './common';
+import { DifficultyChip } from './DifficultyPicker';
 
 const CHALLENGE = ['', 'Gentler', 'Standard', 'Tough'];
 
@@ -38,7 +39,10 @@ export function ChooseEncounter({
   return (
     <div className="stack">
       <div className="stack" style={{ gap: 4 }}>
-        <h1>Choose your encounter</h1>
+        <div className="spread">
+          <h1>Choose your encounter</h1>
+          <DifficultyChip difficulty={game.difficulty} />
+        </div>
         <p className="muted small">
           Where does the party go in {weekLabel(data, game.weekIndex)}? Each encounter re-skins the horde with its own boss and rules. Your players' opponents
           still shape it: their box scores decide how strong each foe is.

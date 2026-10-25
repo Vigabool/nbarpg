@@ -1,5 +1,5 @@
 import type { SeasonData, Week } from '../data/types';
-import { rules as defaultRules, type HeroClass, type HeroProgress, type Rules } from '../rules';
+import { rules as defaultRules, type Difficulty, type HeroClass, type HeroProgress, type Rules } from '../rules';
 import { createBattle, type BattleState, type HeroSetup } from './combat';
 import { buildHorde, playerLine, type HeroGamePick, type Horde } from './horde';
 import { computePool, gearDamage, type PoolBreakdown } from './rating';
@@ -22,6 +22,8 @@ export interface PrepareOptions {
   progress?: Partial<Record<HeroClass, HeroProgress>>;
   /** Chapter (1-based): Champions and bosses grow stronger each chapter after the first. */
   chapter?: number;
+  /** Difficulty (see rules/difficulty.json). Hard, the full-strength tuning, when absent. */
+  difficulty?: Difficulty;
 }
 
 /** Chapter scaling: +X% HP and damage for every Champion and boss per chapter after the first. */
@@ -29,6 +31,19 @@ export function scaleHorde(horde: Horde, chapter: number, rules: Rules = default
   const f = 1 + rules.progression.chapterScaling * Math.max(0, chapter - 1);
   if (f === 1) return horde;
   const scale = (m: Horde['waves'][number][number]) => (m.kind === 'goblin' ? m : { ...m, hp: Math.round(m.hp * f), damage: Math.round(m.damage * f) });
+  const waves = horde.waves.map((w) => w.map(scale));
+  const byId = new Map(waves.flat().map((m) => [m.id, m]));
+  return { waves, champions: horde.champions.map((c) => byId.get(c.id) ?? scale(c)), warlord: byId.get(horde.warlord.id) ?? scale(horde.warlord) };
+}
+
+/** Difficulty: scales the horde's Champions and bosses (and minions, if set) for this encounter. Hard leaves it as is. */
+export function difficultyHorde(horde: Horde, encounter: string, difficulty: Difficulty, rules: Rules = defaultRules): Horde {
+  const d = rules.difficulty.levels[difficulty]?.encounters[encounter];
+  if (!d || (!d.champions && !d.minions)) return horde;
+  const scale = (m: Horde['waves'][number][number]) => {
+    const f = m.kind === 'goblin' ? d.minions : d.champions;
+    return f ? { ...m, hp: Math.max(1, Math.round(m.hp * f.hp)), damage: Math.max(1, Math.round(m.damage * f.damage)) } : m;
+  };
   const waves = horde.waves.map((w) => w.map(scale));
   const byId = new Map(waves.flat().map((m) => [m.id, m]));
   return { waves, champions: horde.champions.map((c) => byId.get(c.id) ?? scale(c)), warlord: byId.get(horde.warlord.id) ?? scale(horde.warlord) };
@@ -57,6 +72,7 @@ export function prepareBattle(
       progress: opts.progress?.[p.heroClass],
     };
   });
-  const horde = scaleHorde(buildHorde(picks, data, rules, encounter), opts.chapter ?? 1, rules);
+  const enc = encounter ?? rules.encounters.default;
+  const horde = difficultyHorde(scaleHorde(buildHorde(picks, data, rules, encounter), opts.chapter ?? 1, rules), enc, opts.difficulty ?? 'hard', rules);
   return { picks, pools, heroes, horde, battle: createBattle(heroes, horde.waves, rules, encounter ?? rules.encounters.default) };
 }

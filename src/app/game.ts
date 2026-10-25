@@ -5,7 +5,7 @@ import type { PoolBreakdown } from '../engine/rating';
 import { computeRewards, type Rewards } from '../engine/rewards';
 import { computeSalary } from '../engine/rating';
 import { playerGamesInWeek, prepareBattle } from '../engine/week';
-import { CLASSES, emptyProgress, rules, type HeroClass, type HeroProgress } from '../rules';
+import { CLASSES, emptyProgress, rules, type Difficulty, type HeroClass, type HeroProgress } from '../rules';
 import { SAVE_VERSION } from './saves';
 
 /** A week runs encounter → assign → select → battle → result; chapters open with roster moves first. */
@@ -39,6 +39,8 @@ export interface SaveGame {
   pp: Record<HeroClass, number>;
   /** What each hero has bought in the Armory (absent in saves from before progression). */
   progress?: Record<HeroClass, HeroProgress>;
+  /** Difficulty (rules/difficulty.json): chosen at New game, changeable between chapters. */
+  difficulty: Difficulty;
   /** The party's gold (see gold.ts). */
   gold: number;
   /** Cap room bought with gold, on top of the salary cap. */
@@ -51,10 +53,11 @@ export interface SaveGame {
 export const CHAPTER_WEEKS = 4;
 export const MOVES_PER_CHAPTER = 3;
 
-export function newGame(season: string, weekIndex: number): SaveGame {
+export function newGame(season: string, weekIndex: number, difficulty: Difficulty = rules.difficulty.default): SaveGame {
   return {
     version: SAVE_VERSION,
     season,
+    difficulty,
     weekIndex,
     phase: 'roster',
     roster: [],
@@ -112,7 +115,7 @@ export function readyPicks(game: SaveGame, data: SeasonData): HeroGamePick[] {
 
 export function startBattle(game: SaveGame, data: SeasonData): SaveGame {
   const progress = Object.fromEntries(CLASSES.map((c) => [c, progressOf(game, c)])) as Record<HeroClass, HeroProgress>;
-  const prepared = prepareBattle(readyPicks(game, data), data, undefined, game.encounter, { progress, chapter: chapterOf(game) });
+  const prepared = prepareBattle(readyPicks(game, data), data, undefined, game.encounter, { progress, chapter: chapterOf(game), difficulty: game.difficulty });
   return { ...game, phase: 'battle', battle: prepared.battle, battlePools: prepared.pools };
 }
 
