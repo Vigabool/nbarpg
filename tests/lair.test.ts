@@ -28,6 +28,19 @@ describe("Dragon's Lair: the sleeping Dragon", () => {
     expect(s.heroes.every((h) => h.hp === h.maxHp)).toBe(true);
   });
 
+  it('once a hit stirs it, area attacks hit it too (with the ambush bonus)', () => {
+    let s = battle([[dragon(), tank()], [monster()], [monster()]], party(), LAIR);
+    // Volley is the Ranger's Signature: unlock it as if their player had a double-double.
+    s = { ...s, heroes: s.heroes.map((h) => (h.id === 'ranger' ? { ...h, signatureUnlocked: true, signatureReady: true } : h)) };
+    expect(option(s, 'ranger', 'volley').validTargets).not.toContain('D');
+    s = act(s, 'warrior', 'axe', ['D']);
+    expect(enemy(s, 'D').waking).toBe(true);
+    expect(option(s, 'ranger', 'volley').validTargets).toContain('D');
+    const before = enemy(s, 'D').hp;
+    s = act(s, 'ranger', 'volley');
+    expect(enemy(s, 'D').hp).toBe(before - Math.floor(6 * rules.combat.dragonSleep.damageMultiplier));
+  });
+
   it('a sleeping Dragon does not hold waves back or count as a foe on the field', () => {
     const k = monster({ hp: 1, damage: 0 });
     let s = battle([[dragon(), k], [monster({ id: 'W2' })], [monster()]], party(), LAIR);

@@ -415,9 +415,9 @@ export function isGuarded(state: BattleState, e: EnemyState, rules: Rules = defa
   return mechanicsFor(state, rules).some((m) => m.guarded?.(state, e, rules));
 }
 
-/** Enemies that weapon attacks and summons can pick: not guarded, not intangible. */
+/** Enemies that weapon attacks and summons can pick: not guarded, not intangible, not a sleeping Dragon nobody has hit. */
 export function pickableEnemies(state: BattleState, rules: Rules = defaultRules): EnemyState[] {
-  return livingEnemies(state).filter((e) => !isGuarded(state, e, rules) && !e.intangible && !e.asleep);
+  return livingEnemies(state).filter((e) => !isGuarded(state, e, rules) && !e.intangible && (!e.asleep || e.waking));
 }
 
 /** Enemies a given action can aim at; spells and Cleric attacks also reach intangible ones. */
@@ -452,9 +452,10 @@ function validTargets(state: BattleState, hero: HeroState, def: ActionDef, rules
     case 'enemies':
       return aimable(state, hero, def, rules).map((e) => e.id);
     case 'allEnemies':
-      // Area attacks pass a sleeping Dragon by: waking it is always a deliberate choice.
+      // Area attacks pass a sleeping Dragon by, so waking it is a deliberate choice; once a hit has
+      // woken it (it stirs until the round ends), they include it.
       return livingEnemies(state)
-        .filter((e) => !e.asleep)
+        .filter((e) => !e.asleep || e.waking)
         .map((e) => e.id);
     case 'ally': {
       let allies = state.heroes.filter((h) => h.alive);
