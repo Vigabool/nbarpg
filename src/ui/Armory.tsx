@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useScrollToTop } from './scroll';
-import { buy, priceOf, type Purchase } from '../app/armory';
+import { buy, priceOf, respec, respecRefund, type Purchase } from '../app/armory';
 import { progressOf, type SaveGame } from '../app/game';
 import { CLASSES, rules, type HeroClass } from '../rules';
 import { CLASS_ICON, ConfirmButton } from './common';
@@ -18,6 +18,7 @@ export function Armory({ game, onChange, onClose, initial }: { game: SaveGame; o
   }, [onClose]);
 
   const p = rules.progression;
+  const refund = respecRefund(game, c);
   const prog = progressOf(game, c);
   const pp = game.pp[c];
   const purchase = (x: Purchase) => onChange(buy(game, c, x));
@@ -102,8 +103,24 @@ export function Armory({ game, onChange, onClose, initial }: { game: SaveGame; o
               onBuy={() => purchase({ kind: 'feat', id })}
             />
           ))}
+          {refund > 0 && (
+            <div className="armory-item">
+              <span className="armory-icon" aria-hidden>
+                ↺
+              </span>
+              <div style={{ minWidth: 0 }}>
+                <strong className="small">Respec</strong>
+                <p className="tiny muted" style={{ margin: 0 }}>
+                  Free: return this hero's gear and feats for a full refund and choose again. Weapon and shield levels stay.
+                </p>
+              </div>
+              <ConfirmButton className="btn small" confirmLabel={`Refund ${refund}?`} onConfirm={() => onChange(respec(game, c))}>
+                ↺ +{refund} PP
+              </ConfirmButton>
+            </div>
+          )}
           <p className="tiny muted" style={{ margin: 0 }}>
-            Purchases are permanent and belong to the hero, whichever player powers them.
+            Purchases belong to the hero, whichever player powers them. Gear and feats can be respecced for free; weapon and shield levels are permanent.
           </p>
         </div>
       </div>

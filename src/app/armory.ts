@@ -35,3 +35,21 @@ export function buy(game: SaveGame, c: HeroClass, p: Purchase, rules: Rules = de
   else prog.feats = [...prog.feats, p.id];
   return { ...game, pp: { ...game.pp, [c]: game.pp[c] - cost }, progress: { ...game.progress!, [c]: prog } };
 }
+
+/** PP a respec would give back: everything the hero spent on gear and feats. */
+export function respecRefund(game: SaveGame, c: HeroClass, rules: Rules = defaultRules): number {
+  const prog = progressOf(game, c);
+  const r = rules.progression;
+  return prog.gear.reduce((t, id) => t + (r.gear[id]?.cost ?? 0), 0) + prog.feats.reduce((t, id) => t + (r.feats[id]?.cost ?? 0), 0);
+}
+
+/**
+ * Respec, free: returns a hero's gear and feats for a full refund so the PP can go to a different
+ * build. Weapon and shield levels stay (they're plain upgrades, with nothing to swap them for).
+ */
+export function respec(game: SaveGame, c: HeroClass, rules: Rules = defaultRules): SaveGame {
+  const refund = respecRefund(game, c, rules);
+  if (!refund) return game;
+  const prog = { ...progressOf(game, c), gear: [], feats: [] };
+  return { ...game, pp: { ...game.pp, [c]: game.pp[c] + refund }, progress: { ...game.progress!, [c]: prog } };
+}

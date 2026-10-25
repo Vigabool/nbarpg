@@ -655,6 +655,10 @@ function ProgressionTab() {
           title="⚔️ Weapon upgrades"
           text={`+${p.weapon.damagePerLevel} weapon damage per level: ${p.weapon.costs.join(' / ')} PP. The Warrior's shield also levels up for +${p.shield.armorPerLevel} armor every round: ${p.shield.costs.join(' / ')} PP.`}
         />
+        <Feature
+          title="↺ Respec (free)"
+          text="Changed your mind? Respec a hero in the Armory: their gear and feats come back for a full PP refund, so you can try another build. Weapon and shield levels stay."
+        />
         <div className="class-picker" role="tablist" aria-label="Class">
           {CLASSES.map((k) => (
             <button key={k} role="tab" aria-selected={k === c} className={`class-pick${k === c ? ' active' : ''}`} onClick={() => setC(k)}>
@@ -796,7 +800,7 @@ function GlossaryTab() {
     ['Double-double / triple-double', "Unlocks the hero's Signature / Legendary ability: free, once per battle."],
     ['Twist', "An encounter's special rule, like Restless Dead or Topple. Shown on each encounter's card."],
     ['Chapter', 'Four weeks. Between chapters you can make roster moves and change difficulty; the horde grows a little stronger each chapter.'],
-    ['PP', 'Progression points: earned per hero, spent in the Armory on weapons, gear and feats.'],
+    ['PP', 'Progression points: earned per hero, spent in the Armory on weapons, gear and feats. Gear and feats can be respecced for a full refund, free.'],
     ['Gold', 'The party’s currency: rent ten-day contracts or raise the salary cap.'],
     ['Ten-day contract', 'Rent a free agent for one week, for a fee, when a player has no game.'],
     ['Difficulty', 'Normal softens Champions and bosses; Hard is full strength. Change it between chapters.'],

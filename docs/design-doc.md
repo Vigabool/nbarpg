@@ -484,6 +484,8 @@ A typical win (three waves, one Elite foe) is about 70 PP per hero; a wave-3 los
 
 All values live in `src/rules/progression.json`. Purchases are permanent (no respec yet). The original plan's talent branches and stat affinities are parked; affinities may return later as a way to widen which players fit a class.
 
+**Respec (free).** In each hero's Armory, Respec returns all their gear and feats for a full refund (two taps), so trying a build costs nothing but the decision. Weapon and shield levels are permanent: they're plain upgrades, with nothing to swap them for.
+
 ### Smart pick (game selection)
 
 The pick-games screen offers **🧠 Smart pick** next to "Most energy for each". It scores a whole lineup in starting-energy points: each hero's energy, +8 for a double-double (Signature) or +16 for a triple-double (Legendary), minus the horde those games build: 3 per tier of each mirrored Champion, 5 per tier of the boss, 6 per trait, plus 4 per Fumble handed to the party. It starts from the most-energy picks and improves one hero at a time, rebuilding the real horde each time so the boss and mirror rules are respected. Weights live in `src/app/smartPick.ts`.
