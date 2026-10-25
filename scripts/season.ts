@@ -1,7 +1,7 @@
 /**
  * Plays full seasons with the auto-play bot, buying Armory upgrades as it goes, and
  * reports win rate by chapter next to a baseline that never spends:
- *   npm run data:season -- [--runs 16]
+ *   npm run data:season -- [--runs 16] [--smart-bot]
  * Also compares picking games by most energy with the smart-pick score.
  */
 import { rules } from '../src/rules';
@@ -12,17 +12,19 @@ import { DEFAULT_PICK_WEIGHTS } from '../src/app/smartPick';
 const arg = (name: string, d: number) => (process.argv.includes(name) ? Number(process.argv[process.argv.indexOf(name) + 1]) : d);
 const data = loadSeasonFile();
 const runs = arg('--runs', 16);
+// The lookahead bot plays like a strong human but is ~50x slower than the heuristic bot.
+const bot = process.argv.includes('--smart-bot') ? 'smart' : 'fast';
 
-const spending = simulateSeasons(data, runs, 'greedy');
-const smart = simulateSeasons(data, runs, 'greedy', 'smart', DEFAULT_PICK_WEIGHTS);
-const aware = simulateSeasons(data, runs, 'greedy', 'smart');
-const baseline = simulateSeasons(data, runs, 'none');
+const spending = simulateSeasons(data, runs, 'greedy', 'energy', undefined, bot);
+const smart = simulateSeasons(data, runs, 'greedy', 'smart', DEFAULT_PICK_WEIGHTS, bot);
+const aware = simulateSeasons(data, runs, 'greedy', 'smart', undefined, bot);
+const baseline = simulateSeasons(data, runs, 'none', 'energy', undefined, bot);
 
 const pct = (ws: SeasonWeek[]) => (ws.length ? `${((ws.filter((w) => w.won).length / ws.length) * 100).toFixed(0)}%` : '–');
 const chapters = [...new Set(spending.map((w) => w.chapter))].sort((a, b) => a - b);
 const avg = (ws: SeasonWeek[], f: (w: SeasonWeek) => number) => (ws.length ? ws.reduce((t, w) => t + f(w), 0) / ws.length : 0);
 
-console.log(`${data.synthetic ? '[SYNTHETIC DATA] ' : ''}${runs} seasons of ${data.weeks.length} weeks (chapter scaling +${rules.progression.chapterScaling * 100}% each)`);
+console.log(`${data.synthetic ? '[SYNTHETIC DATA] ' : ''}${bot} bot · ${runs} seasons of ${data.weeks.length} weeks (chapter scaling +${rules.progression.chapterScaling * 100}% each)`);
 console.log('Chapter  Horde   Win (energy)  Win (smart)  Win (smart, encounter-aware)  Win (no upgrades)  PP spent per hero by chapter end');
 for (const ch of chapters) {
   const s = spending.filter((w) => w.chapter === ch);

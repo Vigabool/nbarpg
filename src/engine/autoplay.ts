@@ -108,6 +108,8 @@ export function chooseAction(
 export interface BotPolicy {
   /** Open the battle with every hero's biggest single-target attack on a sleeping Dragon. */
   ambushDragon?: boolean;
+  /** Use the one-step lookahead bot (smartBot.ts) instead of the heuristic one. */
+  smart?: boolean;
 }
 
 /** Rough damage of an attack on one target, for picking the biggest hit (e.g. "12×2" → 24). */

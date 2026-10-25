@@ -5,6 +5,7 @@
  */
 import { CLASSES, type HeroClass } from '../src/rules';
 import { autoplay, type BotPolicy } from '../src/engine/autoplay';
+import { smartAutoplay } from '../src/engine/smartBot';
 import { eligiblePlayers } from '../src/engine/calibration';
 import type { HeroGamePick } from '../src/engine/horde';
 import { computePool, seasonTier } from '../src/engine/rating';
@@ -56,7 +57,7 @@ export function simulate(data: SeasonData, battles: number, seedIn = 1, encounte
     r.horde += prepared.horde.waves.flat().length;
     r.goblins += prepared.horde.waves.flat().filter((m) => m.kind === 'goblin').length;
     for (const p of Object.values(prepared.pools)) r.pools.push(p!.pool);
-    const end = autoplay(prepared.battle, undefined, policy);
+    const end = policy.smart ? smartAutoplay(prepared.battle) : autoplay(prepared.battle, undefined, policy);
     if (end.phase === 'won') r.won++;
     else r.lost++;
     if (end.outcomeReason?.includes('rounds')) r.roundCap++;

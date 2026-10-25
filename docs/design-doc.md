@@ -458,6 +458,22 @@ Single player comes first, but these choices keep the door open:
 - **Shared horde.** League members could face the same Warlord each week, with a leaderboard on rounds survived or damage dealt.
 - **Head-to-head.** Your heroes' chosen games could become the horde your opponent fights, and vice versa.
 
+## Simulation bots
+
+Balance is measured with two bots (`npm run data:simulate -- [--smart]`, `npm run data:season -- [--smart-bot]`):
+
+- **Heuristic bot** (`src/engine/autoplay.ts`): fixed priorities per class. Fast (about 70 battles a second), used for big sweeps and fitting. It plays like a casual player: it spends Fumbles on the first Champion it can, never uses feat abilities, and ignores fire/holy and most encounter puzzles.
+- **Smart bot** (`src/engine/smartBot.ts`): a one-step lookahead. At each step it tries every sensible move for every hero (narrowed to a few targets each), plus spending each Fumble, plus each next-attack buff paired with the attack that uses it (Ready Crit → Backstab, Empower → an ally's attack). It previews how the round would end with the real enemy turn, rates the result (heroes alive and their HP, energy, enemy HP left, enemy damage per round, bone piles, hoard coins, partial topple progress), takes the best move, and ends the round when nothing beats ending it now. About 0.75 seconds a battle. It plays like a strong human: it cancels specials with Fumbles, focuses giants to topple them, and chooses for itself whether to ambush the Dragon (about 40% of Lair battles).
+
+| Encounter (200 battles) | Heuristic bot | Smart bot |
+| --- | --- | --- |
+| Goblin Horde | 61% | 85% |
+| Crypt | 61% | 91% |
+| Dragon's Lair | 56% | 96% |
+| Giant's Hall | 59% | 67% |
+
+The 60–65% balance targets were set against the heuristic bot, on the assumption that players do better. The smart bot shows how much better a strong player can do, and the gap is uneven: the Lair and the Crypt reward smart play far more than the Giant's Hall does.
+
 ## Build plan
 
 **The first milestone is one playable battle on real 2025–26 data, with rules stored as config.** Calibration happens alongside the data layer, as its first real use.

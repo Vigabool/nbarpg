@@ -5,6 +5,7 @@ import { autoDraft, DRAFT_MODES, type DraftMode } from '../src/app/autoDraft';
 import { chapterOf, currentWeek, finishBattle, newGame, nextWeek, readyPicks, startBattle, type SaveGame } from '../src/app/game';
 import type { SeasonData } from '../src/data/types';
 import { autoplay } from '../src/engine/autoplay';
+import { smartAutoplay } from '../src/engine/smartBot';
 import { encounterIds } from '../src/engine/encounter';
 import { CLASSES, rules, type HeroClass } from '../src/rules';
 
@@ -63,6 +64,7 @@ export function simulateSeasons(
   policy: SpendPolicy = 'greedy',
   pick: PickPolicy = 'energy',
   weights?: PickWeights | ((encounter: string) => PickWeights),
+  bot: 'fast' | 'smart' = 'fast',
 ): SeasonWeek[] {
   const encounters = encounterIds();
   const out: SeasonWeek[] = [];
@@ -85,7 +87,7 @@ export function simulateSeasons(
       }
       const chapter = chapterOf(game);
       game = startBattle(game, data);
-      game = finishBattle({ ...game, battle: autoplay(game.battle!) });
+      game = finishBattle({ ...game, battle: bot === 'smart' ? smartAutoplay(game.battle!) : autoplay(game.battle!) });
       const result = game.history.at(-1)!;
       if (policy === 'greedy') {
         const before = CLASSES.reduce((t, c) => t + game!.pp[c], 0);
