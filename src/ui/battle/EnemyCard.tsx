@@ -1,5 +1,20 @@
 import { useEffect, useState } from 'react';
-import { enemyArmor, justArrived, commandSources, actionsThisRound, canFumble, phylactery, enemyDamage, packBonus, specialDue, activeSpecial, ignoresTaunt, isGuarded, type BattleState, type EnemyState } from '../../engine/combat';
+import {
+  enemyArmor,
+  justArrived,
+  commandSources,
+  actionsThisRound,
+  canFumble,
+  phylactery,
+  enemyDamage,
+  packBonus,
+  specialDue,
+  activeSpecial,
+  ignoresTaunt,
+  isGuarded,
+  type BattleState,
+  type EnemyState,
+} from '../../engine/combat';
 import { rules, type TraitId } from '../../rules';
 import { behaviorOf, encounterOf, hasTwist, monsterIcon } from '../../engine/encounter';
 import { Meter, TierDot, type Intent, dmgMark, foeShort, foeIcon } from './parts';
@@ -11,7 +26,8 @@ export function EnemyIcons({ e, state }: { e: EnemyState; state: BattleState }) 
   const rage = rules.combat.warlordEnrage;
   const icons: { icon: string; tone: string; label: string }[] = [];
   // A Wraith that is already intangible has nothing to fade from.
-  if (special && !e.asleep && specialDue(e, state.round + 1) && !(special.key === 'fade' && e.intangible)) icons.push({ icon: `⏳ ${special.short} next round`, tone: 'soon', label: `${special.name} next round` });
+  if (special && !e.asleep && specialDue(e, state.round + 1) && !(special.key === 'fade' && e.intangible))
+    icons.push({ icon: `⏳ ${special.short} next round`, tone: 'soon', label: `${special.name} next round` });
   if (e.enraged) icons.push({ icon: `🔥+${rage.damageBonus}`, tone: 'warn', label: 'Enraged' });
   if (e.drum && e.drum.round >= state.round) icons.push({ icon: `🥁+${e.drum.amount}`, tone: 'warn', label: 'War Drum' });
   for (const c of commandSources(state, e)) icons.push({ icon: `${c.icon}+${c.bonus}`, tone: 'warn', label: c.name });
@@ -21,11 +37,13 @@ export function EnemyIcons({ e, state }: { e: EnemyState; state: BattleState }) 
   if (e.intangible) icons.push({ icon: '👻 Intangible', tone: 'ghost', label: 'Intangible: only spells and Cleric attacks can touch it' });
   const ovr = encounterOf(state.encounter).monsters[e.kind];
   if (ovr?.regenerate) icons.push({ icon: `♻️+${ovr.regenerate.amount}`, tone: 'good', label: `${ovr.regenerate.name}: ${ovr.regenerate.description}` });
-  if (ovr?.rallyingSaga) icons.push({ icon: `🎶 +${ovr.rallyingSaga.bonus}⛰️`, tone: 'warn', label: `${ovr.rallyingSaga.name}: ${ovr.rallyingSaga.description}` });
+  if (ovr?.rallyingSaga)
+    icons.push({ icon: `🎶 +${ovr.rallyingSaga.bonus}⛰️`, tone: 'warn', label: `${ovr.rallyingSaga.name}: ${ovr.rallyingSaga.description}` });
   if (e.groggy) icons.push({ icon: '😵 Groggy', tone: '', label: 'Groggy: one action a round until the final wave arrives' });
   const ov = encounterOf(state.encounter).monsters[e.kind];
   if (ov?.dragonkin && hasTwist('dragonscale', state.encounter)) icons.push({ icon: '🔥½', tone: 'shield', label: 'Dragonscale: half damage from fire' });
-  if (ov?.moltenHide) icons.push({ icon: `🌋${ov.moltenHide.damage}`, tone: 'warn', label: `${ov.moltenHide.name}: weapon hits burn the attacker for ${ov.moltenHide.damage}` });
+  if (ov?.moltenHide)
+    icons.push({ icon: `🌋${ov.moltenHide.damage}`, tone: 'warn', label: `${ov.moltenHide.name}: weapon hits burn the attacker for ${ov.moltenHide.damage}` });
   if (behaviorOf(e.kind, state.encounter) === 'assassin')
     icons.push({ icon: `🔋${rules.combat.assassinDrain}`, tone: 'curse', label: `Energy drain: each hit drains ${rules.combat.assassinDrain} energy` });
   if (ignoresTaunt(e)) icons.push({ icon: '⊘⚑', tone: '', label: 'Ignores taunts' });
@@ -279,9 +297,7 @@ export function GoblinStack({
       {justArrived(state, first) ? (
         <div className="u-intent muted">Arrived · acts next round</div>
       ) : (
-        counts.size > 0 && (
-          <div className="u-intent">{[...counts].map(([t, n]) => (n > 1 ? `${t} ×${n}` : t)).join(' · ')}</div>
-        )
+        counts.size > 0 && <div className="u-intent">{[...counts].map(([t, n]) => (n > 1 ? `${t} ×${n}` : t)).join(' · ')}</div>
       )}
     </div>
   );

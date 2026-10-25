@@ -1,16 +1,6 @@
 import { actionDamage, energyGain, type ActionOption, type HeroState } from '../../engine/combat';
 
-export function ActionTile({
-  o,
-  hero,
-  details,
-  onPick,
-}: {
-  o: ActionOption;
-  hero: HeroState;
-  details: boolean;
-  onPick: (o: ActionOption) => void;
-}) {
+export function ActionTile({ o, hero, details, onPick }: { o: ActionOption; hero: HeroState; details: boolean; onPick: (o: ActionOption) => void }) {
   const dmg = actionDamage(o.def, hero);
   const gain = energyGain(o.def);
   const description = o.def.description.replace(/\bG\b/g, String(hero.gear));
@@ -33,7 +23,9 @@ export function ActionTile({
             +{gain}
           </span>
         ) : (
-          <span className={`cost${o.cost !== undefined && o.def.cost !== undefined && o.cost < o.def.cost ? ' discounted' : ''}`}>{o.def.unlock ? (o.def.unlock === 'signature' ? 'DD' : 'TD') : o.cost}</span>
+          <span className={`cost${o.cost !== undefined && o.def.cost !== undefined && o.cost < o.def.cost ? ' discounted' : ''}`}>
+            {o.def.unlock ? (o.def.unlock === 'signature' ? 'DD' : 'TD') : o.cost}
+          </span>
         )}
       </span>
       {details && <span className="tiny muted">{description}</span>}

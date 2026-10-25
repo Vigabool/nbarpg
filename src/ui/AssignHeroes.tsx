@@ -37,8 +37,7 @@ export function AssignHeroes({ data, game, onChange }: { data: SeasonData; game:
         <div className="stack" style={{ gap: 4 }}>
           <h1>Assign your heroes</h1>
           <p className="muted small">
-            Bind one rostered player to each hero for this week. Season tier in the class sets gear damage. Players without a game this week
-            sit out.
+            Bind one rostered player to each hero for this week. Season tier in the class sets gear damage. Players without a game this week sit out.
           </p>
         </div>
         <button className="btn small" onClick={suggest}>
@@ -71,7 +70,8 @@ export function AssignHeroes({ data, game, onChange }: { data: SeasonData; game:
                   const other = CLASSES.find((k) => k !== c && game.assignments[k] === pid);
                   return (
                     <option key={pid} value={pid}>
-                      {pl.name} — {t[0].toUpperCase() + t.slice(1)} · {gamesCount(games(pid))}{other ? ` (now ${rules.classes[other].name})` : ''}
+                      {pl.name} — {t[0].toUpperCase() + t.slice(1)} · {gamesCount(games(pid))}
+                      {other ? ` (now ${rules.classes[other].name})` : ''}
                     </option>
                   );
                 })}

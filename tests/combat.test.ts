@@ -1,5 +1,22 @@
 import { describe, expect, it } from 'vitest';
-import { canFumble, endRound, livingEnemies, spendFumble, specialDue, listActions, nextWaveRound, performAction, previewEnemyPhase, previewRound, actionDamage, commandBonus, enemyDamage, isGuarded, packBonus, type BattleState } from '../src/engine/combat';
+import {
+  canFumble,
+  endRound,
+  livingEnemies,
+  spendFumble,
+  specialDue,
+  listActions,
+  nextWaveRound,
+  performAction,
+  previewEnemyPhase,
+  previewRound,
+  actionDamage,
+  commandBonus,
+  enemyDamage,
+  isGuarded,
+  packBonus,
+  type BattleState,
+} from '../src/engine/combat';
 import { rules } from '../src/rules';
 
 const DIRTY = rules.encounters.encounters['goblin-horde'].monsters.hunter!.poisonOnHit!.perRound;
@@ -229,7 +246,10 @@ describe('the horde', () => {
     const s = endRound(battle([[g]]));
     // Warrior has 2 armor from the Shield.
     expect(hero(s, 'warrior').hp).toBe(40 - 3);
-    const noWarrior = battle([[monster({ id: 'x1', damage: 5, hp: 50 })]], party().filter((h) => h.heroClass !== 'warrior'));
+    const noWarrior = battle(
+      [[monster({ id: 'x1', damage: 5, hp: 50 })]],
+      party().filter((h) => h.heroClass !== 'warrior'),
+    );
     const after = endRound(noWarrior);
     expect(hero(after, 'wizard').hp).toBe(22 - 5);
   });
@@ -644,7 +664,11 @@ describe('Goblin Chieftain', () => {
     const before = livingEnemies(s).length;
     s = endRound(s);
     expect(livingEnemies(s).length).toBe(before + 2);
-    expect(livingEnemies(s).filter((e) => e.kind === 'goblin').every((e) => e.arrivedRound === 3)).toBe(true);
+    expect(
+      livingEnemies(s)
+        .filter((e) => e.kind === 'goblin')
+        .every((e) => e.arrivedRound === 3),
+    ).toBe(true);
   });
 });
 

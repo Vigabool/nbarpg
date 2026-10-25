@@ -1,5 +1,18 @@
 import { useEffect, useState } from 'react';
-import { enemyArmor, justArrived, commandSources, canFumble, phylactery, enemyDamage, packBonus, specialDue, activeSpecial, isGuarded, type BattleState, type EnemyState } from '../../engine/combat';
+import {
+  enemyArmor,
+  justArrived,
+  commandSources,
+  canFumble,
+  phylactery,
+  enemyDamage,
+  packBonus,
+  specialDue,
+  activeSpecial,
+  isGuarded,
+  type BattleState,
+  type EnemyState,
+} from '../../engine/combat';
 import { rules } from '../../rules';
 import { EnemyHead, Feature, monsterBehavior, monsterPassives, type EnemyPage } from '../Tutorial';
 import { behaviorOf } from '../../engine/encounter';
@@ -26,7 +39,12 @@ export function EnemyDetail({
   onClose: () => void;
   onHelp: (enemy: EnemyPage) => void;
 }) {
-  const [idx, setIdx] = useState(() => Math.max(0, groups.findIndex((g) => g.some((e) => e.id === initialId))));
+  const [idx, setIdx] = useState(() =>
+    Math.max(
+      0,
+      groups.findIndex((g) => g.some((e) => e.id === initialId)),
+    ),
+  );
   useEffect(() => {
     const onKey = (ev: KeyboardEvent) => ev.key === 'Escape' && onClose();
     window.addEventListener('keydown', onKey);
@@ -40,19 +58,29 @@ export function EnemyDetail({
   const rage = rules.combat.warlordEnrage;
   const n = rules.combat.specialEveryNRounds;
   let nextSpecial: number | null = null;
-  if (special) for (let r = state.round; r < state.round + n + 1; r++) if (specialDue(e, r)) { nextSpecial = r; break; }
+  if (special)
+    for (let r = state.round; r < state.round + n + 1; r++)
+      if (specialDue(e, r)) {
+        nextSpecial = r;
+        break;
+      }
   const when = nextSpecial === state.round ? 'this round' : nextSpecial === state.round + 1 ? 'next round' : `round ${nextSpecial}`;
 
   const now: { text: string; tone: string }[] = [];
   if (e.enraged) now.push({ text: `🔥 Enraged +${rage.damageBonus}`, tone: 'warn' });
-  if (e.drum && e.drum.round >= state.round) now.push({ text: `🥁 War Drum +${e.drum.amount} ${e.drum.round === state.round ? 'this round' : 'next round'}`, tone: 'warn' });
+  if (e.drum && e.drum.round >= state.round)
+    now.push({ text: `🥁 War Drum +${e.drum.amount} ${e.drum.round === state.round ? 'this round' : 'next round'}`, tone: 'warn' });
   if (isGuarded(state, e)) now.push({ text: '🔒 Guarded now', tone: 'shield' });
   if (packBonus(state, e) > 0) now.push({ text: `🐺 Pack +${packBonus(state, e)}`, tone: '' });
   for (const c of commandSources(state, e)) now.push({ text: `${c.icon} ${c.name} +${c.bonus}`, tone: 'warn' });
-  if (behaviorOf(e.kind, state.encounter) === 'lich' && phylactery(state)) now.push({ text: '⚱️ Takes half damage while its Phylactery stands', tone: 'shield' });
+  if (behaviorOf(e.kind, state.encounter) === 'lich' && phylactery(state))
+    now.push({ text: '⚱️ Takes half damage while its Phylactery stands', tone: 'shield' });
   if (e.tauntedBy) {
     const h = state.heroes.find((x) => x.id === e.tauntedBy);
-    now.push({ text: `⚑ Taunted by ${h ? rules.classes[h.heroClass].name : state.summons.find((x) => x.id === e.tauntedBy)?.name ?? 'an ally'}`, tone: 'taunt' });
+    now.push({
+      text: `⚑ Taunted by ${h ? rules.classes[h.heroClass].name : (state.summons.find((x) => x.id === e.tauntedBy)?.name ?? 'an ally')}`,
+      tone: 'taunt',
+    });
   }
   if (e.poison) now.push({ text: `☣ Poison ${e.poison.perRound} × ${e.poison.rounds} rounds`, tone: 'poison' });
   if (e.weaken) now.push({ text: `↓ Cursed −${e.weaken.amount} for ${e.weaken.rounds} rounds`, tone: 'curse' });
@@ -158,9 +186,8 @@ export function EnemyDetail({
               title={`💫 Fumbles · ${e.fumbles} left`}
               text={
                 <>
-                  {player ?? 'Its player'} turned it over {e.spec.source?.line.tov ?? 0} times that night: one Fumble per{' '}
-                  {rules.horde.turnoversPerFumble}. Spend one to cancel its next action, a special included. Free for your party, and lost when it
-                  dies.
+                  {player ?? 'Its player'} turned it over {e.spec.source?.line.tov ?? 0} times that night: one Fumble per {rules.horde.turnoversPerFumble}.
+                  Spend one to cancel its next action, a special included. Free for your party, and lost when it dies.
                   {e.fumbled ? (
                     <span className="u-intent" style={{ display: 'block' }}>
                       Fumbling: it loses its next action.
@@ -190,7 +217,11 @@ export function EnemyDetail({
           {monsterPassives(e.kind, state.encounter).map((p) => (
             <Feature key={p.title} title={`${p.icon ? `${p.icon} ` : ''}Passive · ${p.title}`} text={p.text} />
           ))}
-          <button className="btn small" style={{ alignSelf: 'flex-start' }} onClick={() => onHelp((e.isWarlord || e.kind === 'phylactery' ? 'warlord' : e.kind) as EnemyPage)}>
+          <button
+            className="btn small"
+            style={{ alignSelf: 'flex-start' }}
+            onClick={() => onHelp((e.isWarlord || e.kind === 'phylactery' ? 'warlord' : e.kind) as EnemyPage)}
+          >
             More in How to play →
           </button>
         </div>

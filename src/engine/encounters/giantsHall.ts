@@ -1,5 +1,16 @@
 import { rules as defaultRules, type Rules } from '../../rules';
-import { actionsThisRound, enemyDamage, hitHero, log, lowestHp, targetableHeroes, type BattleState, type EnemyState, type HeroState, type Target } from '../combat';
+import {
+  actionsThisRound,
+  enemyDamage,
+  hitHero,
+  log,
+  lowestHp,
+  targetableHeroes,
+  type BattleState,
+  type EnemyState,
+  type HeroState,
+  type Target,
+} from '../combat';
 import { encounterOf } from '../encounter';
 import type { Mechanic } from './types';
 
@@ -9,7 +20,7 @@ export function toppleThreshold(state: BattleState, e: EnemyState, rules: Rules 
   if (!enc.twists.includes('topple') || e.kind === 'goblin') return null;
   const t = rules.combat.topple;
   // Rallying Saga: while the Skald lives, every giant is harder to topple.
-  const saga = state.enemies.reduce((sum, x) => sum + (x.alive ? enc.monsters[x.kind]?.rallyingSaga?.bonus ?? 0 : 0), 0);
+  const saga = state.enemies.reduce((sum, x) => sum + (x.alive ? (enc.monsters[x.kind]?.rallyingSaga?.bonus ?? 0) : 0), 0);
   return Math.ceil(e.maxHp * (e.isWarlord ? t.bossThreshold : t.threshold)) + saga;
 }
 
@@ -97,7 +108,7 @@ const hallRoles: Mechanic = {
           const bestMissing = best ? (best.unit as HeroState).maxHp - best.unit.hp : -1;
           return missing > bestMissing || (missing === bestMissing && best && t.unit.hp < best.unit.hp) ? t : best;
         }, undefined);
-        return hurt && (hurt.unit as HeroState).maxHp > hurt.unit.hp ? hurt : lowestHp(heroes) ?? lowestHp(all);
+        return hurt && (hurt.unit as HeroState).maxHp > hurt.unit.hp ? hurt : (lowestHp(heroes) ?? lowestHp(all));
       },
     },
   },
@@ -107,12 +118,21 @@ const hallRoles: Mechanic = {
       run(state, enemy, dmg, rules) {
         const sp = rules.combat.specials.boulderToss;
         const heroes = targetableHeroes(state);
-        const target = [...(heroes.some((h) => h.heroClass !== 'warrior') ? heroes.filter((h) => h.heroClass !== 'warrior') : heroes)].sort((a, b) => a.hp - b.hp)[0];
+        const target = [...(heroes.some((h) => h.heroClass !== 'warrior') ? heroes.filter((h) => h.heroClass !== 'warrior') : heroes)].sort(
+          (a, b) => a.hp - b.hp,
+        )[0];
         if (!target) return false;
         const hit = hitHero(state, enemy, target, Math.round(dmg * sp.multiplier), rules);
         const name = rules.classes[target.heroClass].name;
         if (target.alive) target.skipNextTurn = true;
-        log(state, 'enemy', `${enemy.name} hurls a boulder: ${hit.text}${target.alive ? `; the ${name} is knocked prone` : ''}.`, enemy.id, [target.id], `⚠ ${sp.short} → ${hit.short}`);
+        log(
+          state,
+          'enemy',
+          `${enemy.name} hurls a boulder: ${hit.text}${target.alive ? `; the ${name} is knocked prone` : ''}.`,
+          enemy.id,
+          [target.id],
+          `⚠ ${sp.short} → ${hit.short}`,
+        );
         return true;
       },
     },
@@ -137,7 +157,14 @@ const hallRoles: Mechanic = {
           return `${hit.text}${lost ? `, −${lost} energy` : ''}`;
         });
         if (!hits.length) return false;
-        log(state, 'enemy', `${enemy.name} brings down an ${a.name}: ${hits.join('; ')}.`, enemy.id, undefined, `⚠ ${a.short}: all heroes ${Math.max(0, dmg - a.penalty)}, −${a.energyLoss} energy`);
+        log(
+          state,
+          'enemy',
+          `${enemy.name} brings down an ${a.name}: ${hits.join('; ')}.`,
+          enemy.id,
+          undefined,
+          `⚠ ${a.short}: all heroes ${Math.max(0, dmg - a.penalty)}, −${a.energyLoss} energy`,
+        );
         return true;
       },
     },

@@ -21,13 +21,25 @@ const ROLES: ChampionKind[] = ['ogre', 'warlock', 'hunter', 'assassin', 'shaman'
 // Feature order: energy per class (÷10), double-doubles, triple-doubles, Champion tier per role, boss tier, traits, Fumbles.
 const NAMES = [...CLASSES.map((c) => `energy:${c}`), 'doubleDouble', 'tripleDouble', ...ROLES.map((r) => `tier:${r}`), 'bossTier', 'trait', 'fumble'];
 
-function features(picks: HeroGamePick[], pools: Partial<Record<HeroClass, { pool: number; doubleDouble: boolean; tripleDouble: boolean }>>, horde: Horde): number[] {
+function features(
+  picks: HeroGamePick[],
+  pools: Partial<Record<HeroClass, { pool: number; doubleDouble: boolean; tripleDouble: boolean }>>,
+  horde: Horde,
+): number[] {
   const energy = CLASSES.map((c) => (pools[c]?.pool ?? 0) / 10);
   const dd = picks.filter((p) => pools[p.heroClass]?.doubleDouble && !pools[p.heroClass]?.tripleDouble).length;
   const td = picks.filter((p) => pools[p.heroClass]?.tripleDouble).length;
   const tier = ROLES.map((r) => tierIndex(horde.champions.find((m) => m.kind === r)?.tier ?? 'average'));
   const all = [...horde.champions, horde.warlord];
-  return [...energy, dd, td, ...tier, tierIndex(horde.warlord.tier ?? 'cold'), all.reduce((t, m) => t + (m.traits?.length ?? 0), 0), all.reduce((t, m) => t + m.fumbles, 0)];
+  return [
+    ...energy,
+    dd,
+    td,
+    ...tier,
+    tierIndex(horde.warlord.tier ?? 'cold'),
+    all.reduce((t, m) => t + (m.traits?.length ?? 0), 0),
+    all.reduce((t, m) => t + m.fumbles, 0),
+  ];
 }
 
 /** Plain logistic regression by gradient descent, with a little L2 to steady noisy coefficients. */
@@ -58,7 +70,7 @@ const players = eligiblePlayers(data);
 const out: Record<string, unknown> = {};
 for (const enc of encounterIds()) {
   let seed = 7;
-  const rand = () => ((seed = (seed * 1103515245 + 12345) % 2 ** 31) / 2 ** 31);
+  const rand = () => (seed = (seed * 1103515245 + 12345) % 2 ** 31) / 2 ** 31;
   const X: number[][] = [];
   const y: number[] = [];
   for (let b = 0; b < BATTLES; b++) {

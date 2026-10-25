@@ -28,7 +28,10 @@ describe('auto-draft', () => {
   });
 
   const week = data.weeks[0];
-  const drafts = Object.fromEntries(DRAFT_MODES.map((m) => [m.id, autoDraft(data, week, m.id)!])) as Record<DraftMode, NonNullable<ReturnType<typeof autoDraft>>>;
+  const drafts = Object.fromEntries(DRAFT_MODES.map((m) => [m.id, autoDraft(data, week, m.id)!])) as Record<
+    DraftMode,
+    NonNullable<ReturnType<typeof autoDraft>>
+  >;
   const tier = (d: (typeof drafts)[DraftMode], c: HeroClass) => tierIndex(seasonTier(c, data.players[d.slots[c]].avg));
   const tierSum = (d: (typeof drafts)[DraftMode], cs: HeroClass[]) => cs.reduce((t, c) => t + tier(d, c), 0);
   const roles = (id: number) => CLASSES.filter((c) => tierIndex(seasonTier(c, data.players[id].avg)) >= tierIndex('good')).length;

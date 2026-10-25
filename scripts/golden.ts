@@ -24,7 +24,7 @@ const players = eligiblePlayers(data);
 
 function lineups(n: number, seedIn: number): HeroGamePick[][] {
   let seed = seedIn;
-  const rand = () => ((seed = (seed * 1103515245 + 12345) % 2 ** 31) / 2 ** 31);
+  const rand = () => (seed = (seed * 1103515245 + 12345) % 2 ** 31) / 2 ** 31;
   const out: HeroGamePick[][] = [];
   while (out.length < n) {
     const week = data.weeks[Math.floor(rand() * data.weeks.length)];
@@ -39,7 +39,13 @@ function lineups(n: number, seedIn: number): HeroGamePick[][] {
       used.add(best.id);
       const games = playerGamesInWeek(data, week, best.id);
       const gameId = games
-        .map((g) => ({ g, pool: computePool(c, data.games[g].lines.find((l) => l.playerId === best.id)!).pool }))
+        .map((g) => ({
+          g,
+          pool: computePool(
+            c,
+            data.games[g].lines.find((l) => l.playerId === best.id)!,
+          ).pool,
+        }))
         .sort((a, b) => b.pool - a.pool)[0].g;
       picks.push({ heroClass: c, playerId: best.id, gameId });
     }
@@ -51,7 +57,10 @@ function lineups(n: number, seedIn: number): HeroGamePick[][] {
 const hash = (v: unknown) => createHash('sha256').update(JSON.stringify(v)).digest('hex').slice(0, 16);
 const result: Record<string, { fingerprint: string; wins: number; battles: number }> = {};
 for (const enc of encounterIds()) {
-  for (const [bot, n] of [['fast', 120], ['smart', 8]] as const) {
+  for (const [bot, n] of [
+    ['fast', 120],
+    ['smart', 8],
+  ] as const) {
     const ends = lineups(n, 11).map((picks) => {
       const b = prepareBattle(picks, data, undefined, enc).battle;
       return bot === 'smart' ? smartAutoplay(b) : autoplay(b);
@@ -68,7 +77,12 @@ result['seasons/fast'] = { fingerprint: hash(seasons), wins: seasons.filter((w) 
 
 if (process.argv.includes('--update') || !existsSync(FILE)) {
   writeFileSync(FILE, JSON.stringify(result, null, 2) + '\n');
-  console.log('Recorded golden baseline:', Object.entries(result).map(([k, v]) => `${k} ${v.wins}/${v.battles}`).join(' · '));
+  console.log(
+    'Recorded golden baseline:',
+    Object.entries(result)
+      .map(([k, v]) => `${k} ${v.wins}/${v.battles}`)
+      .join(' · '),
+  );
 } else {
   const want = JSON.parse(readFileSync(FILE, 'utf8')) as typeof result;
   let ok = true;

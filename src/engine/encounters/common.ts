@@ -84,7 +84,14 @@ export const roles: Mechanic = {
           h.curse = { amount: c.damageReduction, rounds: c.rounds };
           hits.push(hitHero(state, enemy, h, sp.warlock.damage, rules, true).text);
         }
-        log(state, 'enemy', `${enemy.name} casts ${sp.warlock.name}: −${c.damageReduction} damage for ${c.rounds} turns; ${hits.join('; ')}.`, enemy.id, undefined, `⚠ ${sp.warlock.short}: all heroes`);
+        log(
+          state,
+          'enemy',
+          `${enemy.name} casts ${sp.warlock.name}: −${c.damageReduction} damage for ${c.rounds} turns; ${hits.join('; ')}.`,
+          enemy.id,
+          undefined,
+          `⚠ ${sp.warlock.short}: all heroes`,
+        );
         return true;
       },
     },
@@ -130,7 +137,14 @@ export const roles: Mechanic = {
       run(state, enemy, _dmg, rules) {
         const sp = rules.combat.specials;
         for (const e of livingEnemies(state)) e.drum = { amount: sp.shaman.bonus, round: state.round };
-        log(state, 'enemy', `${enemy.name} beats the ${sp.shaman.name}: the horde deals +${sp.shaman.bonus} damage this round.`, enemy.id, undefined, `⚠ ${sp.shaman.short}: horde +${sp.shaman.bonus}`);
+        log(
+          state,
+          'enemy',
+          `${enemy.name} beats the ${sp.shaman.name}: the horde deals +${sp.shaman.bonus} damage this round.`,
+          enemy.id,
+          undefined,
+          `⚠ ${sp.shaman.short}: horde +${sp.shaman.bonus}`,
+        );
         return true;
       },
     },

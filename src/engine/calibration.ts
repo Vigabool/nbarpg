@@ -42,8 +42,7 @@ export function calibrate(data: SeasonData, rules: Rules = defaultRules): ClassC
     );
     const values: number[] = [];
     for (const g of Object.values(data.games))
-      for (const l of g.lines)
-        if (l.min >= cal.minMinutes && eligible.has(l.playerId)) values.push(computeRating(rules.classes[heroClass].rating, l));
+      for (const l of g.lines) if (l.min >= cal.minMinutes && eligible.has(l.playerId)) values.push(computeRating(rules.classes[heroClass].rating, l));
     values.sort((a, b) => a - b);
 
     const percentiles = {

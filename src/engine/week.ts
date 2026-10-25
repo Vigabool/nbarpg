@@ -48,7 +48,14 @@ export function prepareBattle(
     const pool = computePool(p.heroClass, line, rules);
     pools[p.heroClass] = pool;
     const player = data.players[p.playerId];
-    return { heroClass: p.heroClass, playerId: p.playerId, playerName: player.name, gear: gearDamage(p.heroClass, player.avg, rules), pool, progress: opts.progress?.[p.heroClass] };
+    return {
+      heroClass: p.heroClass,
+      playerId: p.playerId,
+      playerName: player.name,
+      gear: gearDamage(p.heroClass, player.avg, rules),
+      pool,
+      progress: opts.progress?.[p.heroClass],
+    };
   });
   const horde = scaleHorde(buildHorde(picks, data, rules, encounter), opts.chapter ?? 1, rules);
   return { picks, pools, heroes, horde, battle: createBattle(heroes, horde.waves, rules, encounter ?? rules.encounters.default) };

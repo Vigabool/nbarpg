@@ -89,32 +89,31 @@ export function Tutorial({ onClose, topic }: { onClose: () => void; topic?: Tuto
           {tab === 'basics' && (
             <ol className="steps">
               <li>
-                <strong>Build a roster.</strong> Sign {s.rosterSize} NBA players under the {money(s.cap)} cap: one for each of your five heroes,
-                plus three reserves. Salary follows how good a player is, and players who fit several classes cost more.
+                <strong>Build a roster.</strong> Sign {s.rosterSize} NBA players under the {money(s.cap)} cap: one for each of your five heroes, plus three
+                reserves. Salary follows how good a player is, and players who fit several classes cost more.
               </li>
               <li>
-                <strong>Each week, pick a game.</strong> For each hero, choose one of their player's real games that week. That box score
-                sets the hero's starting <em>energy</em>, which they spend on abilities. Each class draws energy from different stats. A big
-                night means a big start.
+                <strong>Each week, pick a game.</strong> For each hero, choose one of their player's real games that week. That box score sets the hero's
+                starting <em>energy</em>, which they spend on abilities. Each class draws energy from different stats. A big night means a big start.
               </li>
               <li>
-                <strong>Watch who you bring.</strong> Every game you pick also sets how strong the opposing player who mirrors your hero is in
-                the horde, and a big night gives that monster a <em>trait</em>. The best opposing line by anyone else becomes the boss.
+                <strong>Watch who you bring.</strong> Every game you pick also sets how strong the opposing player who mirrors your hero is in the horde, and a
+                big night gives that monster a <em>trait</em>. The best opposing line by anyone else becomes the boss.
               </li>
               <li>
-                <strong>Fight.</strong> Three waves, {rules.combat.roundCap} rounds. Waves arrive on a clock (rounds {rules.combat.waveArrivalRounds.join(' and ')}) or as
-                soon as you clear the field, so they can overlap. Each round your heroes act in any order, then summons, then the horde. Every hero gets <em>one attack</em> a round plus any number of <em>utility</em> powers (taunts, heals,
-                armor, buffs, summons) they have energy for. Attacks come in three kinds: a <em>basic</em> weapon attack that gains 2
-                energy, an <em>advanced</em> weapon attack that costs 1–2, and damage spells that cost more. There are no dice: each enemy
-                shows what it will do.
+                <strong>Fight.</strong> Three waves, {rules.combat.roundCap} rounds. Waves arrive on a clock (rounds{' '}
+                {rules.combat.waveArrivalRounds.join(' and ')}) or as soon as you clear the field, so they can overlap. Each round your heroes act in any order,
+                then summons, then the horde. Every hero gets <em>one attack</em> a round plus any number of <em>utility</em> powers (taunts, heals, armor,
+                buffs, summons) they have energy for. Attacks come in three kinds: a <em>basic</em> weapon attack that gains 2 energy, an <em>advanced</em>{' '}
+                weapon attack that costs 1–2, and damage spells that cost more. There are no dice: each enemy shows what it will do.
               </li>
               <li>
-                <strong>Highlights.</strong> A double-double unlocks the hero's Signature ability; a triple-double also unlocks their
-                Legendary. Each is free and usable once.
+                <strong>Highlights.</strong> A double-double unlocks the hero's Signature ability; a triple-double also unlocks their Legendary. Each is free
+                and usable once.
               </li>
               <li>
-                <strong>Win</strong> by clearing every wave before round {rules.combat.roundCap}. Victories and survivors earn progression
-                points (PP) for your heroes.
+                <strong>Win</strong> by clearing every wave before round {rules.combat.roundCap}. Victories and survivors earn progression points (PP) for your
+                heroes.
               </li>
             </ol>
           )}
@@ -298,8 +297,7 @@ function ClassesTab({ initialClass, initialOpen }: { initialClass?: HeroClass; i
           {PLAYSTYLE[c].play}
         </p>
         <p className="tiny muted" style={{ margin: 0 }}>
-          Draft: {PLAYSTYLE[c].draft}.
-          {cls.passives.map((p) => ` Passive: ${p.name}, ${p.description}.`).join('')}
+          Draft: {PLAYSTYLE[c].draft}.{cls.passives.map((p) => ` Passive: ${p.name}, ${p.description}.`).join('')}
         </p>
 
         {groups.map((g) => (
@@ -316,7 +314,11 @@ function ClassesTab({ initialClass, initialOpen }: { initialClass?: HeroClass; i
                     aria-expanded={open === a.id}
                     onClick={() => setOpen(open === a.id ? null : a.id)}
                   >
-                    {isAttack(a) && <span className="atk" aria-label="Attack">⚔</span>}
+                    {isAttack(a) && (
+                      <span className="atk" aria-label="Attack">
+                        ⚔
+                      </span>
+                    )}
                     <span>{a.name}</span>
                     <span className={`cost-badge ${cost.tone}`}>{cost.text}</span>
                   </button>
@@ -374,8 +376,8 @@ function EnemiesTab({ initial, initialEncounter }: { initial?: EnemyPage; initia
       <>
         <EnemyHead icon="✨" name="Traits" sub="Big nights make monsters dangerous in new ways" />
         <p className="small">
-          A standout stat on the opposing player's night gives their monster one trait (the boss can have two). Cold and average nights bring
-          a plain monster. You can see every trait while picking games.
+          A standout stat on the opposing player's night gives their monster one trait (the boss can have two). Cold and average nights bring a plain monster.
+          You can see every trait while picking games.
         </p>
         {(Object.keys(rules.traits) as TraitId[]).map((id) => {
           const t = rules.traits[id];
@@ -413,11 +415,17 @@ function EnemiesTab({ initial, initialEncounter }: { initial?: EnemyPage; initia
           <span className="chip">{w.extraActions + 1} actions a round</span>
         </div>
         <p className="small">
-          The single best opposing line (points + rebounds + assists) across your chosen games leads the horde. Its best tier as any
-          Champion type sets its strength, and its two biggest standout stats can each give it a trait. The boss is never a player who already
-          mirrors one of your heroes. {enc.bossSleeps ? 'It lies asleep on the field from the first round (see Asleep below).' : 'It arrives in the last wave.'}
+          The single best opposing line (points + rebounds + assists) across your chosen games leads the horde. Its best tier as any Champion type sets its
+          strength, and its two biggest standout stats can each give it a trait. The boss is never a player who already mirrors one of your heroes.{' '}
+          {enc.bossSleeps ? 'It lies asleep on the field from the first round (see Asleep below).' : 'It arrives in the last wave.'}
         </p>
-        {sp && <Feature title={`⚠ Special · ${sp.name}`} text={`${sp.description}. Fires ${every} on the field, starting its 2nd round. Its card shows ⏳ the round before, then a red ⚠ NOW banner when it's about to fire.`} warn />}
+        {sp && (
+          <Feature
+            title={`⚠ Special · ${sp.name}`}
+            text={`${sp.description}. Fires ${every} on the field, starting its 2nd round. Its card shows ⏳ the round before, then a red ⚠ NOW banner when it's about to fire.`}
+            warn
+          />
+        )}
         {monsterPassives(enc.boss, encId).map((p) => (
           <Feature key={p.title} title={`${p.icon ? `${p.icon} ` : ''}Passive · ${p.title}`} text={p.text} />
         ))}
@@ -438,8 +446,8 @@ function EnemiesTab({ initial, initialEncounter }: { initial?: EnemyPage; initia
           <span className="chip">{w.extraActions + 1} actions a round</span>
         </div>
         <p className="small">
-          The single best opposing line (points + rebounds + assists) across your chosen games becomes the Warlord: a boosted version of that
-          player's Champion, with its behavior and special. It arrives in the last wave.
+          The single best opposing line (points + rebounds + assists) across your chosen games becomes the Warlord: a boosted version of that player's Champion,
+          with its behavior and special. It arrives in the last wave.
         </p>
         <Feature
           title={`🔥 Enrage · below ${Math.round(c.warlordEnrage.atHpFraction * 100)}% HP`}
@@ -470,7 +478,13 @@ function EnemiesTab({ initial, initialEncounter }: { initial?: EnemyPage; initia
           <span className="chip">Scaled by the opposing player's night</span>
         </div>
         <p className="small">{behavior}.</p>
-        {sp && <Feature title={`⚠ Special · ${sp.name}`} text={`${sp.description}. Fires ${every} on the field, starting its 2nd round. Its card shows ⏳ the round before, then a red ⚠ NOW banner when it's about to fire.`} warn />}
+        {sp && (
+          <Feature
+            title={`⚠ Special · ${sp.name}`}
+            text={`${sp.description}. Fires ${every} on the field, starting its 2nd round. Its card shows ⏳ the round before, then a red ⚠ NOW banner when it's about to fire.`}
+            warn
+          />
+        )}
         {passives.map((p) => (
           <Feature key={p.title} title={`${p.icon ? `${p.icon} ` : ''}Passive · ${p.title}`} text={p.text} />
         ))}
@@ -492,8 +506,9 @@ function EnemiesTab({ initial, initialEncounter }: { initial?: EnemyPage; initia
         <span className="small muted">{enc.tagline}</span>
       </div>
       <p className="small muted" style={{ margin: 0 }}>
-        Waves arrive on a clock (rounds {c.waveArrivalRounds.join(' and ')}) or as soon as the field is clear. Each hero's game brings one
-        mirrored Champion. Every {rules.horde.turnoversPerFumble} turnovers by a Champion's player give you a 💫 Fumble: tap it in battle to cancel that Champion's next action, specials included.
+        Waves arrive on a clock (rounds {c.waveArrivalRounds.join(' and ')}) or as soon as the field is clear. Each hero's game brings one mirrored Champion.
+        Every {rules.horde.turnoversPerFumble} turnovers by a Champion's player give you a 💫 Fumble: tap it in battle to cancel that Champion's next action,
+        specials included.
       </p>
       <div className="class-picker enemy-picker" role="tablist" aria-label="Enemies">
         {ENEMY_PAGES.map((p) => (
@@ -531,7 +546,11 @@ export function monsterPassives(kind: MonsterKind, encounter?: string): { title:
     out.push({ icon: '🐺', title: c.packTactics.name, text: `${c.packTactics.description}. Thin the pack and every goblin hits softer.` });
   if (kind === 'goblin' && hasTwist('restlessDead', encounter)) out.push({ icon: '🦴', title: c.restlessDead.name, text: `${c.restlessDead.description}.` });
   if (behavior === 'wraith') {
-    out.push({ icon: '👻', title: 'Intangible', text: 'Weapon attacks pass through it. Spells and Cleric attacks can hit it, and the first such hit makes it solid.' });
+    out.push({
+      icon: '👻',
+      title: 'Intangible',
+      text: 'Weapon attacks pass through it. Spells and Cleric attacks can hit it, and the first such hit makes it solid.',
+    });
     out.push({
       icon: '💧',
       title: 'Life drain',
@@ -572,10 +591,17 @@ export function monsterPassives(kind: MonsterKind, encounter?: string): { title:
     out.push({ icon: '💤', title: c.dragonSleep.name, text: `${c.dragonSleep.description}.` });
     out.push({ icon: '💰', title: 'Hoard', text: `+1 damage per ${c.hoardTithe.coinsPerDamage} coins in its hoard (up to +${c.hoardTithe.maxBonus}).` });
   }
-  if (ov?.dragonkin && hasTwist('dragonscale', encounter)) out.push({ icon: '🔥½', title: c.dragonscale.name, text: `${c.dragonscale.description}. Lightning hits it at full strength.` });
-  if (behavior === 'chieftain') out.push({ icon: '👑', title: c.chieftainCommand.name, text: `${c.chieftainCommand.description}: minions and the goblin Champions, not the Ogre. Kill the Chieftain and the buff ends.` });
+  if (ov?.dragonkin && hasTwist('dragonscale', encounter))
+    out.push({ icon: '🔥½', title: c.dragonscale.name, text: `${c.dragonscale.description}. Lightning hits it at full strength.` });
+  if (behavior === 'chieftain')
+    out.push({
+      icon: '👑',
+      title: c.chieftainCommand.name,
+      text: `${c.chieftainCommand.description}: minions and the goblin Champions, not the Ogre. Kill the Chieftain and the buff ends.`,
+    });
   if (m.ignoresTaunt) out.push({ icon: '⊘⚑', title: 'Ignores taunts', text: "Provoke, Bulwark and the Bear don't work on it." });
-  if (hasTwist('packGuard', encounter) && c.packGuard.guarded.includes(behavior)) out.push({ icon: '🔒', title: c.packGuard.name, text: `${c.packGuard.description}.` });
+  if (hasTwist('packGuard', encounter) && c.packGuard.guarded.includes(behavior))
+    out.push({ icon: '🔒', title: c.packGuard.name, text: `${c.packGuard.description}.` });
   if (behavior === 'assassin') out.push({ icon: '🔋', title: 'Energy drain', text: `Each hit drains ${c.assassinDrain} energy from its target.` });
   return out;
 }
@@ -618,8 +644,8 @@ function ProgressionTab() {
   return (
     <div className="stack" style={{ gap: 12 }}>
       <p className="small" style={{ margin: 0 }}>
-        Heroes earn <strong>progression points (PP)</strong> each week and spend them in the <strong>🛠️ Armory</strong> (after a battle, or
-        from the hero cards when assigning players). Progress belongs to the hero, whichever player powers them.
+        Heroes earn <strong>progression points (PP)</strong> each week and spend them in the <strong>🛠️ Armory</strong> (after a battle, or from the hero cards
+        when assigning players). Progress belongs to the hero, whichever player powers them.
       </p>
       <section className="stack" style={{ gap: 4 }}>
         <span className="section-label">Earning</span>
@@ -667,11 +693,10 @@ function ProgressionTab() {
       <section className="stack" style={{ gap: 4 }}>
         <span className="section-label">Chapters</span>
         <p className="small" style={{ margin: 0 }}>
-          The season runs in chapters of 4 weeks. Each new chapter, Champions and bosses gain +{Math.round(p.chapterScaling * 100)}% HP and
-          damage, so the horde keeps pace with your upgrades.
+          The season runs in chapters of 4 weeks. Each new chapter, Champions and bosses gain +{Math.round(p.chapterScaling * 100)}% HP and damage, so the horde
+          keeps pace with your upgrades.
         </p>
       </section>
     </div>
   );
 }
-

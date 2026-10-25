@@ -64,7 +64,13 @@ function hordeThreat(h: Horde, w: PickWeights): number {
 }
 
 /** The value of a set of game picks: hero energy and Signature/Legendary unlocks, less the horde they bring. */
-export function picksValue(picks: HeroGamePick[], data: SeasonData, encounter: string | undefined, w: PickWeights = DEFAULT_PICK_WEIGHTS, rules: Rules = defaultRules): number {
+export function picksValue(
+  picks: HeroGamePick[],
+  data: SeasonData,
+  encounter: string | undefined,
+  w: PickWeights = DEFAULT_PICK_WEIGHTS,
+  rules: Rules = defaultRules,
+): number {
   if (picks.length === 0) return 0;
   let value = 0;
   for (const p of picks) {

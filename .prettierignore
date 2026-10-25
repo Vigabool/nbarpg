@@ -1,0 +1,9 @@
+dist
+dist-artifact
+data
+node_modules
+package-lock.json
+src/rules/*.json
+tests/fixtures
+scripts/golden.json
+*.md

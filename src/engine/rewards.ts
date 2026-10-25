@@ -22,11 +22,7 @@ function eliteFoesDefeated(battle: BattleState): number {
   return battle.enemies.filter((e) => !e.alive && e.tier === 'elite' && e.kind !== 'goblin' && e.kind !== 'phylactery').length;
 }
 
-export function computeRewards(
-  battle: BattleState,
-  pools: Partial<Record<HeroClass, PoolBreakdown>>,
-  rules: Rules = defaultRules,
-): Rewards {
+export function computeRewards(battle: BattleState, pools: Partial<Record<HeroClass, PoolBreakdown>>, rules: Rules = defaultRules): Rewards {
   const p = rules.progression.earn;
   const partyLines: RewardLine[] = [];
   const waves = Math.min(battle.stats.wavesCleared, 3);

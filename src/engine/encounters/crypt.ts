@@ -38,7 +38,14 @@ const restlessDead: Mechanic = {
       e.poison = null;
       e.weaken = null;
     }
-    if (rising.length) log(state, 'system', `🦴 ${rising.length} ${rising.length > 1 ? 'skeletons reassemble' : 'skeleton reassembles'}.`, undefined, rising.map((e) => e.id));
+    if (rising.length)
+      log(
+        state,
+        'system',
+        `🦴 ${rising.length} ${rising.length > 1 ? 'skeletons reassemble' : 'skeleton reassembles'}.`,
+        undefined,
+        rising.map((e) => e.id),
+      );
   },
   onEnemyDefeated(state, enemy, source, rules) {
     const restless = encounterOf(state.encounter, rules).monsters[enemy.kind]?.restless;
@@ -65,7 +72,14 @@ const restlessDead: Mechanic = {
           e.weaken = null;
         }
         const sp = specialOf(enemy, state.encounter, rules)!;
-        log(state, 'enemy', `${enemy.name} casts ${sp.name}: ${dead.length} skeletons reassemble and fight from next round.`, enemy.id, dead.map((e) => e.id), `⚠ ${sp.short}: +${dead.length} skeletons`);
+        log(
+          state,
+          'enemy',
+          `${enemy.name} casts ${sp.name}: ${dead.length} skeletons reassemble and fight from next round.`,
+          enemy.id,
+          dead.map((e) => e.id),
+          `⚠ ${sp.short}: +${dead.length} skeletons`,
+        );
         return true;
       },
     },
@@ -111,7 +125,14 @@ const wraith: Mechanic = {
         const hits = heroes.map((h) => hitHero(state, enemy, h, amount, rules, true).text);
         const healed = Math.min(enemy.maxHp - enemy.hp, Math.floor(amount * heroes.length * w.healFraction));
         enemy.hp += healed;
-        log(state, 'enemy', `${enemy.name} drains the party: ${hits.join('; ')}${healed ? `; heals ${healed}` : ''}.`, enemy.id, heroes.map((h) => h.id), `Drain: all heroes ${amount}`);
+        log(
+          state,
+          'enemy',
+          `${enemy.name} drains the party: ${hits.join('; ')}${healed ? `; heals ${healed}` : ''}.`,
+          enemy.id,
+          heroes.map((h) => h.id),
+          `Drain: all heroes ${amount}`,
+        );
         return true;
       },
     },

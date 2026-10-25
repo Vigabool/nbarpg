@@ -33,10 +33,9 @@ export function SelectGames({ data, game, onChange }: { data: SeasonData; game: 
         <div className="stack" style={{ gap: 4 }}>
           <h1>Choose this week's games</h1>
           <p className="muted small">
-            Each hero's starting energy comes from one game this week. Every game also sends that night's opposing player into the horde as a mirrored
-            Champion; a big night gives it a trait (✋ Swat for 4+ blocks, 📣 Floor General for 10+ assists…). The best opposing line by anyone else
-            becomes the boss. Sloppy opponents help: every {rules.horde.turnoversPerFumble}{' '}
-            turnovers give you a 💫 Fumble to cancel that Champion's action in battle.
+            Each hero's starting energy comes from one game this week. Every game also sends that night's opposing player into the horde as a mirrored Champion;
+            a big night gives it a trait (✋ Swat for 4+ blocks, 📣 Floor General for 10+ assists…). The best opposing line by anyone else becomes the boss.
+            Sloppy opponents help: every {rules.horde.turnoversPerFumble} turnovers give you a 💫 Fumble to cancel that Champion's action in battle.
           </p>
         </div>
         <div className="stack" style={{ gap: 6, alignItems: 'flex-end' }}>
@@ -75,7 +74,12 @@ export function SelectGames({ data, game, onChange }: { data: SeasonData; game: 
                 const mirror = mirrorFor(c, pid, gid, data, game.encounter);
                 const selected = game.gamePicks[c] === gid;
                 return (
-                  <button key={gid} className={`card flat selectable game-option stack${selected ? ' selected' : ''}`} style={{ gap: 6 }} onClick={() => pick(c, gid)}>
+                  <button
+                    key={gid}
+                    className={`card flat selectable game-option stack${selected ? ' selected' : ''}`}
+                    style={{ gap: 6 }}
+                    onClick={() => pick(c, gid)}
+                  >
                     <div className="spread small">
                       <strong>
                         {formatDate(g.date)} · {g.home === line.team ? 'vs' : '@'} {opp}
@@ -159,7 +163,8 @@ export function SelectGames({ data, game, onChange }: { data: SeasonData; game: 
                 <div className="row">
                   {goblins.length > 0 && (
                     <span className="chip">
-                      {monsterIcon('goblin', game.encounter)} {goblins.length} × {monsterName('goblin', game.encounter)} ({[...new Set(goblins.map((g) => g.damage))].join('/')} dmg)
+                      {monsterIcon('goblin', game.encounter)} {goblins.length} × {monsterName('goblin', game.encounter)} (
+                      {[...new Set(goblins.map((g) => g.damage))].join('/')} dmg)
                     </span>
                   )}
                   {named.map((m) => (

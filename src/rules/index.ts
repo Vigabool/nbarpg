@@ -221,8 +221,7 @@ export interface EncounterMonster {
 /** A box-score trait: a standout stat on the mirrored player's night gives its monster an ability. */
 export type TraitId = 'swat' | 'pickpocket' | 'secondChance' | 'floorGeneral' | 'deepRange' | 'takeover' | 'hotHand';
 export type TraitTrigger =
-  | { stat: StatKey; atLeast: number; label: string }
-  | { made: StatKey; attempts: StatKey; minAttempts: number; pctAtLeast: number; label: string };
+  { stat: StatKey; atLeast: number; label: string } | { made: StatKey; attempts: StatKey; minAttempts: number; pctAtLeast: number; label: string };
 export interface TraitDef {
   name: string;
   icon: string;

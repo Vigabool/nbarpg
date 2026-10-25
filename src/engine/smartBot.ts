@@ -124,10 +124,13 @@ function moves(state: BattleState, rules: Rules): Move[] {
     if (!h.alive || h.prone) continue;
     for (const o of listActions(state, h.id, rules)) {
       if (!o.available || o.attack || !o.def.effects.some((e) => e.type === 'nextAttackMultiplier')) continue;
-      const targets = o.def.target.type === 'self' ? [h.id] : o.validTargets.filter((id) => {
-        const a = state.heroes.find((x) => x.id === id);
-        return a && a.alive && !a.acted && !a.prone && a.id !== h.id;
-      });
+      const targets =
+        o.def.target.type === 'self'
+          ? [h.id]
+          : o.validTargets.filter((id) => {
+              const a = state.heroes.find((x) => x.id === id);
+              return a && a.alive && !a.acted && !a.prone && a.id !== h.id;
+            });
       for (const t of targets.slice(0, 3)) {
         const buff: Step = { kind: 'action', action: { heroId: h.id, actionId: o.def.id, targetIds: o.def.target.type === 'self' ? [] : [t] } };
         let buffed: BattleState;
@@ -137,7 +140,8 @@ function moves(state: BattleState, rules: Rules): Move[] {
           continue;
         }
         for (const s of steps(buffed, rules))
-          if (s.kind === 'action' && s.action.heroId === t && listActions(buffed, t, rules).find((x) => x.def.id === s.action.actionId)?.attack) out.push([buff, s]);
+          if (s.kind === 'action' && s.action.heroId === t && listActions(buffed, t, rules).find((x) => x.def.id === s.action.actionId)?.attack)
+            out.push([buff, s]);
       }
     }
   }

@@ -32,4 +32,3 @@ describe('smart pick', () => {
     expect(encounterWeights('no-such-encounter')).toEqual(DEFAULT_PICK_WEIGHTS);
   });
 });
-

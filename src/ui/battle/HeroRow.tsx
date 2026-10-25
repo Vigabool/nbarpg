@@ -34,8 +34,16 @@ export function HeroRow({
       <div className="h-name">
         <span className="h-class">
           {CLASS_ICON[h.heroClass]} {cls.name}
-          {state === 'done' && <span className="h-state" aria-label="Done">✓</span>}
-          {state === 'fallen' && <span className="h-state" aria-label="Fallen">💀</span>}
+          {state === 'done' && (
+            <span className="h-state" aria-label="Done">
+              ✓
+            </span>
+          )}
+          {state === 'fallen' && (
+            <span className="h-state" aria-label="Fallen">
+              💀
+            </span>
+          )}
           {doomed && (
             <button
               type="button"
@@ -62,10 +70,17 @@ export function HeroRow({
       <div className="h-tags">
         <Tag passThrough icon={`⚔${h.gear}`} text={`Gear attacks deal ${h.gear}`} />
         {h.armor > 0 && <Tag passThrough icon={`⛨${h.armor}`} text={`+${h.armor} armor this round`} tone="shield" />}
-        {h.nextAttackMultiplier > 1 && <Tag passThrough icon={`✦×${h.nextAttackMultiplier}`} text={`Next attack deals ×${h.nextAttackMultiplier}`} tone="good" />}
+        {h.nextAttackMultiplier > 1 && (
+          <Tag passThrough icon={`✦×${h.nextAttackMultiplier}`} text={`Next attack deals ×${h.nextAttackMultiplier}`} tone="good" />
+        )}
         {h.curse && <Tag passThrough icon={`↓${h.curse.amount}`} text={`Cursed: −${h.curse.amount} damage for ${h.curse.rounds} turns`} tone="curse" />}
         {h.poison && (
-          <Tag passThrough icon={`☣${h.poison.perRound}`} text={`Poisoned: ${h.poison.perRound} damage after the horde acts, ${h.poison.rounds} more time${h.poison.rounds > 1 ? 's' : ''}`} tone="poison" />
+          <Tag
+            passThrough
+            icon={`☣${h.poison.perRound}`}
+            text={`Poisoned: ${h.poison.perRound} damage after the horde acts, ${h.poison.rounds} more time${h.poison.rounds > 1 ? 's' : ''}`}
+            tone="poison"
+          />
         )}
         {h.prone && <Tag passThrough icon="⤵" text="Prone: can't act this round" tone="warn" />}
         {netted && <Tag passThrough icon="🪤" text="Netted: no attack this round (utilities still work)" tone="warn" />}

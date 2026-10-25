@@ -143,7 +143,8 @@ describe('upgrades in battle', () => {
   });
 
   it('Smite adds damage against the undead', () => {
-    const hit = (p: Partial<HeroProgress>, enc?: string) => 999 - enemy(act(battle([[dummy()]], withProgress('cleric', p), enc), 'cleric', 'mace', ['D']), 'D').hp;
+    const hit = (p: Partial<HeroProgress>, enc?: string) =>
+      999 - enemy(act(battle([[dummy()]], withProgress('cleric', p), enc), 'cleric', 'mace', ['D']), 'D').hp;
     expect(hit({ feats: ['smite'] }, 'crypt')).toBe(hit({}, 'crypt') + 3);
     expect(hit({ feats: ['smite'] })).toBe(hit({}));
   });

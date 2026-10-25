@@ -91,15 +91,13 @@ export function autoDraft(
   const candidates = CLASSES.map((c) => {
     const ranked = pool
       .filter((x) => !reserveIds.has(x.p.id))
-      .map(
-        (x): Candidate => ({
-          id: x.p.id,
-          salary: x.salary,
-          tier: tierIndex(seasonTier(c, x.p.avg, rules)),
-          roles: x.roles,
-          rating: computeRating(rules.classes[c].rating, x.p.avg),
-        }),
-      )
+      .map((x): Candidate => ({
+        id: x.p.id,
+        salary: x.salary,
+        tier: tierIndex(seasonTier(c, x.p.avg, rules)),
+        roles: x.roles,
+        rating: computeRating(rules.classes[c].rating, x.p.avg),
+      }))
       .sort((a, b) => slotScore(mode, c, b) - slotScore(mode, c, a) || b.rating - a.rating);
     const chosen = new Set(ranked.slice(0, candidatesPerClass));
     const perSalary = new Map<number, number>();
@@ -114,9 +112,7 @@ export function autoDraft(
   });
 
   // Branch and bound: the best slot score still available from each class onward.
-  const maxFrom = CLASSES.map((_, i) =>
-    CLASSES.slice(i).reduce((t, c, j) => t + Math.max(0, ...candidates[i + j].map((x) => slotScore(mode, c, x))), 0),
-  );
+  const maxFrom = CLASSES.map((_, i) => CLASSES.slice(i).reduce((t, c, j) => t + Math.max(0, ...candidates[i + j].map((x) => slotScore(mode, c, x))), 0));
   maxFrom.push(0);
   let best: { score: number; ids: number[]; cost: number } | null = null;
   const pick: Candidate[] = [];

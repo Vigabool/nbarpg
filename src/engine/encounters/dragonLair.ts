@@ -88,7 +88,14 @@ const hoardTithe: Mechanic = {
       run(state, enemy, _dmg, rules) {
         const sp = rules.combat.specials.titheBlessing;
         state.hoard!.coins += sp.coins;
-        log(state, 'enemy', `${enemy.name} offers a ${sp.name}: +${sp.coins} coins to the hoard (${state.hoard!.coins}).`, enemy.id, undefined, `⚠ ${sp.short}: +${sp.coins} coins`);
+        log(
+          state,
+          'enemy',
+          `${enemy.name} offers a ${sp.name}: +${sp.coins} coins to the hoard (${state.hoard!.coins}).`,
+          enemy.id,
+          undefined,
+          `⚠ ${sp.short}: +${sp.coins} coins`,
+        );
         return true;
       },
     },
@@ -102,7 +109,9 @@ const dragonkin: Mechanic = {
   id: 'dragonkin',
   appliesTo: (enc) => Object.values(enc.monsters).some((m) => m?.dragonkin),
   incomingDamage: (state, e, amount, source, rules) =>
-    source.fire && encounterOf(state.encounter, rules).twists.includes('dragonscale') && isDragonkin(state, e, rules) ? amount * rules.combat.dragonscale.fireMultiplier : amount,
+    source.fire && encounterOf(state.encounter, rules).twists.includes('dragonscale') && isDragonkin(state, e, rules)
+      ? amount * rules.combat.dragonscale.fireMultiplier
+      : amount,
   smiteVulnerable: isDragonkin,
 };
 
@@ -139,7 +148,14 @@ const lairSpecials: Mechanic = {
         const hit = hitHero(state, enemy, target, dmg, rules);
         if (target.alive) target.nettedRound = state.round + 1;
         const name = rules.classes[target.heroClass].name;
-        log(state, 'enemy', `${enemy.name} fires a ${sp.name}: ${hit.text}${target.alive ? `; the ${name} is netted and can't attack next round` : ''}.`, enemy.id, [target.id], `⚠ ${sp.short} → ${hit.short}`);
+        log(
+          state,
+          'enemy',
+          `${enemy.name} fires a ${sp.name}: ${hit.text}${target.alive ? `; the ${name} is netted and can't attack next round` : ''}.`,
+          enemy.id,
+          [target.id],
+          `⚠ ${sp.short} → ${hit.short}`,
+        );
         return true;
       },
     },
@@ -148,7 +164,14 @@ const lairSpecials: Mechanic = {
       run(state, enemy, dmg, rules) {
         const hits = targetableHeroes(state).map((h) => hitHero(state, enemy, h, dmg, rules).text);
         if (!hits.length) return false;
-        log(state, 'enemy', `${enemy.name} breathes fire: ${hits.join('; ')}.`, enemy.id, undefined, `⚠ ${rules.combat.specials.dragon.short}: all heroes ${dmg}`);
+        log(
+          state,
+          'enemy',
+          `${enemy.name} breathes fire: ${hits.join('; ')}.`,
+          enemy.id,
+          undefined,
+          `⚠ ${rules.combat.specials.dragon.short}: all heroes ${dmg}`,
+        );
         return true;
       },
     },

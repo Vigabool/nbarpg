@@ -32,9 +32,22 @@ export interface SimResult {
 
 export function simulate(data: SeasonData, battles: number, seedIn = 1, encounter?: string, policy: BotPolicy = {}): SimResult {
   let seed = seedIn;
-  const rand = () => ((seed = (seed * 1103515245 + 12345) % 2 ** 31) / 2 ** 31);
+  const rand = () => (seed = (seed * 1103515245 + 12345) % 2 ** 31) / 2 ** 31;
   const pool = eligiblePlayers(data);
-  const r = { won: 0, lost: 0, rounds: 0, waves: [0, 0, 0, 0], fallen: 0, roundCap: 0, pools: [] as number[], horde: 0, goblins: 0, gobAttacks: 0, gobDamage: 0, topples: 0 };
+  const r = {
+    won: 0,
+    lost: 0,
+    rounds: 0,
+    waves: [0, 0, 0, 0],
+    fallen: 0,
+    roundCap: 0,
+    pools: [] as number[],
+    horde: 0,
+    goblins: 0,
+    gobAttacks: 0,
+    gobDamage: 0,
+    topples: 0,
+  };
   for (let b = 0; b < battles; b++) {
     const week = data.weeks[Math.floor(rand() * data.weeks.length)];
     const draw = pool.filter(() => rand() < 0.33);
@@ -48,7 +61,13 @@ export function simulate(data: SeasonData, battles: number, seedIn = 1, encounte
       used.add(best.id);
       const games = playerGamesInWeek(data, week, best.id);
       const gameId = games
-        .map((g) => ({ g, pool: computePool(c, data.games[g].lines.find((l) => l.playerId === best.id)!).pool }))
+        .map((g) => ({
+          g,
+          pool: computePool(
+            c,
+            data.games[g].lines.find((l) => l.playerId === best.id)!,
+          ).pool,
+        }))
         .sort((a, b) => b.pool - a.pool)[0].g;
       picks.push({ heroClass: c, playerId: best.id, gameId });
     }

@@ -31,7 +31,9 @@ function shoppingList(c: HeroClass): Purchase[] {
   const p = rules.progression;
   const list: Purchase[] = [{ kind: 'weapon' }];
   if (c === 'warrior') list.push({ kind: 'shield' });
-  const gear = Object.entries(p.gear).filter(([, g]) => g.heroClass === c).sort((a, b) => a[1].cost - b[1].cost);
+  const gear = Object.entries(p.gear)
+    .filter(([, g]) => g.heroClass === c)
+    .sort((a, b) => a[1].cost - b[1].cost);
   for (const [id] of gear) list.push({ kind: 'gear', id });
   for (const [id, f] of Object.entries(p.feats)) if (f.heroClass === c) list.push({ kind: 'feat', id });
   return list;
@@ -80,7 +82,10 @@ export function simulateSeasons(
     for (let w = 0; game; w++) {
       game = { ...game, assignments: autoAssign(game, data), gamePicks: {} };
       game = { ...game, encounter: encounters[(w + offset) % encounters.length] };
-      game = { ...game, gamePicks: pick === 'smart' ? smartGames(game, data, typeof weights === 'function' ? weights(game.encounter!) : weights) : bestGames(game, data) };
+      game = {
+        ...game,
+        gamePicks: pick === 'smart' ? smartGames(game, data, typeof weights === 'function' ? weights(game.encounter!) : weights) : bestGames(game, data),
+      };
       if (readyPicks(game, data).length === 0 || !currentWeek(game, data)) {
         game = nextWeek(game, data);
         continue;

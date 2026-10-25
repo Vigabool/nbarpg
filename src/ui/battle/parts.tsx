@@ -14,7 +14,6 @@ export function groupGoblins(goblins: EnemyState[]): EnemyState[][] {
   return [...groups.values()];
 }
 
-
 export function Meter({ value, max, kind }: { value: number; max: number; kind: 'hp' | 'pool' }) {
   const pct = max > 0 ? Math.max(0, Math.min(100, (value / max) * 100)) : 0;
   return (

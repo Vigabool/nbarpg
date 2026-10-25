@@ -63,7 +63,7 @@ export function BattleScreen({ data, game, onChange, onHelp, onQuit }: Props) {
   // The hero whose fall the player is inspecting (tap their ☠).
   const [threatPick, setThreatPick] = useState<string | null>(null);
   const threat = threatPick && doomed.has(threatPick) ? threatPick : null;
-  const threatFrom = threat ? incoming[threat] ?? {} : {};
+  const threatFrom = threat ? (incoming[threat] ?? {}) : {};
   const [detail, setDetail] = useState<string[] | null>(null);
 
   const hero = selected ? state.heroes.find((h) => h.id === selected) : undefined;
@@ -138,7 +138,9 @@ export function BattleScreen({ data, game, onChange, onHelp, onQuit }: Props) {
           {next && inRounds !== null && (
             <span className={`chip${inRounds <= 1 ? ' wave-soon' : ''}`} title={`Wave ${state.waveIndex + 2}: ${next.length} monsters`}>
               W{state.waveIndex + 2} {inRounds <= 1 ? 'next round' : `in ${inRounds}`} · {next.length}
-              {next.some((m) => m.isWarlord) ? ` + ${encounterOf(state.encounter).boss ? monsterShort(encounterOf(state.encounter).boss!, state.encounter) : 'Warlord'}` : ''}
+              {next.some((m) => m.isWarlord)
+                ? ` + ${encounterOf(state.encounter).boss ? monsterShort(encounterOf(state.encounter).boss!, state.encounter) : 'Warlord'}`
+                : ''}
             </span>
           )}
         </div>
@@ -296,8 +298,7 @@ export function BattleScreen({ data, game, onChange, onHelp, onQuit }: Props) {
               </span>
             ) : (
               <strong className="small" style={{ minWidth: 0 }}>
-                {CLASS_ICON[hero.heroClass]} {rules.classes[hero.heroClass].name}{' '}
-                <span className="muted">· {hero.pool} energy</span>
+                {CLASS_ICON[hero.heroClass]} {rules.classes[hero.heroClass].name} <span className="muted">· {hero.pool} energy</span>
               </strong>
             )}
             <div className="row" style={{ gap: 4, flexWrap: 'nowrap' }}>
@@ -356,18 +357,22 @@ export function BattleScreen({ data, game, onChange, onHelp, onQuit }: Props) {
                 <span className="faint">{hero.acted ? 'used this round' : '1 per round'}</span>
               </div>
               <div className={`actions${details ? ' detailed' : ''}`}>
-                {options.filter((o) => o.attack).map((o) => (
-                  <ActionTile key={o.def.id} o={o} hero={hero} details={details} onPick={chooseAction} />
-                ))}
+                {options
+                  .filter((o) => o.attack)
+                  .map((o) => (
+                    <ActionTile key={o.def.id} o={o} hero={hero} details={details} onPick={chooseAction} />
+                  ))}
               </div>
               <div className="action-group">
                 <span>Utility</span>
                 <span className="faint">any number, while energy lasts</span>
               </div>
               <div className={`actions${details ? ' detailed' : ''}`}>
-                {options.filter((o) => !o.attack).map((o) => (
-                  <ActionTile key={o.def.id} o={o} hero={hero} details={details} onPick={chooseAction} />
-                ))}
+                {options
+                  .filter((o) => !o.attack)
+                  .map((o) => (
+                    <ActionTile key={o.def.id} o={o} hero={hero} details={details} onPick={chooseAction} />
+                  ))}
               </div>
             </>
           )}

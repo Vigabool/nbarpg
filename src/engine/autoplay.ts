@@ -1,16 +1,26 @@
 import { rules as defaultRules, type Rules } from '../rules';
-import { actionDamage, canFumble, endRound, toppleThreshold, justArrived, listActions, livingEnemies, pickableEnemies, performAction, spendFumble, type ActionOption, type BattleState, type HeroAction, type HeroState } from './combat';
+import {
+  actionDamage,
+  canFumble,
+  endRound,
+  toppleThreshold,
+  justArrived,
+  listActions,
+  livingEnemies,
+  pickableEnemies,
+  performAction,
+  spendFumble,
+  type ActionOption,
+  type BattleState,
+  type HeroAction,
+  type HeroState,
+} from './combat';
 
 /**
  * A simple rule-based player used by the batch simulator and tests. It is not
  * optimal; it gives a baseline for balance (a thoughtful human should beat it).
  */
-export function chooseAction(
-  state: BattleState,
-  hero: HeroState,
-  rules: Rules = defaultRules,
-  exclude: Set<string> = new Set(),
-): HeroAction | null {
+export function chooseAction(state: BattleState, hero: HeroState, rules: Rules = defaultRules, exclude: Set<string> = new Set()): HeroAction | null {
   const opts = listActions(state, hero.id, rules).filter((o) => o.available && !exclude.has(o.def.id));
   if (opts.length === 0) return null;
   const has = (id: string) => opts.find((o) => o.def.id === id);
@@ -27,8 +37,7 @@ export function chooseAction(
   const byThreat = [...enemies].sort((a, b) => phyl(b) - phyl(a) || toGo(a) - toGo(b) || b.damage - a.damage || b.hp - a.hp);
   const allies = state.heroes.filter((h) => h.alive);
   const fallen = state.heroes.filter((h) => !h.alive);
-  const act = (o: ActionOption | undefined, targetIds: string[] = []): HeroAction | null =>
-    o ? { heroId: hero.id, actionId: o.def.id, targetIds } : null;
+  const act = (o: ActionOption | undefined, targetIds: string[] = []): HeroAction | null => (o ? { heroId: hero.id, actionId: o.def.id, targetIds } : null);
   // Weapon attacks: spend on the advanced one while energy is comfortable, else build energy.
   const gear = () => {
     const advanced = opts.find((o) => o.source === 'gear' && o.def.cost !== undefined);
@@ -73,7 +82,11 @@ export function chooseAction(
       if (ghost && missile?.validTargets.includes(ghost.id)) return act(missile, [ghost.id]);
       if (has('meteor') && totalEnemyHp >= 60) return act(has('meteor'));
       if (has('chain-lightning') && enemies.length >= 4) return act(has('chain-lightning'));
-      if (has('fireball') && enemies.length >= 3) return act(has('fireball'), byHpAsc.slice(0, 3).map((e) => e.id));
+      if (has('fireball') && enemies.length >= 3)
+        return act(
+          has('fireball'),
+          byHpAsc.slice(0, 3).map((e) => e.id),
+        );
       const big = byThreat.find((e) => e.hp >= 12);
       if (has('lightning-bolt') && big) return act(has('lightning-bolt'), [big.id]);
       const lowestArmor = Math.min(...state.heroes.filter((h) => h.alive).map((h) => h.armor));
@@ -98,7 +111,11 @@ export function chooseAction(
       if (has('summon-wolf') && state.summons.filter((s) => s.alive).length < 2 && hero.pool >= 14) return act(has('summon-wolf'));
       const big = byThreat.find((e) => e.hp >= 12);
       if (has('aimed-shot') && big) return act(has('aimed-shot'), [big.id]);
-      if (has('double-strike') && byHpAsc.length) return act(has('double-strike'), byHpAsc.slice(0, 2).map((e) => e.id));
+      if (has('double-strike') && byHpAsc.length)
+        return act(
+          has('double-strike'),
+          byHpAsc.slice(0, 2).map((e) => e.id),
+        );
       return gear();
     }
   }

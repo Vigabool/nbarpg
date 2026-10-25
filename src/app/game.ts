@@ -143,4 +143,3 @@ export function nextWeek(game: SaveGame, data: SeasonData): SaveGame | null {
     battlePools: null,
   };
 }
-

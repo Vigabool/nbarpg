@@ -109,10 +109,7 @@ export function RosterBuilder({ data, game, onChange }: { data: SeasonData; game
     [data, week],
   );
   const byId = useMemo(() => new Map(players.map((x) => [x.p.id, x])), [players]);
-  const teams = useMemo(
-    () => [...new Set(players.map((x) => x.p.team))].sort((a, b) => teamName(a).localeCompare(teamName(b))),
-    [players],
-  );
+  const teams = useMemo(() => [...new Set(players.map((x) => x.p.team))].sort((a, b) => teamName(a).localeCompare(teamName(b))), [players]);
 
   const roster = [...CLASSES.map((c) => slots[c]).filter((x): x is number => x !== undefined), ...reserves];
   const cost = rosterCost(roster, data);
@@ -129,9 +126,7 @@ export function RosterBuilder({ data, game, onChange }: { data: SeasonData; game
       if (sort === 'salary') return b.salary.salary - a.salary.salary || a.p.name.localeCompare(b.p.name);
       if (sort === 'salary-asc') return a.salary.salary - b.salary.salary || a.p.name.localeCompare(b.p.name);
       return (
-        tierIndex(b.salary.classTiers[sort]) - tierIndex(a.salary.classTiers[sort]) ||
-        a.salary.salary - b.salary.salary ||
-        a.p.name.localeCompare(b.p.name)
+        tierIndex(b.salary.classTiers[sort]) - tierIndex(a.salary.classTiers[sort]) || a.salary.salary - b.salary.salary || a.p.name.localeCompare(b.p.name)
       );
     });
 
@@ -305,8 +300,22 @@ export function RosterBuilder({ data, game, onChange }: { data: SeasonData; game
       </div>
 
       <div className="row" ref={listRef} style={{ scrollMarginTop: 12 }}>
-        <input className="input" id="player-search" style={{ flex: '1 1 200px' }} placeholder="Search players or teams" value={query} onChange={(e) => setQuery(e.target.value)} />
-        <select className="input" id="player-team" style={{ flex: '0 1 220px' }} value={team} onChange={(e) => setTeam(e.target.value)} aria-label="Filter by team">
+        <input
+          className="input"
+          id="player-search"
+          style={{ flex: '1 1 200px' }}
+          placeholder="Search players or teams"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+        <select
+          className="input"
+          id="player-team"
+          style={{ flex: '0 1 220px' }}
+          value={team}
+          onChange={(e) => setTeam(e.target.value)}
+          aria-label="Filter by team"
+        >
           <option value="">All teams</option>
           {teams.map((t) => (
             <option key={t} value={t}>
@@ -348,7 +357,12 @@ export function RosterBuilder({ data, game, onChange }: { data: SeasonData; game
           />
         ))}
         {list.length > 150 && <p className="muted small">Showing 150 of {list.length}. Search to narrow the list.</p>}
-        {list.length === 0 && <p className="muted small">No players match. Rostered players and deep-bench players (under {rules.salary.eligibility.minGames} games or {rules.salary.eligibility.minMinutesPerGame} minutes a game) aren't listed.</p>}
+        {list.length === 0 && (
+          <p className="muted small">
+            No players match. Rostered players and deep-bench players (under {rules.salary.eligibility.minGames} games or{' '}
+            {rules.salary.eligibility.minMinutesPerGame} minutes a game) aren't listed.
+          </p>
+        )}
       </div>
 
       <div className="sticky-bottom">
@@ -413,7 +427,11 @@ function PlayerRow({
           ))}
         </div>
       </div>
-      <div className={`num salary${overCap ? ' warn' : ''}`} style={{ fontWeight: 700, textAlign: 'right' }} title={overCap ? 'Would put you over the cap' : undefined}>
+      <div
+        className={`num salary${overCap ? ' warn' : ''}`}
+        style={{ fontWeight: 700, textAlign: 'right' }}
+        title={overCap ? 'Would put you over the cap' : undefined}
+      >
         {money(salary.salary)}
       </div>
       <div className="tiers">

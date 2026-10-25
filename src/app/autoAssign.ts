@@ -23,8 +23,7 @@ export function autoAssign(game: SaveGame, data: SeasonData): Partial<Record<Her
     const best = game.roster
       .filter((id) => !used.has(id))
       .sort(
-        (a, b) =>
-          Number(games(b) > 0) - Number(games(a) > 0) || tierIndex(seasonTier(c, data.players[b].avg)) - tierIndex(seasonTier(c, data.players[a].avg)),
+        (a, b) => Number(games(b) > 0) - Number(games(a) > 0) || tierIndex(seasonTier(c, data.players[b].avg)) - tierIndex(seasonTier(c, data.players[a].avg)),
       )[0];
     if (best !== undefined) {
       next[c] = best;

@@ -47,7 +47,10 @@ describe('horde generation', () => {
   });
 
   it('always fields every role; a hero who sits out leaves an average, traitless one', () => {
-    const h = buildHorde(picks.filter((p) => p.heroClass !== 'rogue'), data);
+    const h = buildHorde(
+      picks.filter((p) => p.heroClass !== 'rogue'),
+      data,
+    );
     const assassin = h.waves.flat().find((m) => m.kind === 'assassin')!;
     expect(assassin.tier).toBe('average');
     expect(assassin.source).toBeUndefined();

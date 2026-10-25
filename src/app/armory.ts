@@ -11,7 +11,7 @@ export function priceOf(game: SaveGame, c: HeroClass, p: Purchase, rules: Rules 
     case 'weapon':
       return r.weapon.costs[prog.weapon] ?? null;
     case 'shield':
-      return c === 'warrior' ? r.shield.costs[prog.shield] ?? null : null;
+      return c === 'warrior' ? (r.shield.costs[prog.shield] ?? null) : null;
     case 'gear': {
       const g = r.gear[p.id];
       return g && g.heroClass === c && !prog.gear.includes(p.id) ? g.cost : null;

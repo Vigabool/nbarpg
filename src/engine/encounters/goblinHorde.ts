@@ -84,7 +84,14 @@ const goblinToss: Mechanic = {
         goblin.alive = false;
         goblin.hp = 0;
         const hit = hitHero(state, enemy, target, Math.round(dmg * sp.goblinToss.multiplier), rules);
-        log(state, 'enemy', `${enemy.name} hurls ${goblin.name} at the ${rules.classes[target.heroClass].name}: ${hit.text}.`, enemy.id, [target.id, goblin.id], `⚠ ${sp.goblinToss.short} → ${hit.short}`);
+        log(
+          state,
+          'enemy',
+          `${enemy.name} hurls ${goblin.name} at the ${rules.classes[target.heroClass].name}: ${hit.text}.`,
+          enemy.id,
+          [target.id, goblin.id],
+          `⚠ ${sp.goblinToss.short} → ${hit.short}`,
+        );
         return true;
       },
     },

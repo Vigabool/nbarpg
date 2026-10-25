@@ -1,4 +1,15 @@
-import { CLASSES, emptyProgress, rules as defaultRules, type ActionDef, type Effect, type HeroClass, type HeroProgress, type Rules, type SummonKind, type TraitId } from '../rules';
+import {
+  CLASSES,
+  emptyProgress,
+  rules as defaultRules,
+  type ActionDef,
+  type Effect,
+  type HeroClass,
+  type HeroProgress,
+  type Rules,
+  type SummonKind,
+  type TraitId,
+} from '../rules';
 import { behaviorOf, encounterOf, monsterName, specialFor, type SpecialInfo } from './encounter';
 import { behaviorHandler, mechanicsFor, specialHandler, type BuffSource, type DamageSource } from './encounters';
 import type { MonsterSpec } from './horde';
@@ -441,7 +452,9 @@ function validTargets(state: BattleState, hero: HeroState, def: ActionDef, rules
       return aimable(state, hero, def, rules).map((e) => e.id);
     case 'allEnemies':
       // Area attacks pass a sleeping Dragon by: waking it is always a deliberate choice.
-      return livingEnemies(state).filter((e) => !e.asleep).map((e) => e.id);
+      return livingEnemies(state)
+        .filter((e) => !e.asleep)
+        .map((e) => e.id);
     case 'ally': {
       let allies = state.heroes.filter((h) => h.alive);
       // Empower doesn't stack with itself: skip allies who already have it.
@@ -487,7 +500,11 @@ export function listActions(state: BattleState, heroId: HeroClass, rules: Rules 
   const over = state.phase !== 'party' ? 'Battle is over' : !hero.alive ? 'Fallen' : hero.prone ? 'Prone this round' : undefined;
   const blockedFor = (def: ActionDef) =>
     over ??
-    (isAttack(def) && hero.acted ? 'Already attacked this round' : isAttack(def) && hero.nettedRound === state.round ? 'Netted: no attack this round' : undefined);
+    (isAttack(def) && hero.acted
+      ? 'Already attacked this round'
+      : isAttack(def) && hero.nettedRound === state.round
+        ? 'Netted: no attack this round'
+        : undefined);
   for (const def of cls.gear) {
     const targets = validTargets(state, hero, def, rules);
     let reason = blockedFor(def);
@@ -511,10 +528,8 @@ export function listActions(state: BattleState, heroId: HeroClass, rules: Rules 
     if (def.feat && !hasFeat(hero, def.feat)) continue;
     const targets = validTargets(state, hero, def, rules);
     let reason = blockedFor(def);
-    if (!reason && def.unlock === 'signature' && !hero.signatureReady)
-      reason = hero.signatureUnlocked ? 'Already used' : 'Needs a double-double';
-    if (!reason && def.unlock === 'legendary' && !hero.legendaryReady)
-      reason = hero.legendaryUnlocked ? 'Already used' : 'Needs a triple-double';
+    if (!reason && def.unlock === 'signature' && !hero.signatureReady) reason = hero.signatureUnlocked ? 'Already used' : 'Needs a double-double';
+    if (!reason && def.unlock === 'legendary' && !hero.legendaryReady) reason = hero.legendaryUnlocked ? 'Already used' : 'Needs a triple-double';
     if (!reason && alreadyActive(def, hero)) reason = 'Already active this round';
     const cost = actionCost(state, hero, def, rules);
     if (!reason && def.oncePerBattle && hero.usedOnce?.includes(def.id)) reason = 'Already used this battle';
@@ -527,14 +542,7 @@ export function listActions(state: BattleState, heroId: HeroClass, rules: Rules 
 
 // ---------- Hero actions ----------
 
-function damageEnemy(
-  state: BattleState,
-  enemy: EnemyState,
-  amount: number,
-  pierce: boolean,
-  rules: Rules = defaultRules,
-  source: DamageSource = {},
-): number {
+function damageEnemy(state: BattleState, enemy: EnemyState, amount: number, pierce: boolean, rules: Rules = defaultRules, source: DamageSource = {}): number {
   // Hunter's Mark: every hit this round lands harder.
   if (amount > 0 && enemy.mark?.round === state.round) amount += enemy.mark.amount;
   if (amount > 0) {
@@ -760,15 +768,7 @@ function nameOf(state: BattleState, id: string, rules: Rules): string {
   return u.name;
 }
 
-function applyEffect(
-  state: BattleState,
-  hero: HeroState,
-  effect: Effect,
-  targets: string[],
-  parts: string[],
-  rules: Rules,
-  def: ActionDef,
-): boolean {
+function applyEffect(state: BattleState, hero: HeroState, effect: Effect, targets: string[], parts: string[], rules: Rules, def: ActionDef): boolean {
   const defId = def.id;
   const source = damageSource(hero, def);
   // Amulet of Healing adds to every heal; Blessed Ward also gives the healed ally armor this round.
@@ -801,7 +801,8 @@ function applyEffect(
           e.intangible = false;
           solidified = true;
         }
-        let base = (effect.amount === 'gear' ? hero.gear : effect.amount) + (effect.bonus ?? 0) + armoryDamage(hero, def, rules) + featDamageVs(state, hero, e, rules);
+        let base =
+          (effect.amount === 'gear' ? hero.gear : effect.amount) + (effect.bonus ?? 0) + armoryDamage(hero, def, rules) + featDamageVs(state, hero, e, rules);
         if (effect.doubleIfTauntedByOther && e.tauntedBy && e.tauntedBy !== hero.id) base *= 2;
         const amount = heroHitAmount(hero, base);
         const dealt = damageEnemy(state, e, amount, !!effect.pierce, rules, source);
@@ -809,7 +810,9 @@ function applyEffect(
         for (const m of mechanicsFor(state, rules)) m.afterHeroStrike?.(state, hero, e, def, parts, rules);
         // Cleave: the Axe also hits a second enemy for half.
         if (def.id === 'axe' && hasFeat(hero, 'cleave')) {
-          const second = pickableEnemies(state, rules).filter((x) => x.id !== e.id).sort((a, b) => a.hp - b.hp)[0];
+          const second = pickableEnemies(state, rules)
+            .filter((x) => x.id !== e.id)
+            .sort((a, b) => a.hp - b.hp)[0];
           if (second) {
             const cleft = damageEnemy(state, second, Math.floor(amount / 2), false, rules, source);
             parts.push(`cleaves ${cleft} into ${second.name}${endText(second)}`);
@@ -858,9 +861,7 @@ function applyEffect(
       return false;
     case 'heal':
       if (effect.on === 'mostInjuredAlly') {
-        const h = state.heroes
-          .filter((x) => x.alive && x.hp < x.maxHp)
-          .sort((a, b) => b.maxHp - b.hp - (a.maxHp - a.hp))[0];
+        const h = state.heroes.filter((x) => x.alive && x.hp < x.maxHp).sort((a, b) => b.maxHp - b.hp - (a.maxHp - a.hp))[0];
         if (h) heal(h);
         return false;
       }
@@ -1071,9 +1072,7 @@ export function hitTarget(state: BattleState, enemy: EnemyState, target: Target,
 }
 
 export function targetableHeroes(state: BattleState): HeroState[] {
-  return state.heroes
-    .filter((h) => h.alive && h.untargetableRounds <= 0)
-    .sort((a, b) => HERO_ORDER.indexOf(a.heroClass) - HERO_ORDER.indexOf(b.heroClass));
+  return state.heroes.filter((h) => h.alive && h.untargetableRounds <= 0).sort((a, b) => HERO_ORDER.indexOf(a.heroClass) - HERO_ORDER.indexOf(b.heroClass));
 }
 
 /** Champion specials on the every-Nth-round beat (see SpecialHandler). Returns true if the special replaced the action. */
@@ -1119,7 +1118,14 @@ function summonsAct(state: BattleState) {
     const target = [...pickableEnemies(state)].sort((a, b) => a.hp - b.hp)[0];
     if (!target) continue;
     const dealt = damageEnemy(state, target, s.damage, false);
-    log(state, 'summon', `${s.name} bites ${target.name} for ${dealt}${target.alive ? '' : ' (defeated)'}.`, s.id, [target.id], `→ ${foeLabel(target)} ${dealt}`);
+    log(
+      state,
+      'summon',
+      `${s.name} bites ${target.name} for ${dealt}${target.alive ? '' : ' (defeated)'}.`,
+      s.id,
+      [target.id],
+      `→ ${foeLabel(target)} ${dealt}`,
+    );
     afterDamage(state);
   }
 }
@@ -1174,7 +1180,14 @@ export function endRound(prev: BattleState, rules: Rules = defaultRules): Battle
       h.alive = false;
       state.stats.anyHeroFell = true;
     }
-    log(state, 'enemy', `☣ Poison deals ${dealt} to the ${name}${h.alive ? '' : ` — ${name} falls`}.`, p.sourceId, [h.id], `☣ ${name} ${dealt}${h.alive ? '' : ' 💀'}`);
+    log(
+      state,
+      'enemy',
+      `☣ Poison deals ${dealt} to the ${name}${h.alive ? '' : ` — ${name} falls`}.`,
+      p.sourceId,
+      [h.id],
+      `☣ ${name} ${dealt}${h.alive ? '' : ' 💀'}`,
+    );
     h.poison = --p.rounds > 0 && h.alive ? p : null;
   }
 

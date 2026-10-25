@@ -10,8 +10,8 @@ export function TitleScreen({ data, saved, onStart }: { data: SeasonData; saved:
       <div className="stack" style={{ maxWidth: 520, width: '100%' }}>
         <h1>NBA Fantasy RPG</h1>
         <p className="muted">
-          Five heroes, each powered by a real NBA player. Their box scores power your heroes' energy; their opponents form the horde. The
-          games deal the hand. You play it.
+          Five heroes, each powered by a real NBA player. Their box scores power your heroes' energy; their opponents form the horde. The games deal the hand.
+          You play it.
         </p>
         {saved && saved.season === data.season && (
           <button className="btn primary block" onClick={() => onStart(saved)}>

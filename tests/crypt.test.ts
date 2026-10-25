@@ -61,8 +61,7 @@ describe('The Crypt: Restless Dead', () => {
   const skeleton = () => monster({ hp: 8, damage: 0 });
   const tank = () => monster({ kind: 'ogre', hp: 999, damage: 0 });
   /** Drops a skeleton to 1 HP, then finishes it with a weapon (not fire or holy). */
-  const smash = (s: BattleState, id: string) =>
-    act({ ...s, enemies: s.enemies.map((e) => (e.id === id ? { ...e, hp: 1 } : e)) }, 'warrior', 'axe', [id]);
+  const smash = (s: BattleState, id: string) => act({ ...s, enemies: s.enemies.map((e) => (e.id === id ? { ...e, hp: 1 } : e)) }, 'warrior', 'axe', [id]);
 
   it('weapon kills leave a bone pile that reassembles at half HP each time: 8, 4, 2, then gone', () => {
     const sk = skeleton();
@@ -154,7 +153,11 @@ describe('The Crypt: Wight and Lich', () => {
     s = act(s, 'rogue', 'dagger', [lich.id]);
     expect(before - enemy(s, lich.id).hp).toBeGreaterThan(halved);
     // A fresh fight: killing the Lich shatters its Phylactery.
-    let t = battle([[monster({ kind: 'lich', id: 'L', hp: 1, damage: 0, isWarlord: true }), monster({ kind: 'phylactery', id: 'P', hp: 99, damage: 0 })]], party(), CRYPT);
+    let t = battle(
+      [[monster({ kind: 'lich', id: 'L', hp: 1, damage: 0, isWarlord: true }), monster({ kind: 'phylactery', id: 'P', hp: 99, damage: 0 })]],
+      party(),
+      CRYPT,
+    );
     t = { ...t, enemies: t.enemies.map((e) => (e.id === 'L' ? { ...e, hp: 1 } : e)) };
     t = act(t, 'warrior', 'axe', ['L']);
     expect(enemy(t, 'P').alive).toBe(false);
@@ -176,7 +179,10 @@ describe('The Crypt: horde', () => {
     const bbb = [101, 102, 103, 104, 105].map((id, i) => boxLine(id, 'BBB', { pts: 30 - i * 4, dreb: 3 + i, ast: 2 + i, stl: i, fgm: 8, fga: 16 }));
     const data = season([{ id: 'g1', date: '2025-10-21', home: 'AAA', away: 'BBB', lines: [...aaa, ...bbb] }]);
     const h = buildHorde(
-      [{ heroClass: 'ranger', playerId: 2, gameId: 'g1' }, { heroClass: 'rogue', playerId: 4, gameId: 'g1' }],
+      [
+        { heroClass: 'ranger', playerId: 2, gameId: 'g1' },
+        { heroClass: 'rogue', playerId: 4, gameId: 'g1' },
+      ],
       data,
       undefined,
       CRYPT,

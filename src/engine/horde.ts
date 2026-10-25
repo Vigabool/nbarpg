@@ -74,8 +74,7 @@ export function traitsFor(line: BoxLine, max: number, rules: Rules = defaultRule
 }
 
 /** A role Champion's stat after the encounter's scale (the Giant's Hall makes them bigger). */
-const scaled = (n: number, stat: 'hp' | 'damage', rules: Rules, encounter?: string) =>
-  Math.round(n * (encounterOf(encounter, rules).statScale?.[stat] ?? 1));
+const scaled = (n: number, stat: 'hp' | 'damage', rules: Rules, encounter?: string) => Math.round(n * (encounterOf(encounter, rules).statScale?.[stat] ?? 1));
 
 /** A role nobody mirrors this week (its hero sits out): an average, traitless monster. */
 function baselineChampion(kind: ChampionKind, rules: Rules, encounter?: string): MonsterSpec {
@@ -136,9 +135,7 @@ export function buildHorde(picks: HeroGamePick[], data: SeasonData, rules: Rules
 
   const champions: MonsterSpec[] = [];
   const order = rules.horde.mirrors;
-  const sortedPicks = [...picks].sort(
-    (a, b) => order.findIndex((m) => m.heroClass === a.heroClass) - order.findIndex((m) => m.heroClass === b.heroClass),
-  );
+  const sortedPicks = [...picks].sort((a, b) => order.findIndex((m) => m.heroClass === a.heroClass) - order.findIndex((m) => m.heroClass === b.heroClass));
   for (const pick of sortedPicks) {
     const game = data.games[pick.gameId];
     const own = playerLine(data, pick.gameId, pick.playerId);
@@ -175,9 +172,7 @@ export function buildHorde(picks: HeroGamePick[], data: SeasonData, rules: Rules
   const best = bestLine(true) ?? bestLine(false);
   // The performance's strength: the best tier it earns as any Champion type.
   const kinds = order.map((m) => m.champion);
-  const bestKind = kinds.reduce((a, b) =>
-    tierIndex(championTier(b, best!.line, rules)) > tierIndex(championTier(a, best!.line, rules)) ? b : a,
-  );
+  const bestKind = kinds.reduce((a, b) => (tierIndex(championTier(b, best!.line, rules)) > tierIndex(championTier(a, best!.line, rules)) ? b : a));
   const base = makeChampion(bestKind, best!.line, best!.gameId, nameOf(best!.line.playerId), rules, undefined, encounter);
   let warlord: MonsterSpec;
   if (enc.boss) {
@@ -277,4 +272,3 @@ export function buildHorde(picks: HeroGamePick[], data: SeasonData, rules: Rules
   const nonEmpty = waves.filter((wv) => wv.length > 0);
   return { waves: nonEmpty, champions: byStrength, warlord };
 }
-

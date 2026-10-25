@@ -42,20 +42,20 @@ export default function App() {
   return (
     <div className={`app${active?.phase === 'battle' ? ' battle' : ''}`}>
       {active?.phase !== 'battle' && (
-      <header className="topbar">
-        <span className="brand">NBA Fantasy RPG</span>
-        {active && <span className="crumbs">{weekLabel(data, active.weekIndex)}</span>}
-        <div className="row">
-          <button className="btn ghost small" onClick={() => setTutorial({ tab: 'basics' })}>
-            How to play
-          </button>
-          {active && (
-            <ConfirmButton className="btn ghost small" confirmLabel="Tap again to abandon run" onConfirm={() => update(null)}>
-            Quit
-            </ConfirmButton>
-          )}
-        </div>
-      </header>
+        <header className="topbar">
+          <span className="brand">NBA Fantasy RPG</span>
+          {active && <span className="crumbs">{weekLabel(data, active.weekIndex)}</span>}
+          <div className="row">
+            <button className="btn ghost small" onClick={() => setTutorial({ tab: 'basics' })}>
+              How to play
+            </button>
+            {active && (
+              <ConfirmButton className="btn ghost small" confirmLabel="Tap again to abandon run" onConfirm={() => update(null)}>
+                Quit
+              </ConfirmButton>
+            )}
+          </div>
+        </header>
       )}
       {tutorial && <Tutorial key={JSON.stringify(tutorial)} topic={tutorial} onClose={() => setTutorial(null)} />}
       {data.synthetic && (
@@ -86,11 +86,12 @@ function MissingData() {
       <h1 className="serif">NBA Fantasy RPG</h1>
       <div className="card stack">
         <h2>Season data not found</h2>
-        <p className="muted">The app loads <code>public/data/{SEASON}.json</code>, which is built from the raw game logs. To create it:</p>
+        <p className="muted">
+          The app loads <code>public/data/{SEASON}.json</code>, which is built from the raw game logs. To create it:
+        </p>
         <ol className="muted">
           <li>
-            On your computer, run <code>python3 scripts/fetch_gamelogs.py --season {SEASON}</code> (see README) and commit{' '}
-            <code>data/raw/{SEASON}.json</code>.
+            On your computer, run <code>python3 scripts/fetch_gamelogs.py --season {SEASON}</code> (see README) and commit <code>data/raw/{SEASON}.json</code>.
           </li>
           <li>
             Run <code>npm run data:build</code>, then reload.
