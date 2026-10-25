@@ -7,6 +7,7 @@ import { computeSalary, gearDamage, seasonTier, type SalaryBreakdown } from '../
 import { playerGamesInWeek } from '../engine/week';
 import { CLASSES, rules, tierIndex, type HeroClass } from '../rules';
 import { teamName } from '../data/teams';
+import { capOf, raiseCap } from '../app/gold';
 import { Bar, CLASS_ICON, TierChip, gamesCount, money } from './common';
 
 type Sort = 'salary' | 'salary-asc' | 'name' | HeroClass;
@@ -96,7 +97,8 @@ export function RosterBuilder({ data, game, onChange }: { data: SeasonData; game
   const [onlyFits, setOnlyFits] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
   const week = currentWeek(game, data);
-  const cap = rules.salary.cap;
+  const cap = capOf(game);
+  const capRaise = rules.salary.gold.capRaise;
   const size = rules.salary.rosterSize;
 
   const players = useMemo(
@@ -208,7 +210,7 @@ export function RosterBuilder({ data, game, onChange }: { data: SeasonData; game
                       className="draft-mode"
                       onClick={() => {
                         setDraftMenu(false);
-                        const d = autoDraft(data, week, m.id);
+                        const d = autoDraft(data, week, m.id, undefined, undefined, cap);
                         if (!d) return;
                         setSlots(d.slots);
                         setReserves(d.reserves);
@@ -248,6 +250,21 @@ export function RosterBuilder({ data, game, onChange }: { data: SeasonData; game
             </>
           }
         />
+        {(game.gold > 0 || game.capBonus > 0) && (
+          <div className="spread small">
+            <span className="muted">
+              💰 {game.gold} gold{game.capBonus > 0 && ` · cap includes +${game.capBonus} bought with gold`}
+            </span>
+            <button
+              className="btn small"
+              disabled={game.gold < capRaise.cost}
+              onClick={() => onChange(raiseCap(game))}
+              title="Permanent: the extra room stays for the rest of the run"
+            >
+              Raise cap +{capRaise.step} · {capRaise.cost} gold
+            </button>
+          </div>
+        )}
         <div className="slot-grid">
           {CLASSES.map((c) => {
             const id = slots[c];

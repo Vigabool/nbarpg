@@ -73,7 +73,12 @@ for (const enc of encounterIds()) {
   }
 }
 const seasons = simulateSeasons(data, 4, 'greedy', 'smart');
-result['seasons/fast'] = { fingerprint: hash(seasons), wins: seasons.filter((w) => w.won).length, battles: seasons.length };
+// Only what a season result means, so adding report fields doesn't move the baseline.
+result['seasons/fast'] = {
+  fingerprint: hash(seasons.map((w) => [w.run, w.week, w.chapter, w.encounter, w.won, w.rounds, w.spentPerHero])),
+  wins: seasons.filter((w) => w.won).length,
+  battles: seasons.length,
+};
 
 if (process.argv.includes('--update') || !existsSync(FILE)) {
   writeFileSync(FILE, JSON.stringify(result, null, 2) + '\n');

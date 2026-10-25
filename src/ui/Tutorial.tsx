@@ -629,10 +629,11 @@ export function Feature({ title, text, warn }: { title: ReactNode; text: ReactNo
   );
 }
 
-/** How heroes earn and spend progression points. */
+/** How heroes earn and spend progression points, and the party its gold. */
 function ProgressionTab() {
   const p = rules.progression;
   const e = p.earn;
+  const g = rules.salary.gold;
   const [c, setC] = useState<HeroClass>('warrior');
   const earn: [string, string][] = [
     ['Each wave cleared', `${e.perWaveCleared} to every hero`],
@@ -689,6 +690,21 @@ function ProgressionTab() {
           .map((f) => (
             <Feature key={f.name} title={`${f.icon} Feat · ${f.name} · ${f.cost} PP`} text={`${f.description}.`} />
           ))}
+      </section>
+      <section className="stack" style={{ gap: 6 }}>
+        <span className="section-label">💰 Gold</span>
+        <p className="small" style={{ margin: 0 }}>
+          The party starts with {g.starting} gold and earns more each battle: {g.earn.win} for a victory, {g.earn.loss} for a defeat, plus{' '}
+          {g.earn.perWaveCleared} per wave cleared. Gold belongs to the whole team and is spent on the roster:
+        </p>
+        <Feature
+          title="📝 Ten-day contracts"
+          text={`When a player has no game this week, rent a free agent who does, for this week only: ${Math.round(g.tenDay.feeFraction * 100)}% of their salary (at least ${g.tenDay.minFee} gold), with no cap space or roster move. Up to ${g.tenDay.perWeek} a week, from the Assign heroes screen; release one before the battle for a refund.`}
+        />
+        <Feature
+          title="📈 Raise the cap"
+          text={`+${g.capRaise.step} salary cap for ${g.capRaise.cost} gold, for the rest of the run. Spend it on roster moves between chapters: a second star, or a versatile reserve who covers several heroes.`}
+        />
       </section>
       <section className="stack" style={{ gap: 4 }}>
         <span className="section-label">Chapters</span>

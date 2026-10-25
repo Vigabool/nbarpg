@@ -4,5 +4,11 @@
   "heroSlots": 5,
   "byTier": { "cold": 4, "average": 10, "good": 18, "great": 28, "elite": 40 },
   "versatility": { "minTier": "great", "premiumPerExtraClass": 5 },
-  "eligibility": { "minGames": 10, "minMinutesPerGame": 15 }
+  "eligibility": { "minGames": 10, "minMinutesPerGame": 15 },
+  "gold": {
+    "starting": 20,
+    "earn": { "win": 6, "loss": 2, "perWaveCleared": 1 },
+    "tenDay": { "feeFraction": 0.5, "minFee": 3, "perWeek": 2 },
+    "capRaise": { "step": 5, "cost": 5 }
+  }
 }

@@ -4,6 +4,7 @@ import { computePool, seasonTier } from '../engine/rating';
 import { playerGamesInWeek } from '../engine/week';
 import { CLASSES, tierIndex, type HeroClass } from '../rules';
 import { currentWeek, type SaveGame } from './game';
+import { weekRoster } from './gold';
 
 /**
  * Suggested hero assignments for the week: players with a game first, then the
@@ -12,15 +13,16 @@ import { currentWeek, type SaveGame } from './game';
 export function autoAssign(game: SaveGame, data: SeasonData): Partial<Record<HeroClass, number>> {
   const week = currentWeek(game, data);
   const games = (id: number) => (week ? playerGamesInWeek(data, week, id).length : 0);
+  const roster = weekRoster(game);
   const next: Partial<Record<HeroClass, number>> = {};
   const used = new Set<number>();
   const order = [...CLASSES].sort(
     (a, b) =>
-      game.roster.filter((id) => tierIndex(seasonTier(a, data.players[id].avg)) >= 2).length -
-      game.roster.filter((id) => tierIndex(seasonTier(b, data.players[id].avg)) >= 2).length,
+      roster.filter((id) => tierIndex(seasonTier(a, data.players[id].avg)) >= 2).length -
+      roster.filter((id) => tierIndex(seasonTier(b, data.players[id].avg)) >= 2).length,
   );
   for (const c of order) {
-    const best = game.roster
+    const best = roster
       .filter((id) => !used.has(id))
       .sort(
         (a, b) => Number(games(b) > 0) - Number(games(a) > 0) || tierIndex(seasonTier(c, data.players[b].avg)) - tierIndex(seasonTier(c, data.players[a].avg)),

@@ -65,6 +65,26 @@ A player's salary comes from their best season-average tier across all five clas
 
 The roster stays fixed for a chapter of the season. Between chapters the user can make up to three moves (release a player, sign another under the cap). Hero assignments still change weekly from within the roster.
 
+### Gold
+
+**Gold is the party's currency, earned every battle and spent on the roster.** Progression points belong to a hero and grow that hero. Gold belongs to the team and grows the roster. Salaries and the cap are already priced in gold, so cap room is a straight purchase. Gold doesn't buy Armory gear: PP keep meaning "this hero earned it".
+
+- **Starting purse:** 20 gold, enough to open the season with a little cap room or to keep for rentals. Saves from before gold get it too.
+- **Earning:** 6 for a victory, 2 for a defeat, plus 1 per wave cleared. Losses still pay, to blunt the rich-get-richer snowball. That's roughly 150–200 gold over a season.
+- **Ten-day contracts:** for heroes whose player has no game, or is a weak fill-in that week.
+  - **What it is:** sign any eligible free agent who has a game this week, for this week only. It uses no cap space and no roster move.
+  - **Fee:** half their salary (at least 3 gold), so an Elite costs about 20–25 gold and a Good player about 9.
+  - **Limits:** up to 2 a week, signed from Assign heroes, either from a hero card or by browsing free agents. Releasing a contract before the battle refunds the fee. Contracts end when the week does.
+- **Raise the cap:** +5 cap for 5 gold, permanent. Auto-draft drafts to the raised cap. The cap only matters when signing, so this pays off in the roster moves between chapters: a second star, or a versatile reserve who covers several heroes.
+
+**Balance (season simulator, encounter-aware smart pick):**
+- **Rental policy:** rent for a hero with no game, or a fill-in below Good in that class, when a free agent at least two tiers better is affordable.
+- **Result:** win rate 45% → 57%. Weak spots per week fall from 0.51 to 0.17, using about 8.5 contracts a season.
+- **Before the fee went up:** at a quarter of salary, rentals were nearly free and took the win rate to 63%.
+- **What the simulator skips:** it makes no roster moves, so it can't weigh rentals against cap room. A real player splits the gold.
+
+**Later (phase 2):** extra roster spots (a 9th and 10th), extra roster moves mid-chapter, and consumables from a Quartermaster.
+
 ### Later: aprons and cap mechanics
 
 The NBA's cap rules give natural hooks for later design:

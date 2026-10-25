@@ -7,7 +7,10 @@ import type { SeasonData } from '../src/data/types';
 import { autoplay } from '../src/engine/autoplay';
 import { smartAutoplay } from '../src/engine/smartBot';
 import { encounterIds } from '../src/engine/encounter';
-import { CLASSES, rules, type HeroClass } from '../src/rules';
+import { CLASSES, rules, tierIndex, type HeroClass } from '../src/rules';
+import { signTenDay, tenDayBlocked, tenDayCandidates, tenDayFee } from '../src/app/gold';
+import { seasonTier } from '../src/engine/rating';
+import { playerGamesInWeek } from '../src/engine/week';
 
 /** How the bot spends PP between weeks. */
 export type SpendPolicy = 'none' | 'greedy';
@@ -24,6 +27,37 @@ export interface SeasonWeek {
   rounds: number;
   /** PP spent per hero so far this run, averaged over the five heroes. */
   spentPerHero: number;
+  /** Heroes on a fill-in below Good in their class, or with no game (after any ten-day contracts). */
+  sittingOut: number;
+  /** Ten-day contracts signed this week, and the gold left after the battle. */
+  rented: number;
+  gold: number;
+}
+
+/** How the bot uses gold: never, or ten-day contracts for heroes whose player has no game. */
+export type GoldPolicy = 'none' | 'rent';
+
+/**
+ * Rents for the weakest spots first: a hero whose player has no game, or a fill-in below Good in
+ * that class, gets the best affordable free agent if they're at least two tiers better.
+ */
+function rentForGaps(game: SaveGame, data: SeasonData): SaveGame {
+  const week = currentWeek(game, data)!;
+  const tierOf = (c: HeroClass, id: number | undefined) =>
+    id === undefined || playerGamesInWeek(data, week, id).length === 0 ? -1 : tierIndex(seasonTier(c, data.players[id].avg));
+  let g = game;
+  const weakest = [...CLASSES].sort((a, b) => tierOf(a, g.assignments[a]) - tierOf(b, g.assignments[b]));
+  for (const c of weakest) {
+    const now = tierOf(c, g.assignments[c]);
+    if (now >= tierIndex('good') || tenDayBlocked(g)) continue;
+    const pick = tenDayCandidates(g, data)
+      .filter((x) => tenDayFee(data, x) <= g.gold)
+      .sort((a, b) => tierOf(c, b) - tierOf(c, a) || tenDayFee(data, a) - tenDayFee(data, b))[0];
+    if (pick === undefined || tierOf(c, pick) < now + 2) continue;
+    g = signTenDay(g, data, pick);
+    g = { ...g, assignments: { ...g.assignments, [c]: pick } };
+  }
+  return g;
 }
 
 /** Everything a hero could buy, in the order the greedy bot prefers. */
@@ -67,6 +101,7 @@ export function simulateSeasons(
   pick: PickPolicy = 'energy',
   weights?: PickWeights | ((encounter: string) => PickWeights),
   bot: 'fast' | 'smart' = 'fast',
+  gold: GoldPolicy = 'none',
 ): SeasonWeek[] {
   const encounters = encounterIds();
   const out: SeasonWeek[] = [];
@@ -81,6 +116,7 @@ export function simulateSeasons(
     let spent = 0;
     for (let w = 0; game; w++) {
       game = { ...game, assignments: autoAssign(game, data), gamePicks: {} };
+      if (gold === 'rent' && currentWeek(game, data)) game = rentForGaps({ ...game, phase: 'assign' }, data);
       game = { ...game, encounter: encounters[(w + offset) % encounters.length] };
       game = {
         ...game,
@@ -91,6 +127,12 @@ export function simulateSeasons(
         continue;
       }
       const chapter = chapterOf(game);
+      const week = currentWeek(game, data)!;
+      const sittingOut = CLASSES.filter((c) => {
+        const id = game!.assignments[c];
+        return id === undefined || playerGamesInWeek(data, week, id).length === 0 || tierIndex(seasonTier(c, data.players[id].avg)) < tierIndex('good');
+      }).length;
+      const rented = game.tenDay.length;
       game = startBattle(game, data);
       game = finishBattle({ ...game, battle: bot === 'smart' ? smartAutoplay(game.battle!) : autoplay(game.battle!) });
       const result = game.history.at(-1)!;
@@ -107,6 +149,9 @@ export function simulateSeasons(
         won: result.outcome === 'won',
         rounds: result.rounds,
         spentPerHero: spent / CLASSES.length,
+        sittingOut,
+        rented,
+        gold: game.gold,
       });
       game = nextWeek(game, data);
     }

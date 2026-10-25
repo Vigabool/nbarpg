@@ -5,7 +5,7 @@ import type { PoolBreakdown } from '../engine/rating';
 import { computeRewards, type Rewards } from '../engine/rewards';
 import { computeSalary } from '../engine/rating';
 import { playerGamesInWeek, prepareBattle } from '../engine/week';
-import { CLASSES, emptyProgress, type HeroClass, type HeroProgress } from '../rules';
+import { CLASSES, emptyProgress, rules, type HeroClass, type HeroProgress } from '../rules';
 import { SAVE_VERSION } from './saves';
 
 export type Phase = 'roster' | 'assign' | 'select' | 'battle' | 'result';
@@ -36,6 +36,12 @@ export interface SaveGame {
   pp: Record<HeroClass, number>;
   /** What each hero has bought in the Armory (absent in saves from before progression). */
   progress?: Record<HeroClass, HeroProgress>;
+  /** The party's gold (see gold.ts). */
+  gold: number;
+  /** Cap room bought with gold, on top of the salary cap. */
+  capBonus: number;
+  /** Ten-day contracts for this week only, with the fee paid (refunded if released before the battle). */
+  tenDay: { playerId: number; fee: number }[];
   history: WeekResult[];
 }
 
@@ -56,6 +62,9 @@ export function newGame(season: string, weekIndex: number): SaveGame {
     battlePools: null,
     pp: Object.fromEntries(CLASSES.map((c) => [c, 0])) as Record<HeroClass, number>,
     progress: Object.fromEntries(CLASSES.map((c) => [c, emptyProgress()])) as Record<HeroClass, HeroProgress>,
+    gold: rules.salary.gold.starting,
+    capBonus: 0,
+    tenDay: [],
     history: [],
   };
 }
@@ -114,6 +123,7 @@ export function finishBattle(game: SaveGame): SaveGame {
     ...game,
     phase: 'result',
     pp,
+    gold: (game.gold ?? 0) + (rewards.gold?.total ?? 0),
     history: [...game.history, { weekIndex: game.weekIndex, outcome: b.phase, rounds: b.round, rewards }],
   };
 }
@@ -128,8 +138,12 @@ export function nextWeek(game: SaveGame, data: SeasonData): SaveGame | null {
   if (!next) return null;
   const startWeek = game.history[0]?.weekIndex ?? game.weekIndex;
   const chapterEnds = isChapterBoundary(next.index, startWeek);
+  // Ten-day contracts end with the week.
+  const assignments = Object.fromEntries(Object.entries(game.assignments).filter(([, id]) => game.roster.includes(id!)));
   return {
     ...game,
+    assignments,
+    tenDay: [],
     weekIndex: next.index,
     phase: chapterEnds ? 'roster' : 'assign',
     chapterRoster: chapterEnds ? [...game.roster] : null,

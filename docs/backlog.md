@@ -86,6 +86,16 @@ Encounter rules are now mechanic modules in `src/engine/encounters/` ([guide](ad
 
 **Done when.** Every passive feat and gear effect is visible on the hero row and credited in the log where it fires.
 
+## Gold, phase 2
+
+**Why.** Phase 1 shipped gold: earning, ten-day contracts and cap room (see the design doc's Gold section). More sinks give gold real tradeoffs.
+
+**What.**
+- **Roster spots:** a 9th and a 10th spot at escalating prices (for example 40 and 80 gold), capped at 10.
+- **Extra roster moves:** a signing outside the between-chapters window, at a price that rises each time.
+- **Quartermaster consumables:** single-use battle items bought with gold, such as a Healing Potion, a Scroll of Fireball, a Smoke Bomb or War Paint.
+- **Simulator:** let the season simulator make roster moves, so cap room can be weighed against rentals.
+
 ## Later / parked
 
 - **New encounters:** the Colosseum (crowd favor) and the Twilight Court (bargains and illusions). Build them after item 1.

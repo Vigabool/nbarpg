@@ -56,6 +56,28 @@ export function ResultScreen({ data, game, onChange }: { data: SeasonData; game:
           )}
         </section>
 
+        {r.gold && (
+          <section className="card stack">
+            <div className="spread">
+              <h2>Gold</h2>
+              <span className="small muted">💰 {game.gold} in the treasury</span>
+            </div>
+            <table className="table small">
+              <tbody>
+                {r.gold.lines.map((l) => (
+                  <tr key={l.label}>
+                    <td>{l.label}</td>
+                    <td className="num" style={{ textAlign: 'right' }}>
+                      +{l.gold}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <p className="tiny muted">Gold belongs to the party: rent ten-day contracts when a player has no game, or raise the salary cap between chapters.</p>
+          </section>
+        )}
+
         <section className="card stack">
           <div className="spread">
             <h2>Heroes</h2>

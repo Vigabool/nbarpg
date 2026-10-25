@@ -15,6 +15,8 @@ export interface Rewards {
   heroLines: RewardLine[];
   /** Whole PP per hero who fought. */
   perHero: Record<HeroClass, number>;
+  /** Gold for the party (absent in saves from before gold). */
+  gold?: { lines: { label: string; gold: number }[]; total: number };
 }
 
 /** Monsters worth an Elite bounty: Elite-tier Champions and bosses (not minions or the Phylactery). */
@@ -50,5 +52,14 @@ export function computeRewards(battle: BattleState, pools: Partial<Record<HeroCl
   const fought = new Set(battle.heroes.map((h) => h.heroClass));
   const perHero = Object.fromEntries(CLASSES.map((c) => [c, fought.has(c) ? party : 0])) as Record<HeroClass, number>;
   for (const l of heroLines) perHero[l.heroClass!] += l.pp;
-  return { partyLines, heroLines, perHero };
+  return { partyLines, heroLines, perHero, gold: goldFor(battle, rules) };
+}
+
+/** Gold for the party: something for every battle, more for a win, a little per wave cleared. */
+export function goldFor(battle: BattleState, rules: Rules = defaultRules): NonNullable<Rewards['gold']> {
+  const g = rules.salary.gold.earn;
+  const lines = [battle.phase === 'won' ? { label: 'Victory', gold: g.win } : { label: 'Fought', gold: g.loss }];
+  const waves = Math.min(battle.stats.wavesCleared, 3);
+  if (waves) lines.push({ label: `Waves cleared (${waves})`, gold: waves * g.perWaveCleared });
+  return { lines, total: lines.reduce((t, l) => t + l.gold, 0) };
 }

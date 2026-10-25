@@ -7,13 +7,18 @@ import { gearDamage, seasonTier } from '../engine/rating';
 import { playerGamesInWeek } from '../engine/week';
 import { CLASSES, rules, type HeroClass } from '../rules';
 import { ClassName, TierChip, gamesCount } from './common';
+import { isTenDay, releaseTenDay, weekRoster } from '../app/gold';
+import { TenDayPicker } from './TenDay';
 
 export function AssignHeroes({ data, game, onChange }: { data: SeasonData; game: SaveGame; onChange: (g: SaveGame) => void }) {
   const [armory, setArmory] = useState<HeroClass | null>(null);
+  // Ten-day picker: open for a hero (signing also assigns), or for no hero in particular.
+  const [tenDay, setTenDay] = useState<{ heroClass?: HeroClass } | null>(null);
+  const roster = weekRoster(game);
   const week = currentWeek(game, data);
   const games = (id: number) => (week ? playerGamesInWeek(data, week, id).length : 0);
   const assigned = new Set(Object.values(game.assignments));
-  const reserves = game.roster.filter((id) => !assigned.has(id));
+  const reserves = roster.filter((id) => !assigned.has(id));
 
   const assign = (c: HeroClass, playerId: number | undefined) => {
     const next = { ...game.assignments };
@@ -64,13 +69,14 @@ export function AssignHeroes({ data, game, onChange }: { data: SeasonData; game:
               </div>
               <select className="input" value={id ?? ''} onChange={(e) => assign(c, e.target.value ? Number(e.target.value) : undefined)}>
                 <option value="">Choose a player…</option>
-                {game.roster.map((pid) => {
+                {roster.map((pid) => {
                   const pl = data.players[pid];
                   const t = seasonTier(c, pl.avg);
                   const other = CLASSES.find((k) => k !== c && game.assignments[k] === pid);
                   return (
                     <option key={pid} value={pid}>
-                      {pl.name} — {t[0].toUpperCase() + t.slice(1)} · {gamesCount(games(pid))}
+                      {pl.name}
+                      {isTenDay(game, pid) ? ' (10-day)' : ''} — {t[0].toUpperCase() + t.slice(1)} · {gamesCount(games(pid))}
                       {other ? ` (now ${rules.classes[other].name})` : ''}
                     </option>
                   );
@@ -85,11 +91,49 @@ export function AssignHeroes({ data, game, onChange }: { data: SeasonData; game:
                   ) : (
                     <span className="chip warn">No games: sits out</span>
                   )}
+                  {isTenDay(game, p.id) && <span className="chip">📝 10-day</span>}
                 </div>
+              )}
+              {(!p || games(p.id) === 0) && (
+                <button className="btn small" onClick={() => setTenDay({ heroClass: c })}>
+                  📝 Sign a ten-day contract
+                </button>
               )}
             </div>
           );
         })}
+      </div>
+
+      <div className="card flat stack">
+        <div className="spread">
+          <h3>Ten-day contracts</h3>
+          <span className="small muted">💰 {game.gold} gold</span>
+        </div>
+        <p className="muted small">
+          Rent a free agent with a game this week, for this week only: {Math.round(rules.salary.gold.tenDay.feeFraction * 100)}% of their salary in gold, no cap
+          space or roster move. Up to {rules.salary.gold.tenDay.perWeek} a week; release before the battle for a refund.
+        </p>
+        {game.tenDay.length > 0 && (
+          <div className="row">
+            {game.tenDay.map((t) => (
+              <span key={t.playerId} className="chip">
+                📝 {data.players[t.playerId].name} · {t.fee} gold{' '}
+                <button
+                  className="btn ghost small icon-btn"
+                  onClick={() => onChange(releaseTenDay(game, t.playerId))}
+                  aria-label={`Release ${data.players[t.playerId].name}`}
+                >
+                  ✕
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+        <div>
+          <button className="btn small" onClick={() => setTenDay({})}>
+            Browse free agents
+          </button>
+        </div>
       </div>
 
       <div className="card flat stack">
@@ -118,6 +162,7 @@ export function AssignHeroes({ data, game, onChange }: { data: SeasonData; game:
           </button>
         </div>
       </div>
+      {tenDay && <TenDayPicker data={data} game={game} heroClass={tenDay.heroClass} onChange={onChange} onClose={() => setTenDay(null)} />}
       {armory && <Armory game={game} onChange={onChange} initial={armory} onClose={() => setArmory(null)} />}
     </div>
   );

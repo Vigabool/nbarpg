@@ -18,6 +18,7 @@ const bot = process.argv.includes('--smart-bot') ? 'smart' : 'fast';
 const spending = simulateSeasons(data, runs, 'greedy', 'energy', undefined, bot);
 const smart = simulateSeasons(data, runs, 'greedy', 'smart', DEFAULT_PICK_WEIGHTS, bot);
 const aware = simulateSeasons(data, runs, 'greedy', 'smart', undefined, bot);
+const renting = simulateSeasons(data, runs, 'greedy', 'smart', undefined, bot, 'rent');
 const baseline = simulateSeasons(data, runs, 'none', 'energy', undefined, bot);
 
 const pct = (ws: SeasonWeek[]) => (ws.length ? `${((ws.filter((w) => w.won).length / ws.length) * 100).toFixed(0)}%` : '–');
@@ -52,3 +53,9 @@ for (const [label, ws] of [
   ['encounter-aware', aware],
 ] as const)
   console.log(`By encounter (${label}): ${encs.map((e) => `${e} ${pct(ws.filter((w) => w.encounter === e))}`).join(' · ')}`);
+// Gold: ten-day contracts for heroes whose player has no game (encounter-aware smart pick).
+const perRun = (ws: SeasonWeek[], f: (w: SeasonWeek) => number) => ws.reduce((t, w) => t + f(w), 0) / runs;
+const lastGold = [...new Map(renting.map((w) => [w.run, w.gold])).values()];
+console.log(
+  `Gold: ${pct(renting)} with ten-day contracts vs ${pct(aware)} without · weak spots per week (below Good or no game) ${avg(aware, (w) => w.sittingOut).toFixed(2)} → ${avg(renting, (w) => w.sittingOut).toFixed(2)} · ${perRun(renting, (w) => w.rented).toFixed(1)} contracts a season · ${(lastGold.reduce((t, g) => t + g, 0) / lastGold.length).toFixed(0)} gold left at the end`,
+);

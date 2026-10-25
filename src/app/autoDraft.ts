@@ -67,6 +67,8 @@ export function autoDraft(
   mode: DraftMode = 'balance',
   rules: Rules = defaultRules,
   candidatesPerClass = 12,
+  /** The cap to draft under, including any cap room bought with gold. */
+  cap = rules.salary.cap,
 ): Draft | null {
   const plays = (id: number) => !week || playerGamesInWeek(data, week, id).length > 0;
   const good = tierIndex('good');
@@ -84,7 +86,7 @@ export function autoDraft(
     .sort((a, b) => a.salary - b.salary || (mode === 'flexibility' ? b.roles - a.roles : 0) || b.p.avg.min - a.p.avg.min)
     .slice(0, reserveCount);
   const reserveIds = new Set(reserves.map((r) => r.p.id));
-  const budget = rules.salary.cap - reserves.reduce((s, r) => s + r.salary, 0);
+  const budget = cap - reserves.reduce((s, r) => s + r.salary, 0);
 
   // Per class: the top players for this mode, plus the best few at each salary
   // level so a cheaper fit is always available if the stars don't fit.
@@ -135,5 +137,5 @@ export function autoDraft(
   if (!best) return null;
   const found = best as { score: number; ids: number[]; cost: number };
   const slots = Object.fromEntries(CLASSES.map((c, i) => [c, found.ids[i]])) as Record<HeroClass, number>;
-  return { slots, reserves: reserves.map((r) => r.p.id), cost: found.cost + (rules.salary.cap - budget) };
+  return { slots, reserves: reserves.map((r) => r.p.id), cost: found.cost + (cap - budget) };
 }
