@@ -498,6 +498,18 @@ The season runs in chapters of 4 weeks (roster moves happen between chapters). E
 
 **Tuned with the season simulator** (`npm run data:season`), which plays whole seasons through the real game flow (auto-draft, weekly assignments and game picks, auto-played battles, rewards, greedy Armory spending) next to a baseline that never spends. It showed the real season already gets harder on its own: with no chapter bonus at all, a team that never upgrades falls from 53% bot wins in chapter 1 to about 25% late, while a spending team stays flat around 55%. The first proposal, +10% per chapter, collapsed even spending teams to near 0% by chapter 4. At +3%, bots that spend win 56% → 28–56% across chapters (lowest in chapter 4) and bots that don't fall to near 0%, so upgrades clearly matter. The bot spends greedily and never uses Hunter's Mark or Vanish, so a human should land higher.
 
+## Onboarding
+
+**Show, don't tell.** New players learn in two places, kept apart:
+- **How to play** opens on first launch and is meant to be read in order. **Basics** is six short cards (roster, weekly setup, how games build the horde, the fight, big nights, growth). **Sample turn** is a scripted round played by the real engine. It ends with "Let's play" and offers **Replay the walkthrough**.
+- **Guide** is reference: Classes, Enemies (by encounter), Progression and gold, and a **Glossary** of one-line terms (energy, Fumble, special, trait, wave clock…). It opens from the top bar, the battle menu, and the ? and ⓘ buttons in battle.
+
+**The first battle is the tutorial.** The player's real first battle shows coach marks.
+- **How a tip looks:** a gold ring around one element, the rest dimmed, and a one- or two-sentence note with **Got it** and **Skip tips**. Taps still reach the game, so players can just do the thing.
+- **When a tip shows:** each appears once, the first time its moment comes (`src/ui/coachTips.ts`). The order: the horde → the party → one attack plus utilities (when the action sheet opens) → picking a target → End round (after a hero acts). Then, if they happen: a falling hero (☠), a special a round away (⏳), Fumbles (💫), the next wave. The result screen gets one tip on PP and gold.
+- **Setup screens** (encounter, assign heroes, pick games) each show a one-line banner the first time. In week 1, Goblin Horde is marked "Recommended first".
+- **Memory:** seen tips are stored per browser, not per save (`src/app/coach.ts`), so a new run doesn't repeat them.
+
 ## Multiplayer direction (future)
 
 Single player comes first, but these choices keep the door open:

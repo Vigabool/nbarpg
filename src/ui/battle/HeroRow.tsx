@@ -69,6 +69,7 @@ export function HeroRow({
             <button
               type="button"
               className={`doom${threatOn ? ' on' : ''}`}
+              data-coach="doom"
               aria-label={`${cls.name} falls if the round ends now: show where the damage comes from`}
               aria-pressed={threatOn}
               onClick={(ev) => {

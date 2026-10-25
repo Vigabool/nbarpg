@@ -52,6 +52,9 @@ export default function App() {
             <button className="btn ghost small" onClick={() => setTutorial({ tab: 'basics' })}>
               How to play
             </button>
+            <button className="btn ghost small" onClick={() => setTutorial({ tab: 'classes' })}>
+              Guide
+            </button>
             {active && (
               <button className="btn ghost small" onClick={() => setSaveFile('export')}>
                 Save file

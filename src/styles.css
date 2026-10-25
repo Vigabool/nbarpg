@@ -1801,3 +1801,65 @@ textarea.input.mono {
 .cost.discounted {
   color: var(--good);
 }
+
+/* ---------- Guide: glossary ---------- */
+.glossary {
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+.glossary dt {
+  font-weight: 700;
+}
+.glossary dd {
+  margin: 2px 0 0;
+  color: var(--muted);
+}
+
+/* ---------- Coach marks (first-time tips) ---------- */
+.coach {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+}
+.coach-ring {
+  position: fixed;
+  border: 2px solid var(--gold);
+  border-radius: 12px;
+  box-shadow: 0 0 0 9999px rgb(8 6 14 / 0.55);
+  transition:
+    top 0.15s,
+    left 0.15s,
+    width 0.15s,
+    height 0.15s;
+}
+.coach-bubble {
+  position: fixed;
+  pointer-events: auto;
+  background: var(--card-2);
+  border: 1px solid var(--gold);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  padding: 12px 14px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.coach-bubble p {
+  margin: 0;
+}
+.setup-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border: 1px solid var(--gold);
+  border-radius: var(--radius);
+  background: rgb(232 182 76 / 0.08);
+}
+.setup-banner .btn {
+  white-space: nowrap;
+  flex-shrink: 0;
+}

@@ -6,6 +6,7 @@ import type { JSX, ReactNode } from 'react';
 import { SampleTurn } from './SampleTurn';
 import { behaviorOf, encounterIds, encounterOf, hasTwist, monsterDescription, monsterIcon, monsterName, monsterShort, specialFor } from '../engine/encounter';
 import { CLASS_ICON, money } from './common';
+import { coachStarted, resetCoach } from '../app/coach';
 
 const SEEN_KEY = 'nbarpg.tutorialSeen';
 
@@ -33,23 +34,31 @@ const PLAYSTYLE: Record<HeroClass, { draft: string; play: string }> = {
   wizard: { draft: 'Volume three-point shooters', play: 'Burst damage: area spells for crowds, big bolts for Champions.' },
 };
 
-type Tab = 'basics' | 'sample' | 'classes' | 'enemies' | 'progression';
-const TABS: { id: Tab; label: string }[] = [
+type Tab = 'basics' | 'sample' | 'classes' | 'enemies' | 'progression' | 'glossary';
+/** How to play is the short, in-order introduction; the Guide is reference to look things up in. */
+const HOW_TO_PLAY: { id: Tab; label: string }[] = [
   { id: 'basics', label: 'Basics' },
   { id: 'sample', label: 'Sample turn' },
+];
+const GUIDE: { id: Tab; label: string }[] = [
   { id: 'classes', label: 'Classes' },
   { id: 'enemies', label: 'Enemies' },
   { id: 'progression', label: 'Progression' },
+  { id: 'glossary', label: 'Glossary' },
 ];
 export type EnemyPage = 'goblin' | ChampionKind | 'warlord' | 'traits';
 
-/** Where to open How to play, e.g. from a "?" in battle. */
+/** Where to open How to play (basics, sample) or the Guide (everything else), e.g. from a "?" in battle. */
 export type TutorialTopic =
   | { tab: 'basics' }
   | { tab: 'sample' }
   | { tab: 'classes'; heroClass?: HeroClass; abilityId?: string }
   | { tab: 'enemies'; enemy?: EnemyPage; encounter?: string }
-  | { tab: 'progression' };
+  | { tab: 'progression' }
+  | { tab: 'glossary' };
+
+/** Which book a topic belongs to. */
+export const isHowToPlay = (topic: TutorialTopic) => topic.tab === 'basics' || topic.tab === 'sample';
 
 export function Tutorial({ onClose, topic }: { onClose: () => void; topic?: TutorialTopic }) {
   const [tab, setTab] = useState<Tab>(topic?.tab ?? 'basics');
@@ -66,13 +75,14 @@ export function Tutorial({ onClose, topic }: { onClose: () => void; topic?: Tuto
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  const s = rules.salary;
+  const howTo = isHowToPlay(topic ?? { tab: 'basics' });
+  const TABS = howTo ? HOW_TO_PLAY : GUIDE;
   const nextTab = TABS[TABS.findIndex((t) => t.id === tab) + 1];
   return (
     <div className="modal-backdrop" onClick={close}>
       <div className="modal" role="dialog" aria-modal="true" aria-labelledby="tutorial-title" onClick={(e) => e.stopPropagation()}>
         <div className="spread">
-          <h2 id="tutorial-title">How to play</h2>
+          <h2 id="tutorial-title">{howTo ? 'How to play' : '📖 Guide'}</h2>
           <button ref={closeRef} className="btn ghost small" onClick={close} aria-label="Close">
             ✕
           </button>
@@ -86,37 +96,8 @@ export function Tutorial({ onClose, topic }: { onClose: () => void; topic?: Tuto
         </div>
 
         <div className="modal-body">
-          {tab === 'basics' && (
-            <ol className="steps">
-              <li>
-                <strong>Build a roster.</strong> Sign {s.rosterSize} NBA players under the {money(s.cap)} cap: one for each of your five heroes, plus three
-                reserves. Salary follows how good a player is, and players who fit several classes cost more.
-              </li>
-              <li>
-                <strong>Each week, pick a game.</strong> For each hero, choose one of their player's real games that week. That box score sets the hero's
-                starting <em>energy</em>, which they spend on abilities. Each class draws energy from different stats. A big night means a big start.
-              </li>
-              <li>
-                <strong>Watch who you bring.</strong> Every game you pick also sets how strong the opposing player who mirrors your hero is in the horde, and a
-                big night gives that monster a <em>trait</em>. The best opposing line by anyone else becomes the boss.
-              </li>
-              <li>
-                <strong>Fight.</strong> Three waves, {rules.combat.roundCap} rounds. Waves arrive on a clock (rounds{' '}
-                {rules.combat.waveArrivalRounds.join(' and ')}) or as soon as you clear the field, so they can overlap. Each round your heroes act in any order,
-                then summons, then the horde. Every hero gets <em>one attack</em> a round plus any number of <em>utility</em> powers (taunts, heals, armor,
-                buffs, summons) they have energy for. Attacks come in three kinds: a <em>basic</em> weapon attack that gains 2 energy, an <em>advanced</em>{' '}
-                weapon attack that costs 1–2, and damage spells that cost more. There are no dice: each enemy shows what it will do.
-              </li>
-              <li>
-                <strong>Highlights.</strong> A double-double unlocks the hero's Signature ability; a triple-double also unlocks their Legendary. Each is free
-                and usable once.
-              </li>
-              <li>
-                <strong>Win</strong> by clearing every wave before round {rules.combat.roundCap}. Victories and survivors earn progression points (PP) for your
-                heroes.
-              </li>
-            </ol>
-          )}
+          {tab === 'basics' && <BasicsTab />}
+          {tab === 'glossary' && <GlossaryTab />}
 
           {tab === 'sample' && <SampleTurn />}
           {tab === 'progression' && <ProgressionTab />}
@@ -136,14 +117,14 @@ export function Tutorial({ onClose, topic }: { onClose: () => void; topic?: Tuto
         </div>
 
         <div className="spread">
-          <span className="tiny faint">Reopen anytime from "How to play".</span>
+          <span className="tiny faint">{howTo ? 'Look anything up later in the Guide.' : 'Reopen anytime from "Guide".'}</span>
           {nextTab ? (
             <button className="btn primary small" onClick={() => setTab(nextTab.id)}>
               {nextTab.label} →
             </button>
           ) : (
             <button className="btn primary small" onClick={close}>
-              Got it
+              {howTo ? "Let's play" : 'Got it'}
             </button>
           )}
         </div>
@@ -714,5 +695,116 @@ function ProgressionTab() {
         </p>
       </section>
     </div>
+  );
+}
+
+// ---------- How to play: basics ----------
+
+/** The game in six cards, one idea each. */
+function BasicsTab() {
+  const s = rules.salary;
+  const [replayed, setReplayed] = useState(false);
+  const cards: [string, ReactNode][] = [
+    [
+      '🏀 Build a roster',
+      <>
+        Sign {s.rosterSize} NBA players under the {money(s.cap)} cap: one for each of your five heroes, plus three reserves. Better players cost more, and so do
+        players who fit several classes.
+      </>,
+    ],
+    [
+      '📅 Set up each week',
+      <>
+        Choose an encounter, put a player on each hero, and pick one of that player's real games this week. The box score sets the hero's starting{' '}
+        <em>energy</em>, which pays for abilities. Each class draws energy from different stats.
+      </>,
+    ],
+    [
+      '🪞 Your games build the horde',
+      <>
+        Every game you pick also brings the opposing player who mirrors your hero, as a monster as strong as their night. A big box score gives it a{' '}
+        <em>trait</em>. The best other opposing line becomes the boss.
+      </>,
+    ],
+    [
+      '⚔️ Fight',
+      <>
+        Three waves, {rules.combat.roundCap} rounds. Each round your heroes act in any order: one <em>attack</em> each, plus any <em>utilities</em> they can
+        afford. Then summons and the horde act. There are no dice: every enemy shows what it will do.
+      </>,
+    ],
+    [
+      '⭐ Big nights',
+      <>A double-double unlocks the hero's Signature ability; a triple-double also unlocks their Legendary. Each is free and usable once per battle.</>,
+    ],
+    [
+      '📈 Grow',
+      <>Clear every wave before round {rules.combat.roundCap} to win. Battles earn progression points (PP) for hero upgrades, and gold for your roster.</>,
+    ],
+  ];
+  return (
+    <div className="stack" style={{ gap: 8 }}>
+      {cards.map(([title, text], i) => (
+        <Feature key={i} title={`${i + 1} · ${title}`} text={text} />
+      ))}
+      <p className="small muted" style={{ margin: 0 }}>
+        Your first battle shows you the controls as you go. Watch a scripted round in <strong>Sample turn</strong>; look up classes, enemies and terms in the{' '}
+        <strong>Guide</strong>.
+      </p>
+      {coachStarted() && (
+        <div>
+          <button
+            className="btn small"
+            disabled={replayed}
+            onClick={() => {
+              resetCoach();
+              setReplayed(true);
+            }}
+          >
+            {replayed ? 'Tips will show again in your next battle' : 'Replay the walkthrough'}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------- Guide: glossary ----------
+
+/** One line per term, for "what's a Fumble?" moments. */
+function GlossaryTab() {
+  const c = rules.combat;
+  const terms: [string, string][] = [
+    ['Energy', "A hero's blue bar: set by their player's box score, spent on abilities. Basic weapon attacks give 2 back."],
+    ['Gear damage (⚔)', "What the hero's weapon attacks hit for, from their player's season tier in that class plus Armory weapon levels."],
+    ['Attack', 'Anything that deals damage. Each hero gets one a round.'],
+    ['Utility', 'Everything else: taunts, heals, armor, buffs, summons. Any number a round, while energy lasts.'],
+    ['Armor (⛨)', 'Reduces each hit a hero takes this round.'],
+    ['Taunt', 'Makes an enemy attack the taunter. Some enemies ignore taunts.'],
+    ['Champion', 'A monster mirroring one of your heroes: the opposing player your hero faced in the picked game.'],
+    ['Minion', 'The rank-and-file (goblins, skeletons, kobolds, wolves): their number comes from the opposing teams’ points.'],
+    ['Boss', 'The best opposing line that no hero mirrors. Two actions a round, and it grows angrier when hurt.'],
+    ['Trait', 'An ability a Champion gets from a big stat line, e.g. 4+ blocks gives Swat. See Enemies → Traits.'],
+    ['Special (⏳)', `A Champion's big move, every ${c.specialEveryNRounds} rounds. Its card warns a round ahead.`],
+    ['Fumble (💫)', 'Earned from the opposing player’s turnovers. Spend one (two taps) to cancel that enemy’s next action, specials included.'],
+    ['Fall warning (☠)', 'This hero falls if you end the round now. Tap it to see who hits them.'],
+    ['Wave clock', `Waves arrive on rounds ${c.waveArrivalRounds.join(' and ')}, or as soon as the field is clear.`],
+    ['Double-double / triple-double', "Unlocks the hero's Signature / Legendary ability: free, once per battle."],
+    ['Twist', "An encounter's special rule, like Restless Dead or Topple. Shown on each encounter's card."],
+    ['Chapter', 'Four weeks. Between chapters you can make roster moves and change difficulty; the horde grows a little stronger each chapter.'],
+    ['PP', 'Progression points: earned per hero, spent in the Armory on weapons, gear and feats.'],
+    ['Gold', 'The party’s currency: rent ten-day contracts or raise the salary cap.'],
+    ['Ten-day contract', 'Rent a free agent for one week, for a fee, when a player has no game.'],
+    ['Difficulty', 'Normal softens Champions and bosses; Hard is full strength. Change it between chapters.'],
+  ];
+  return (
+    <dl className="glossary small">
+      {terms.map(([t, d]) => (
+        <div key={t}>
+          <dt>{t}</dt>
+          <dd>{d}</dd>
+        </div>
+      ))}
+    </dl>
   );
 }

@@ -54,7 +54,7 @@ export function EnemyIcons({ e, state }: { e: EnemyState; state: BattleState }) 
   return (
     <>
       {icons.map((i) => (
-        <span key={i.label} className={`tag static ${i.tone}`} aria-label={i.label}>
+        <span key={i.label} className={`tag static ${i.tone}`} aria-label={i.label} data-coach={i.tone === 'soon' ? 'special-soon' : undefined}>
           {i.icon}
         </span>
       ))}
@@ -119,6 +119,7 @@ export function FumbleChip({ e, state, passive, onFumble }: { e: EnemyState; sta
   return (
     <button
       type="button"
+      data-coach="fumble"
       className={`tag fumble${armed ? ' armed' : ''}`}
       aria-label={
         armed

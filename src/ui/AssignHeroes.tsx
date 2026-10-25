@@ -9,6 +9,7 @@ import { CLASSES, rules, type HeroClass } from '../rules';
 import { ClassName, TierChip, gamesCount } from './common';
 import { isTenDay, releaseTenDay, weekRoster } from '../app/gold';
 import { TenDayPicker } from './TenDay';
+import { SetupBanner } from './SetupBanner';
 
 export function AssignHeroes({ data, game, onChange }: { data: SeasonData; game: SaveGame; onChange: (g: SaveGame) => void }) {
   const [armory, setArmory] = useState<HeroClass | null>(null);
@@ -49,6 +50,11 @@ export function AssignHeroes({ data, game, onChange }: { data: SeasonData; game:
           Suggest assignments
         </button>
       </div>
+
+      <SetupBanner id="banner-assign">
+        <strong>Put a player on each hero.</strong> Their season tier in that class sets the hero's gear damage. A player with no game this week sits out: sign
+        a 📝 ten-day contract to cover.
+      </SetupBanner>
 
       <div className="grid">
         {CLASSES.map((c) => {

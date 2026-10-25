@@ -5,6 +5,8 @@ import { Armory } from './Armory';
 import { nextWeek, type SaveGame } from '../app/game';
 import { CLASSES, rules } from '../rules';
 import { ClassName, weekLabel } from './common';
+import { CoachMarks } from './CoachMarks';
+import { RESULT_TIPS } from './coachTips';
 
 export function ResultScreen({ data, game, onChange }: { data: SeasonData; game: SaveGame; onChange: (g: SaveGame) => void }) {
   const [armory, setArmory] = useState(false);
@@ -25,7 +27,7 @@ export function ResultScreen({ data, game, onChange }: { data: SeasonData; game:
         </p>
       </div>
 
-      <div className="grid">
+      <div className="grid" data-coach="rewards">
         <section className="card stack">
           <h2>Progression points</h2>
           {partyLines.length === 0 && heroLines.length === 0 ? (
@@ -113,6 +115,7 @@ export function ResultScreen({ data, game, onChange }: { data: SeasonData; game:
         </section>
       </div>
       {armory && <Armory game={game} onChange={onChange} onClose={() => setArmory(false)} />}
+      {!armory && <CoachMarks tips={RESULT_TIPS} ctx={null} />}
 
       <div className="sticky-bottom">
         <div className="spread">

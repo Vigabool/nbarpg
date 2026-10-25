@@ -30,7 +30,7 @@ Getting the game ready for outside testers, in this order.
 2. **A link friends can open ✅ Set up.** Pushing to the `playtest` branch deploys to https://vigabool.github.io/nbarpg/ (`.github/workflows/pages.yml`). It needs Pages enabled once, with Source: GitHub Actions. The title screen shows the build label.
 3. **Normal difficulty ✅ Done.** It's the default for new runs; the heuristic bot wins about 60% in every encounter.
 4. **Weekly encounter choice ✅ Done (interim).** **Choose your encounter** is now the first step of each week, and players may pick any encounter. Weekly offers come with the season structure (item 2 below).
-5. **First-battle walkthrough:** three or four contextual tips in the first battle.
+5. **First-battle walkthrough ✅ Done.** Coach marks in the first battle, one-time banners on the setup screens, and How to play split from a reference Guide (see the design doc's Onboarding section).
 6. **Landing-damage warning and feat tags ✅ Done** (items 4 and 6 below).
 7. **A full chapter on a phone:** play the exact build you'll share before sending it.
 

@@ -23,6 +23,8 @@ import { EnemyDetail } from './battle/EnemyDetail';
 import { HeroRow, ThreatCallout, SummonRow } from './battle/HeroRow';
 import { ActionTile } from './battle/ActionTile';
 import { Ticker, LogDrawer } from './battle/BattleLog';
+import { CoachMarks } from './CoachMarks';
+import { BATTLE_TIPS } from './coachTips';
 
 interface Props {
   data: SeasonData;
@@ -148,7 +150,7 @@ export function BattleScreen({ data, game, onChange, onHelp, onQuit }: Props) {
             W{state.waveIndex + 1}/{state.waveCount} · R{state.round}/{rules.combat.roundCap}
           </strong>
           {next && inRounds !== null && (
-            <span className={`chip${inRounds <= 1 ? ' wave-soon' : ''}`} title={`Wave ${state.waveIndex + 2}: ${next.length} monsters`}>
+            <span className={`chip${inRounds <= 1 ? ' wave-soon' : ''}`} data-coach="wave" title={`Wave ${state.waveIndex + 2}: ${next.length} monsters`}>
               W{state.waveIndex + 2} {inRounds <= 1 ? 'next round' : `in ${inRounds}`} · {next.length}
               {next.some((m) => m.isWarlord)
                 ? ` + ${encounterOf(state.encounter).boss ? monsterShort(encounterOf(state.encounter).boss!, state.encounter) : 'Warlord'}`
@@ -173,7 +175,7 @@ export function BattleScreen({ data, game, onChange, onHelp, onQuit }: Props) {
           >
             ↶
           </button>
-          <button className="btn primary small" disabled={over} onClick={doEndRound}>
+          <button className="btn primary small" disabled={over} onClick={doEndRound} data-coach="end-round">
             End round{waiting > 0 && <span className="badge">{waiting}</span>}
           </button>
           <div className="menu-wrap">
@@ -192,6 +194,16 @@ export function BattleScreen({ data, game, onChange, onHelp, onQuit }: Props) {
                   }}
                 >
                   How to play
+                </button>
+                <button
+                  className="btn ghost small block"
+                  role="menuitem"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onHelp({ tab: 'glossary' });
+                  }}
+                >
+                  Guide
                 </button>
                 <button
                   className="btn ghost small block"
@@ -235,7 +247,7 @@ export function BattleScreen({ data, game, onChange, onHelp, onQuit }: Props) {
         )}
         {state.hoard && <HoardTag state={state} />}
       </div>
-      <div className={`enemy-grid${threat ? ' threat-mode' : ''}`}>
+      <div className={`enemy-grid${threat ? ' threat-mode' : ''}`} data-coach="horde">
         {champions.map((e) => (
           <EnemyCard
             key={e.id}
@@ -266,7 +278,7 @@ export function BattleScreen({ data, game, onChange, onHelp, onQuit }: Props) {
       </div>
 
       <div className="section-label">Party</div>
-      <div className="party">
+      <div className="party" data-coach="party">
         {state.heroes.map((h) => {
           const allyTarget = targeting && (targetType === 'ally' || targetType === 'fallenAlly') && action!.validTargets.includes(h.id);
           return (
@@ -301,7 +313,7 @@ export function BattleScreen({ data, game, onChange, onHelp, onQuit }: Props) {
       </div>
 
       {hero && !over && (
-        <section className="action-sheet" aria-label={`${rules.classes[hero.heroClass].name} actions`}>
+        <section className="action-sheet" data-coach="actions" aria-label={`${rules.classes[hero.heroClass].name} actions`}>
           <div className="sheet-head">
             {targeting ? (
               <span className="small" style={{ color: 'var(--info)', minWidth: 0 }}>
@@ -392,6 +404,7 @@ export function BattleScreen({ data, game, onChange, onHelp, onQuit }: Props) {
         </section>
       )}
 
+      {!over && <CoachMarks tips={BATTLE_TIPS} ctx={{ state, sheetOpen: !!hero, targeting, doomed }} />}
       {logOpen && <LogDrawer log={state.log} onClose={() => setLogOpen(false)} />}
       {detail && (
         <EnemyDetail

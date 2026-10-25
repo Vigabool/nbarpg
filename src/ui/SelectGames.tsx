@@ -8,6 +8,7 @@ import { difficultyHorde, playerGamesInWeek, scaleHorde } from '../engine/week';
 import { CLASSES, rules, type HeroClass } from '../rules';
 import { encounterOf, monsterIcon, monsterName } from '../engine/encounter';
 import { DifficultyChip } from './DifficultyPicker';
+import { SetupBanner } from './SetupBanner';
 import { ClassName, TierChip, formatDate, statLine } from './common';
 
 function mirrorFor(c: HeroClass, playerId: number, gameId: string, data: SeasonData, encounter?: string): MonsterSpec | undefined {
@@ -54,6 +55,11 @@ export function SelectGames({ data, game, onChange }: { data: SeasonData; game: 
           </button>
         </div>
       </div>
+
+      <SetupBanner id="banner-games">
+        <strong>Each game cuts both ways.</strong> It sets your hero's starting energy, and it brings the player they faced into the horde, as strong as that
+        player's night. Not sure? Try 🧠 Smart pick.
+      </SetupBanner>
 
       {heroes.map((c) => {
         const pid = game.assignments[c]!;

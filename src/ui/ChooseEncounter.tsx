@@ -5,6 +5,7 @@ import { rules, type MonsterKind } from '../rules';
 import type { TutorialTopic } from './Tutorial';
 import { weekLabel } from './common';
 import { DifficultyChip } from './DifficultyPicker';
+import { SetupBanner } from './SetupBanner';
 
 const CHALLENGE = ['', 'Gentler', 'Standard', 'Tough'];
 
@@ -49,6 +50,10 @@ export function ChooseEncounter({
         </p>
       </div>
 
+      <SetupBanner id="banner-encounter">
+        <strong>Each week starts here.</strong> Pick where the party fights. The dots show how hard an encounter plays, and Meet the enemies previews its horde.
+      </SetupBanner>
+
       <div className="grid" role="radiogroup" aria-label="Encounter">
         {encounterIds().map((id) => {
           const enc = encounterOf(id);
@@ -70,7 +75,10 @@ export function ChooseEncounter({
                 <h2 style={{ margin: 0 }}>
                   {enc.boss ? monsterIcon(enc.boss, id) : '⚔️'} {enc.name}
                 </h2>
-                {selected && <span className="chip status-good">Chosen</span>}
+                <span className="row" style={{ gap: 4 }}>
+                  {game.history.length === 0 && id === rules.encounters.default && <span className="chip">Recommended first</span>}
+                  {selected && <span className="chip status-good">Chosen</span>}
+                </span>
               </div>
               <span className="small muted">{enc.tagline}</span>
               <div className="row small" style={{ gap: 6 }}>
