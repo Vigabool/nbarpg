@@ -1,8 +1,10 @@
 import { useEffect, useLayoutEffect, useState } from 'react';
 import { decodeSeason, type CompactSeason } from './data/format';
 import type { SeasonData } from './data/types';
+import { formView } from './data/form';
+import { FALLBACK_MANIFEST, type SeasonManifest } from './data/manifest';
 import { localSaveStore } from './app/storage';
-import type { SaveGame } from './app/game';
+import { chapterStartWeek, type SaveGame } from './app/game';
 import { ConfirmButton, weekLabel } from './ui/common';
 import { TitleScreen } from './ui/TitleScreen';
 import { Tutorial, tutorialSeen, type TutorialTopic } from './ui/Tutorial';
@@ -14,27 +16,46 @@ import { ResultScreen } from './ui/ResultScreen';
 import { SaveFile } from './ui/SaveFile';
 import { ChooseEncounter } from './ui/ChooseEncounter';
 
-const SEASON = '2025-26';
+type Load = { status: 'loading' } | { status: 'missing'; season: string } | { status: 'ready'; data: SeasonData };
 
-type Load = { status: 'loading' } | { status: 'missing' } | { status: 'ready'; data: SeasonData };
+const getJson = <T,>(path: string): Promise<T> =>
+  fetch(`${import.meta.env.BASE_URL}${path}`).then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))));
 
 export default function App() {
   const [load, setLoad] = useState<Load>({ status: 'loading' });
   const [game, setGame] = useState<SaveGame | null>(() => localSaveStore.load());
   const [tutorial, setTutorial] = useState<TutorialTopic | null>(() => (tutorialSeen() ? null : { tab: 'basics' }));
   const [saveFile, setSaveFile] = useState<'export' | 'import' | null>(null);
+  const [manifest, setManifest] = useState<SeasonManifest | null>(null);
+  // The season on screen: a saved run's season if it's still available, otherwise the live one.
+  const [season, setSeason] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(`${import.meta.env.BASE_URL}data/${SEASON}.json`)
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
-      .then((c: CompactSeason) => setLoad({ status: 'ready', data: decodeSeason(c) }))
-      .catch(() => setLoad({ status: 'missing' }));
+    getJson<SeasonManifest>('data/seasons.json')
+      .catch(() => FALLBACK_MANIFEST)
+      .then((m) => {
+        setManifest(m);
+        const saved = localSaveStore.load()?.season;
+        setSeason(saved && m.seasons.some((x) => x.season === saved) ? saved : m.current);
+      });
   }, []);
+
+  useEffect(() => {
+    if (!season) return;
+    setLoad({ status: 'loading' });
+    getJson<CompactSeason>(`data/${season}.json`)
+      .then((c) => setLoad({ status: 'ready', data: decodeSeason(c) }))
+      .catch(() => setLoad({ status: 'missing', season }));
+  }, [season]);
 
   const update = (g: SaveGame | null) => {
     setGame(g);
     if (g) localSaveStore.save(g);
-    else localSaveStore.clear();
+    else {
+      localSaveStore.clear();
+      // With the run over, new runs default to the live season again.
+      if (manifest) setSeason(manifest.current);
+    }
   };
 
   // A new screen starts at the top: the week's steps, battle, results, title. Otherwise it opens
@@ -47,9 +68,11 @@ export default function App() {
   }, [screen]);
 
   if (load.status === 'loading') return <div className="app muted">Loading season…</div>;
-  if (load.status === 'missing') return <MissingData />;
-  const data = load.data;
-  const active = game && game.season === data.season ? game : null;
+  if (load.status === 'missing') return <MissingData season={load.season} />;
+  const full = load.data;
+  const active = game && game.season === full.season ? game : null;
+  // Ratings (salary, season tier, gear) are fixed at the chapter's first week; see src/data/form.ts.
+  const data = active ? formView(full, chapterStartWeek(active)) : full;
 
   return (
     <div className={`app${active?.phase === 'battle' ? ' battle' : ''}`}>
@@ -96,7 +119,15 @@ export default function App() {
         </p>
       )}
       {!active ? (
-        <TitleScreen data={data} saved={game} onStart={update} onImport={() => setSaveFile('import')} />
+        <TitleScreen
+          key={data.season}
+          data={data}
+          seasons={manifest?.seasons ?? []}
+          onSeason={setSeason}
+          saved={game}
+          onStart={update}
+          onImport={() => setSaveFile('import')}
+        />
       ) : active.phase === 'roster' ? (
         <RosterBuilder data={data} game={active} onChange={update} />
       ) : active.phase === 'encounter' ? (
@@ -114,7 +145,7 @@ export default function App() {
   );
 }
 
-function MissingData() {
+function MissingData({ season: SEASON }: { season: string }) {
   return (
     <div className="app stack">
       <h1 className="serif">NBA Fantasy RPG</h1>
@@ -125,7 +156,8 @@ function MissingData() {
         </p>
         <ol className="muted">
           <li>
-            On your computer, run <code>python3 scripts/fetch_gamelogs.py --season {SEASON}</code> (see README) and commit <code>data/raw/{SEASON}.json</code>.
+            Fetch the games: <code>npx tsx scripts/fetch-cdn.ts --season {SEASON}</code> (the scheduled Refresh season data workflow does this), or{' '}
+            <code>python3 scripts/fetch_gamelogs.py --season {SEASON}</code> on your computer (see README). Commit <code>data/raw/{SEASON}.json</code>.
           </li>
           <li>
             Run <code>npm run data:build</code>, then reload.

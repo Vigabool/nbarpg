@@ -1,4 +1,4 @@
-import { STAT_KEYS, type BoxLine, type Game, type PlayerSummary, type RawGameLog, type SeasonData, type StatLine, type Week } from './types';
+import { STAT_KEYS, type BoxLine, type Game, type PlayerSummary, type PriorSeason, type RawGameLog, type SeasonData, type StatLine, type Week } from './types';
 
 const RAW_COLUMNS: Record<string, keyof BoxLine | 'gameId' | 'date' | 'matchup' | 'playerName'> = {
   PLAYER_ID: 'playerId',
@@ -52,7 +52,10 @@ function addDays(isoDate: string, days: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-export function buildSeason(raw: RawGameLog): SeasonData {
+/** How many prior-season games each player carries: enough to fill a whole form window. */
+export const PRIOR_GAMES = 15;
+
+function parseGames(raw: RawGameLog) {
   const idx: Record<string, number> = {};
   raw.headers.forEach((h, i) => (idx[h] = i));
   for (const col of Object.keys(RAW_COLUMNS)) {
@@ -90,6 +93,19 @@ export function buildSeason(raw: RawGameLog): SeasonData {
     names[playerId] = String(get('PLAYER_NAME'));
     if (!latest[playerId] || latest[playerId].date <= date) latest[playerId] = { date, team };
   }
+  return { games, names, latest };
+}
+
+/**
+ * Builds the app's season file from a raw game log. With `prior` (the previous regular season),
+ * each current player also carries their last PRIOR_GAMES prior games for the form window.
+ */
+export function buildSeason(raw: RawGameLog, prior?: RawGameLog): SeasonData {
+  const { games: allGames, names, latest } = parseGames(raw);
+  // A live log can end mid-week: leave that week out until it's over.
+  const games = raw.throughDate
+    ? Object.fromEntries(Object.entries(allGames).filter(([, g]) => addDays(mondayOf(g.date), 6) <= raw.throughDate!))
+    : allGames;
 
   const totals: Record<number, { gp: number; sum: StatLine }> = {};
   for (const g of Object.values(games)) {
@@ -125,5 +141,25 @@ export function buildSeason(raw: RawGameLog): SeasonData {
     weeks,
     games,
     players,
+    ...(prior ? { prior: priorLines(prior, players) } : {}),
+    ...(raw.throughDate ? { throughDate: raw.throughDate } : {}),
   };
+}
+
+function priorLines(prior: RawGameLog, players: Record<number, PlayerSummary>): PriorSeason {
+  const byPlayer: Record<number, { date: string; line: StatLine }[]> = {};
+  for (const g of Object.values(parseGames(prior).games))
+    for (const l of g.lines) {
+      if (!players[l.playerId]) continue;
+      const line = emptyStatLine();
+      for (const k of STAT_KEYS) line[k] = l[k];
+      (byPlayer[l.playerId] ??= []).push({ date: g.date, line });
+    }
+  const lines: Record<number, StatLine[]> = {};
+  for (const [id, list] of Object.entries(byPlayer))
+    lines[Number(id)] = list
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .slice(-PRIOR_GAMES)
+      .map((x) => x.line);
+  return { season: prior.season, lines };
 }

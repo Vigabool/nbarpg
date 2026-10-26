@@ -4,7 +4,7 @@ import type { RewardLine } from '../engine/rewards';
 import { Armory } from './Armory';
 import { nextWeek, type SaveGame } from '../app/game';
 import { CLASSES, rules } from '../rules';
-import { ClassName, weekLabel } from './common';
+import { ClassName, formatDate, weekLabel } from './common';
 import { CoachMarks } from './CoachMarks';
 import { RESULT_TIPS } from './coachTips';
 
@@ -124,7 +124,9 @@ export function ResultScreen({ data, game, onChange }: { data: SeasonData; game:
               ? next.phase === 'roster'
                 ? `Chapter complete: up to 3 roster moves before ${weekLabel(data, next.weekIndex)}`
                 : `Next: ${weekLabel(data, next.weekIndex)}`
-              : 'End of the available season.'}
+              : data.throughDate
+                ? `You're caught up: games through ${formatDate(data.throughDate)} are in. The next week unlocks once it's been played.`
+                : 'End of the available season.'}
           </span>
           {next && (
             <button className="btn primary" onClick={() => onChange(next)}>

@@ -1,4 +1,4 @@
-import { STAT_KEYS, type BoxLine, type Game, type PlayerSummary, type SeasonData, type Week } from './types';
+import { STAT_KEYS, type BoxLine, type Game, type PlayerSummary, type SeasonData, type StatLine, type Week } from './types';
 
 /**
  * Compact on-disk format for public/data/<season>.json. Box lines are stored as
@@ -15,6 +15,9 @@ export interface CompactSeason {
   weeks: Week[];
   games: { id: string; date: string; home: string; away: string; lines: (string | number)[][] }[];
   players: { id: number; name: string; team: string; gp: number; avg: number[] }[];
+  /** Prior-season lines per player, each in STAT_KEYS order. */
+  prior?: { season: string; lines: Record<number, number[][]> };
+  throughDate?: string;
 }
 
 export function encodeSeason(data: SeasonData): CompactSeason {
@@ -39,6 +42,15 @@ export function encodeSeason(data: SeasonData): CompactSeason {
       gp: p.gp,
       avg: STAT_KEYS.map((k) => Math.round(p.avg[k] * 100) / 100),
     })),
+    ...(data.prior
+      ? {
+          prior: {
+            season: data.prior.season,
+            lines: Object.fromEntries(Object.entries(data.prior.lines).map(([id, ls]) => [id, ls.map((l) => STAT_KEYS.map((k) => l[k]))])),
+          },
+        }
+      : {}),
+    ...(data.throughDate ? { throughDate: data.throughDate } : {}),
   };
 }
 
@@ -71,5 +83,19 @@ export function decodeSeason(c: CompactSeason): SeasonData {
     weeks: c.weeks,
     games,
     players,
+    ...(c.prior
+      ? {
+          prior: {
+            season: c.prior.season,
+            lines: Object.fromEntries(
+              Object.entries(c.prior.lines).map(([id, ls]) => [
+                Number(id),
+                ls.map((row) => Object.fromEntries(STAT_KEYS.map((k, i) => [k, row[i]])) as StatLine),
+              ]),
+            ),
+          },
+        }
+      : {}),
+    ...(c.throughDate ? { throughDate: c.throughDate } : {}),
   };
 }

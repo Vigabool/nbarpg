@@ -10,9 +10,15 @@ This branch covers milestones 1–3: the data layer and calibration, the combat 
 npm install
 ```
 
-### 1. Get the season data (once, on your own computer)
+### 1. Get the season data
 
-stats.nba.com blocks most cloud servers, so the game logs are downloaded locally and committed.
+**The live season** comes from the NBA's public CDN. The **Refresh season data** workflow fetches it every Monday and commits `data/raw/<season>.json`; to fetch by hand:
+
+```bash
+npx tsx scripts/fetch-cdn.ts            # the current season's finished games → data/raw/2026-27.json
+```
+
+**A finished season** comes from stats.nba.com, which blocks most cloud servers, so it's downloaded on your own computer and committed:
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
@@ -24,7 +30,7 @@ git add data/raw/2025-26.json && git commit -m "Add 2025-26 game logs"
 ### 2. Build, calibrate, play
 
 ```bash
-npm run data:build        # data/raw/2025-26.json → public/data/2025-26.json (what the app loads)
+npm run data:build        # every data/raw/<season>.json → public/data/ (what the app loads), plus seasons.json
 npm run data:calibrate    # writes docs/calibration-2025-26.md; add -- --apply to update tier thresholds
 npm run data:simulate     # auto-plays battles and reports win rate, battle length, pool sizes
 npm run dev               # http://localhost:5173

@@ -79,7 +79,9 @@ export interface SalarySummary {
 
 export function eligiblePlayers(data: SeasonData, rules: Rules = defaultRules) {
   const e = rules.salary.eligibility;
-  return Object.values(data.players).filter((p) => p.gp >= e.minGames && p.avg.min >= e.minMinutesPerGame);
+  // A live season needs a full form window: rookies and others without 15 games are left out.
+  const minGames = data.prior ? e.formGames : e.minGames;
+  return Object.values(data.players).filter((p) => p.gp >= minGames && p.avg.min >= e.minMinutesPerGame);
 }
 
 export function summarizeSalaries(data: SeasonData, rules: Rules = defaultRules): SalarySummary {

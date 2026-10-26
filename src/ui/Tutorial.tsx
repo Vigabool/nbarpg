@@ -788,6 +788,10 @@ function GlossaryTab() {
   const terms: [string, string][] = [
     ['Energy', "A hero's blue bar: set by their player's box score, spent on abilities. Basic weapon attacks give 2 back."],
     ['Gear damage (⚔)', "What the hero's weapon attacks hit for, from their player's season tier in that class plus Armory weapon levels."],
+    [
+      'Season tier',
+      "A player's level in a class, which sets gear damage and salary. In the live season it comes from their last 15 games (early on, partly last season's) and holds for the chapter.",
+    ],
     ['Attack', 'Anything that deals damage. Each hero gets one a round.'],
     ['Utility', 'Everything else: taunts, heals, armor, buffs, summons. Any number a round, while energy lasts.'],
     ['Armor (⛨)', 'Reduces each hit a hero takes this round.'],

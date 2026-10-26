@@ -38,21 +38,22 @@ Getting the game ready for outside testers, in this order.
 
 **Why.** Live results powering battles is the most compelling way to play, so the current season becomes the default mode. Today the app loads one finished season and rates players on whole-season averages, which look ahead in a replay and are empty early in a live season. Design: the design doc's Live season section.
 
-**What, in order.**
-1. **Form window:** the build writes each week's per-player averages from the last 15 regular-season games before that week, filled from the prior regular season (`npm run data:build -- --prior <raw file>`). Salary, season tier, gear, ten-day fees and auto-draft read form for the current week instead of `player.avg`. Test it on 2025–26 with a 2024–25 log as the prior (fetch it locally), which also measures how well last season predicts this one.
-2. **Chapter salary lock:** salary, tier and gear are fixed at each chapter boundary; repricing never forces a release.
-3. **Rookies and limited data:** a hand-kept draft file per class, draft-slot pricing (calibrated from the 2025 class's first 15 games), the eligibility rules, and a "Limited data" warning in the roster builder, Assign heroes and ten-day lists.
-4. **Live calendar:** the current season is the default; a week unlocks once its Sunday is over, with a "next battle unlocks Monday" screen. Sandbox replays of older seasons stay, with one save per season (bump `SAVE_VERSION` if the save shape changes). 2025–26 stays the data for tests, the golden baseline and the simulators.
-5. **Automated refresh:** a scheduled GitHub Actions workflow (Monday morning ET, plus `workflow_dispatch` for testing) that fetches the week from the NBA's CDN (schedule and box scores), commits the raw log and triggers the rebuild and deploy. Fallback if Actions is blocked: the local fetch script each Monday, or a self-hosted runner.
+**Built (data feed).** The form window (`src/data/form.ts`: last 15 regular-season games before the week, topped up from the prior season), with ratings fixed at each chapter's first week; players short of 15 games across both seasons (rookies included) can't be signed for now; the CDN fetcher (`scripts/fetch-cdn.ts`) and the Monday **Refresh season data** workflow; the build makes every season in `data/raw/` and a `seasons.json` list; the title screen opens on the live season with older seasons as replays; unfinished weeks stay locked. 2025–26 has no prior season in the repo, so it keeps whole-season averages and the golden baseline is unchanged.
+
+**Still to do.**
+1. **Turn on the schedule:** GitHub only runs schedules from the default branch, so the workflow file needs to be on `main` (or `milestones-1-3` made the default).
+2. **First real fetch:** confirm the CDN answers GitHub's servers (the workflow's first run), then check the 2026–27 build: weeks, players, eligible pool.
+3. **Ship to friends:** decide how the weekly data reaches `playtest` (the workflow pushes to `milestones-1-3` only; a deploy needs a push to `playtest`).
+4. **Measure the prior season:** fetch 2024–25 locally to test how well last season predicts this one, and to give 2025–26 replays form windows too (this changes the golden baseline).
+5. **Simulators on the live season:** the season simulator still rates players on whole-season averages; switch it to form views before tuning on 2026–27.
 6. **Recalibration:** after 6–8 weeks, `npm run data:calibrate` on 2026–27; adopt at a chapter boundary if the tier mix moved.
 
 **Done when.**
 - A new run starts in the latest finished week of 2026–27, and the next week unlocks on its own after the refresh.
-- No rating anywhere uses a game from the week being played or later (a test checks this on 2025–26).
-- Rookies are draftable from opening night with a warning, and reprice from their own games after 15.
+- No rating anywhere uses a game from the week being played or later.
 - The simulators and golden baseline still run on 2025–26, unchanged.
 
-**Decide during live testing.** Roster moves beyond ten-day contracts and cap raises: releasing a player at any time (not only between chapters), signing replacements mid-chapter, and what a release costs. See Gold, phase 2.
+**Decide during live testing.** Roster moves beyond ten-day contracts and cap raises: releasing a player at any time (not only between chapters), signing replacements mid-chapter, and what a release costs. See Gold, phase 2. Also whether excluded rookies should be signable after all (by draft slot; see the design doc).
 
 ## 2. Season structure and encounter use
 

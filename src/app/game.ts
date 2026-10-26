@@ -85,6 +85,12 @@ export function chapterOf(game: SaveGame): number {
   return Math.floor((game.weekIndex - startWeek) / CHAPTER_WEEKS) + 1;
 }
 
+/** The week a chapter's ratings come from: its first week, so salary, tier and gear hold for the chapter. */
+export function chapterStartWeek(game: SaveGame): number {
+  const startWeek = game.history[0]?.weekIndex ?? game.weekIndex;
+  return startWeek + (chapterOf(game) - 1) * CHAPTER_WEEKS;
+}
+
 export function currentWeek(game: SaveGame, data: SeasonData): Week | undefined {
   return data.weeks.find((w) => w.index === game.weekIndex);
 }

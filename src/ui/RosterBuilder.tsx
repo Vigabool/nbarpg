@@ -80,6 +80,12 @@ function initialSlots(game: SaveGame, data: SeasonData): { slots: Slots; reserve
   return { slots, reserves: rest };
 }
 
+/** Games behind a player's ratings: in a live season, this season's plus any carried over from last season. */
+function gpLabel(p: SeasonData['players'][number]): string {
+  if (!p.form) return `${p.gp} GP`;
+  return p.form.prior ? `${p.form.current} GP + ${p.form.prior} last season` : `${p.form.current} GP`;
+}
+
 export function RosterBuilder({ data, game, onChange }: { data: SeasonData; game: SaveGame; onChange: (g: SaveGame) => void }) {
   const init = useMemo(() => initialSlots(game, data), [game, data]);
   const [slots, setSlots] = useState<Slots>(init.slots);
@@ -368,7 +374,7 @@ export function RosterBuilder({ data, game, onChange }: { data: SeasonData; game
           <PlayerRow
             key={p.id}
             name={p.name}
-            meta={`${p.team} · ${p.gp} GP · ${gamesCount(gamesThisWeek)} this week`}
+            meta={`${p.team} · ${gpLabel(p)} · ${gamesCount(gamesThisWeek)} this week`}
             stats={playerStats(p.avg, isClassSort(sort) ? sort : undefined)}
             salary={salary}
             slots={slots}
@@ -382,8 +388,9 @@ export function RosterBuilder({ data, game, onChange }: { data: SeasonData; game
         {list.length > 150 && <p className="muted small">Showing 150 of {list.length}. Search to narrow the list.</p>}
         {list.length === 0 && (
           <p className="muted small">
-            No players match. Rostered players and deep-bench players (under {rules.salary.eligibility.minGames} games or{' '}
-            {rules.salary.eligibility.minMinutesPerGame} minutes a game) aren't listed.
+            No players match. Rostered players and deep-bench players (under{' '}
+            {data.prior ? rules.salary.eligibility.formGames : rules.salary.eligibility.minGames} games or {rules.salary.eligibility.minMinutesPerGame} minutes
+            a game) aren't listed.
           </p>
         )}
       </div>

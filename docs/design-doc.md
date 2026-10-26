@@ -100,7 +100,7 @@ The NBA's cap rules give natural hooks for later design:
 
 ### Form: the last 15 regular-season games
 
-Salary, season tier, gear and auto-draft all read a player's per-game averages. A whole-season average looks ahead (in a replay, week 3 would know March), and in a live season it is empty for weeks. Instead, each week's averages (a player's **form**) come from the player's **15 most recent regular-season games before that week**. Early in the season the window reaches back into the prior regular season: a player with 4 games this year uses those 4 plus their last 11 of last season. Once they have 15 games this season, form is their season-to-date average.
+Salary, season tier, gear, ten-day fees and auto-draft all read a player's per-game averages (`src/data/form.ts`). A whole-season average looks ahead (in a replay, week 3 would know March), and in a live season it is empty for weeks. Instead, each week's averages (a player's **form**) come from the player's **15 most recent regular-season games before that week**. Early in the season the window reaches back into the prior regular season: a player with 4 games this year uses those 4 plus their last 11 of last season. Once they have 15 games this season, form is their season-to-date average.
 
 **Why 15 (measured on 2025–26):**
 
@@ -116,23 +116,21 @@ Reliability is the odd/even split-half correlation, stepped up with Spearman-Bro
 
 ### Salaries lock for each chapter
 
-Form updates weekly, but **salary is set at each chapter boundary** (when roster moves happen) and holds for the chapter, so a roster that was legal at the draft stays legal. Repricing never forces a release: the cap only applies when signing. A player who breaks out is a bargain until the next chapter, and that is part of the fun. Gear and season tier follow the same lock, so a hero's character sheet doesn't shift mid-chapter.
+Form updates weekly, but **salary is set at each chapter boundary** (when roster moves happen; in code, `formView` as of `chapterStartWeek`) and holds for the chapter, so a roster that was legal at the draft stays legal. Repricing never forces a release: the cap only applies when signing. A player who breaks out is a bargain until the next chapter, and that is part of the fun. Gear and season tier follow the same lock, so a hero's character sheet doesn't shift mid-chapter.
 
 ### Rookies and players with little data
 
-- **Rookies are priced by draft slot** until they have 15 NBA games; their tier and gear come from the slot too. The slot-to-tier table should be calibrated from the 2025 draft class's first 15 games; until then, a placeholder (for example picks 1–3 Good, 4–14 Average, later picks and undrafted Cold).
-- **A "Limited data" warning** on the player card and in the roster builder ("priced by draft slot: #4 pick" or "5 NBA games") marks the risk. It applies to anyone with fewer than 15 games in the window, not just rookies.
-- **Others without a full window:** players who missed last season (injury), arrive from overseas, or were drafted years ago and stashed. Draft slot is misleading for a stash or a returning veteran, so they use whatever games they have (looking back a further season if needed) and carry the warning; with no NBA games at all they fall back to the rookie rule.
-- **Eligibility:** the 15+ minutes rule is measured over the window. First-round rookies are eligible from opening night; second-rounders and undrafted players once they have 5 games at 15+ minutes.
-- **Draft data:** a small hand-kept file per draft class (about 60 rows: player ID, pick) is simpler than another stats.nba.com request.
+**For now, a player needs 15 games across this season and last season to be signed.** Rookies, and anyone else short of a full window (a player who missed last season, or arrives from overseas), stay off the market until they reach 15. Since rosters open between chapters, a rookie who earns minutes becomes signable a chapter or so in. In code: `salary.eligibility.formGames` (15) replaces the 10-game rule in a live season, and the 15+ minutes rule is measured over the window.
+
+**Parked: pricing rookies by draft slot.** If excluding them feels wrong in live testing: price by draft slot (a hand-kept file per draft class, calibrated from the 2025 class's first 15 games), with a "Limited data" warning on anyone short of a full window.
 
 ### Weekly calendar
 
-A week becomes playable once its Sunday is over, and the game shows when the next battle unlocks instead of running out of data. A short first week (the season opens midweek) is still week 1. Ten-day contracts and roster moves work as in sandbox mode; expanding them (dropping a player any time, more signings) is for live testing.
+A week becomes playable once its Sunday is over: the fetcher records `throughDate` (the last day whose games are all final) and the build leaves out any week ending after it. The title screen offers the live season by default, starting in the latest finished week, with older seasons as replays (a saved run reopens in its own season). When a run catches up, the result screen says the next week unlocks once it's been played. A short first week (the season opens midweek) is still week 1. Ten-day contracts and roster moves work as in sandbox mode; expanding them (dropping a player any time, more signings) is for live testing.
 
 ### Data refresh
 
-stats.nba.com blocks most cloud servers, probably including GitHub Actions. The plan is a scheduled workflow (Monday mornings, Eastern time) that fetches the finished week from the NBA's public CDN (the schedule plus each game's box score), commits the raw log, and lets the existing workflows rebuild and deploy. If the CDN also blocks Actions, the fallback is running `scripts/fetch_gamelogs.py` on your own computer each Monday (or a self-hosted runner on that machine).
+stats.nba.com blocks most cloud servers, so the live season comes from the NBA's public CDN instead: the season schedule (`scheduleLeagueV2.json`) and each final game's box score. `scripts/fetch-cdn.ts` writes the same raw format as the LeagueGameLog script (regular-season games only; the NBA Cup final doesn't count), downloads only games it doesn't have plus the last week's again (stat corrections), and fails loudly if the feed changes shape. The **Refresh season data** workflow (`.github/workflows/refresh-data.yml`) runs it Monday mornings and commits `data/raw/<season>.json`; `npm run data:build` then builds every season in `data/raw/`, giving each one its previous season for the form window, and writes `public/data/seasons.json` for the app. If the CDN ever blocks GitHub's servers, the fallback is running `scripts/fetch_gamelogs.py` locally each Monday.
 
 ### Recalibration
 

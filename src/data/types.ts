@@ -25,8 +25,10 @@ export interface PlayerSummary {
   /** Most recent team. */
   team: string;
   gp: number;
-  /** Per-game season averages. */
+  /** Per-game season averages (in a form view: the form window's averages). */
   avg: StatLine;
+  /** In a form view, how many of the window's games came from this season and from the prior one. */
+  form?: { current: number; prior: number };
 }
 
 export interface Week {
@@ -47,6 +49,19 @@ export interface SeasonData {
   weeks: Week[];
   games: Record<string, Game>;
   players: Record<number, PlayerSummary>;
+  /**
+   * A live season's prior regular season: each current player's most recent prior games, oldest
+   * first. When present, ratings come from each week's form window (src/data/form.ts) instead of
+   * whole-season averages.
+   */
+  prior?: PriorSeason;
+  /** Last date (ISO, Eastern time) the data fully covers; weeks after it are left out until they finish. */
+  throughDate?: string;
+}
+
+export interface PriorSeason {
+  season: string;
+  lines: Record<number, StatLine[]>;
 }
 
 /** The raw dump written by scripts/fetch_gamelogs.py (an nba_api LeagueGameLog result set). */
@@ -55,6 +70,8 @@ export interface RawGameLog {
   source: string;
   fetchedAt: string;
   synthetic?: boolean;
+  /** Set by the live fetcher: the last date (Eastern time) whose games are all final. */
+  throughDate?: string;
   headers: string[];
   rows: (string | number | null)[][];
 }

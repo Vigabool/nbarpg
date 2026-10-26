@@ -1,24 +1,33 @@
 import { useState } from 'react';
 import type { SeasonData } from '../data/types';
 import { newGame, type SaveGame } from '../app/game';
-import { ConfirmButton, weekLabel } from './common';
+import type { SeasonManifest } from '../data/manifest';
+import { ConfirmButton, formatDate, weekLabel } from './common';
 import { BUILD } from '../app/build';
 import { rules, type Difficulty } from '../rules';
 import { DifficultyPicker } from './DifficultyPicker';
 
 export function TitleScreen({
   data,
+  seasons,
+  onSeason,
   saved,
   onStart,
   onImport,
 }: {
   data: SeasonData;
+  /** Seasons the app can load (from the manifest). */
+  seasons: SeasonManifest['seasons'];
+  /** Switches the loaded season. */
+  onSeason: (season: string) => void;
   saved: SaveGame | null;
   onStart: (g: SaveGame) => void;
   /** Opens the import dialog to load a save file. */
   onImport: () => void;
 }) {
-  const [week, setWeek] = useState(data.weeks[0]?.index ?? 1);
+  const live = seasons.find((s) => s.season === data.season)?.live ?? false;
+  // A live run starts in the latest finished week; a replay starts at the beginning.
+  const [week, setWeek] = useState((live ? data.weeks.at(-1) : data.weeks[0])?.index ?? 1);
   const [difficulty, setDifficulty] = useState<Difficulty>(rules.difficulty.default);
   return (
     <div className="title-screen">
@@ -33,8 +42,30 @@ export function TitleScreen({
             Continue · {weekLabel(data, saved.weekIndex)}
           </button>
         )}
+        {saved && saved.season !== data.season && seasons.some((s) => s.season === saved.season) && (
+          <button className="btn primary block" onClick={() => onSeason(saved.season)}>
+            Continue · {saved.season} · Week {saved.weekIndex}
+          </button>
+        )}
         <div className="card stack" style={{ textAlign: 'left' }}>
-          <h2>New sandbox run · {data.season}</h2>
+          <h2>{live ? `New run · ${data.season}` : `New sandbox run · ${data.season}`}</h2>
+          {seasons.length > 1 && (
+            <label className="stack small" style={{ gap: 4 }}>
+              <span className="muted">Season</span>
+              <select className="input" value={data.season} onChange={(e) => onSeason(e.target.value)}>
+                {seasons.map((s) => (
+                  <option key={s.season} value={s.season}>
+                    {s.season} · {s.live ? 'live' : 'replay'}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          {live && data.throughDate && (
+            <p className="small muted" style={{ margin: 0 }}>
+              Live season: real games through {formatDate(data.throughDate)}. A new week unlocks once it's been played.
+            </p>
+          )}
           <label className="stack small" style={{ gap: 4 }}>
             <span className="muted">Starting week</span>
             <select className="input" value={week} onChange={(e) => setWeek(Number(e.target.value))}>
