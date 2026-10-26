@@ -50,8 +50,8 @@ export interface SeasonData {
   games: Record<string, Game>;
   players: Record<number, PlayerSummary>;
   /**
-   * A live season's prior regular season: each current player's most recent prior games, oldest
-   * first. When present, ratings come from each week's form window (src/data/form.ts) instead of
+   * A live season's earlier regular seasons: each current player's most recent earlier games
+   * (from the last two seasons), oldest first. When present, ratings come from each week's form window (src/data/form.ts) instead of
    * whole-season averages.
    */
   prior?: PriorSeason;
@@ -60,6 +60,7 @@ export interface SeasonData {
 }
 
 export interface PriorSeason {
+  /** The most recent earlier season. */
   season: string;
   lines: Record<number, StatLine[]>;
 }

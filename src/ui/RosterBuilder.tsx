@@ -80,10 +80,10 @@ function initialSlots(game: SaveGame, data: SeasonData): { slots: Slots; reserve
   return { slots, reserves: rest };
 }
 
-/** Games behind a player's ratings: in a live season, this season's plus any carried over from last season. */
+/** Games behind a player's ratings: in a live season, this season's plus any carried over from earlier seasons. */
 function gpLabel(p: SeasonData['players'][number]): string {
   if (!p.form) return `${p.gp} GP`;
-  return p.form.prior ? `${p.form.current} GP + ${p.form.prior} last season` : `${p.form.current} GP`;
+  return p.form.prior ? `${p.form.current} GP + ${p.form.prior} earlier` : `${p.form.current} GP`;
 }
 
 export function RosterBuilder({ data, game, onChange }: { data: SeasonData; game: SaveGame; onChange: (g: SaveGame) => void }) {

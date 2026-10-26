@@ -97,10 +97,11 @@ function parseGames(raw: RawGameLog) {
 }
 
 /**
- * Builds the app's season file from a raw game log. With `prior` (the previous regular season),
- * each current player also carries their last PRIOR_GAMES prior games for the form window.
+ * Builds the app's season file from a raw game log. With `priors` (earlier regular seasons, most
+ * recent first), each current player also carries their last PRIOR_GAMES earlier games for the
+ * form window, reaching back past a season they mostly missed.
  */
-export function buildSeason(raw: RawGameLog, prior?: RawGameLog): SeasonData {
+export function buildSeason(raw: RawGameLog, priors: RawGameLog[] = []): SeasonData {
   const { games: allGames, names, latest } = parseGames(raw);
   // A live log can end mid-week: leave that week out until it's over.
   const games = raw.throughDate
@@ -141,14 +142,15 @@ export function buildSeason(raw: RawGameLog, prior?: RawGameLog): SeasonData {
     weeks,
     games,
     players,
-    ...(prior ? { prior: priorLines(prior, players) } : {}),
+    ...(priors.length ? { prior: priorLines(priors, players) } : {}),
     ...(raw.throughDate ? { throughDate: raw.throughDate } : {}),
   };
 }
 
-function priorLines(prior: RawGameLog, players: Record<number, PlayerSummary>): PriorSeason {
+function priorLines(priors: RawGameLog[], players: Record<number, PlayerSummary>): PriorSeason {
   const byPlayer: Record<number, { date: string; line: StatLine }[]> = {};
-  for (const g of Object.values(parseGames(prior).games))
+  for (const prior of priors)
+    for (const g of Object.values(parseGames(prior).games))
     for (const l of g.lines) {
       if (!players[l.playerId]) continue;
       const line = emptyStatLine();
@@ -161,5 +163,5 @@ function priorLines(prior: RawGameLog, players: Record<number, PlayerSummary>): 
       .sort((a, b) => a.date.localeCompare(b.date))
       .slice(-PRIOR_GAMES)
       .map((x) => x.line);
-  return { season: prior.season, lines };
+  return { season: priors[0].season, lines };
 }

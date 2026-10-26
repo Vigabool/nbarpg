@@ -1,11 +1,11 @@
 /**
  * Turns the raw game logs (scripts/fetch-cdn.ts or scripts/fetch_gamelogs.py) into the compact
  * files the app loads (public/data/<season>.json), plus public/data/seasons.json listing them.
- * A season whose previous season is also in data/raw/ carries that season's last games for the
- * form window (src/data/form.ts).
+ * A live season carries each player's last games from the two seasons before it (when they're in
+ * data/raw/) for the form window (src/data/form.ts).
  *
  *   npm run data:build                                 # every data/raw/<season>.json
- *   npm run data:build -- --raw <path> [--prior <path>] # one raw file
+ *   npm run data:build -- --raw <path> [--prior <path>]… # one raw file; priors most recent first
  */
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { buildSeason } from '../src/data/build';
@@ -23,16 +23,26 @@ export function previousSeason(season: string): string {
   return `${y}-${String((y + 1) % 100).padStart(2, '0')}`;
 }
 
+/** How far back the form window may reach: last season, and the one before for a player who missed most of it. */
+const LOOKBACK = 2;
+
 const rawArg = arg('--raw');
-const jobs: { raw: string; prior?: string }[] = rawArg
-  ? [{ raw: rawArg, prior: arg('--prior') }]
+const jobs: { raw: string; priors: string[] }[] = rawArg
+  ? [{ raw: rawArg, priors: args.flatMap((a, i) => (args[i - 1] === '--prior' ? [a] : [])) }]
   : existsSync('data/raw')
     ? readdirSync('data/raw')
         .filter((f) => /^\d{4}-\d{2}\.json$/.test(f))
         .sort()
         .map((f) => {
-          const prior = `data/raw/${previousSeason(f.slice(0, 7))}.json`;
-          return { raw: `data/raw/${f}`, prior: existsSync(prior) ? prior : undefined };
+          // Only a live season (one the CDN fetcher wrote) rates players on form. Finished seasons
+          // keep whole-season averages, so the simulators and golden baseline on 2025-26 hold still.
+          const live = !!read(`data/raw/${f}`).throughDate;
+          const priors: string[] = [];
+          for (let s = f.slice(0, 7), i = 0; live && i < LOOKBACK; i++) {
+            s = previousSeason(s);
+            if (existsSync(`data/raw/${s}.json`)) priors.push(`data/raw/${s}.json`);
+          }
+          return { raw: `data/raw/${f}`, priors };
         })
     : [];
 
@@ -44,7 +54,7 @@ if (!jobs.length || !jobs.every((j) => existsSync(j.raw))) {
 mkdirSync('public/data', { recursive: true });
 const built: SeasonManifest['seasons'] = [];
 for (const job of jobs) {
-  const season = buildSeason(read(job.raw), job.prior ? read(job.prior) : undefined);
+  const season = buildSeason(read(job.raw), job.priors.map(read));
   const out = `public/data/${season.season}.json`;
   writeFileSync(out, JSON.stringify(encodeSeason(season)));
   built.push({

@@ -100,7 +100,7 @@ The NBA's cap rules give natural hooks for later design:
 
 ### Form: the last 15 regular-season games
 
-Salary, season tier, gear, ten-day fees and auto-draft all read a player's per-game averages (`src/data/form.ts`). A whole-season average looks ahead (in a replay, week 3 would know March), and in a live season it is empty for weeks. Instead, each week's averages (a player's **form**) come from the player's **15 most recent regular-season games before that week**. Early in the season the window reaches back into the prior regular season: a player with 4 games this year uses those 4 plus their last 11 of last season. Once they have 15 games this season, form is their season-to-date average.
+Salary, season tier, gear, ten-day fees and auto-draft all read a player's per-game averages (`src/data/form.ts`). A whole-season average looks ahead (in a replay, week 3 would know March), and in a live season it is empty for weeks. Instead, each week's averages (a player's **form**) come from the player's **15 most recent regular-season games before that week**. Early in the season the window reaches back into the prior regular season (and the one before, for a player who missed most of it): a player with 4 games this year uses those 4 plus their last 11 of last season. Once they have 15 games this season, form is their season-to-date average.
 
 **Why 15 (measured on 2025–26):**
 
@@ -120,7 +120,7 @@ Form updates weekly, but **salary is set at each chapter boundary** (when roster
 
 ### Rookies and players with little data
 
-**For now, a player needs 15 games across this season and last season to be signed.** Rookies, and anyone else short of a full window (a player who missed last season, or arrives from overseas), stay off the market until they reach 15. Since rosters open between chapters, a rookie who earns minutes becomes signable a chapter or so in. In code: `salary.eligibility.formGames` (15) replaces the 10-game rule in a live season, and the 15+ minutes rule is measured over the window.
+**For now, a player needs 15 games across this season and the two before it to be signed.** The window reaches back a second season only for a player who missed most of the last one (Kyrie Irving, Damian Lillard and Dejounte Murray were among 63 players short on last season alone). Rookies, and anyone else short of a full window (a player arriving from overseas, or out for two seasons), stay off the market until they reach 15. Since rosters open between chapters, a rookie who earns minutes becomes signable a chapter or so in. In code: `salary.eligibility.formGames` (15) replaces the 10-game rule in a live season, and the 15+ minutes rule is measured over the window. Only a live season rates on form; finished seasons keep whole-season averages, so the simulators and golden baseline on 2025–26 hold still.
 
 **Parked: pricing rookies by draft slot.** If excluding them feels wrong in live testing: price by draft slot (a hand-kept file per draft class, calibrated from the 2025 class's first 15 games), with a "Limited data" warning on anyone short of a full window.
 

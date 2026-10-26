@@ -42,7 +42,7 @@ for (let w = 0; w < 3; w++)
     nights.push([1, day('2026-10-19', w * 7 + d), 30]);
     nights.push([2, day('2026-10-19', w * 7 + d), 20]);
   }
-const live = buildSeason(rawLog('2026-27', nights), prior);
+const live = buildSeason(rawLog('2026-27', nights), [prior]);
 
 describe('form window', () => {
   it('carries each current player’s last prior games, and only current players', () => {
@@ -77,6 +77,25 @@ describe('form window', () => {
     expect(ids).not.toContain(2);
   });
 
+  it('reaches back a second season for a player who missed most of the last one', () => {
+    // Player 3: 20 games of 8 points in 2024-25, then 3 games of 20 points in 2025-26.
+    const older = rawLog(
+      '2024-25',
+      Array.from({ length: 20 }, (_, i) => [3, day('2025-02-01', i), 8] as [number, string, number]),
+    );
+    const last = rawLog('2025-26', [
+      [3, '2026-04-01', 20],
+      [3, '2026-04-03', 20],
+      [3, '2026-04-05', 20],
+    ]);
+    const data = buildSeason(rawLog('2026-27', [...nights, [3, day('2026-10-19', 1), 0]]), [last, older]);
+    expect(data.prior?.lines[3]).toHaveLength(15);
+    expect(data.prior?.lines[3].at(-1)?.pts).toBe(20); // most recent last
+    const p = formView(data, 1).players[3];
+    expect(p.gp).toBe(15);
+    expect(p.avg.pts).toBeCloseTo((3 * 20 + 12 * 8) / 15);
+  });
+
   it('leaves a season without prior data on whole-season averages', () => {
     const sandbox = buildSeason(rawLog('2026-27', nights));
     expect(formView(sandbox, 2)).toBe(sandbox);
@@ -84,7 +103,7 @@ describe('form window', () => {
   });
 
   it('round-trips the prior games and through date in the compact format', () => {
-    const withDate = buildSeason(rawLog('2026-27', nights, { throughDate: '2026-11-08' }), prior);
+    const withDate = buildSeason(rawLog('2026-27', nights, { throughDate: '2026-11-08' }), [prior]);
     const back = decodeSeason(JSON.parse(JSON.stringify(encodeSeason(withDate))));
     expect(back.prior).toEqual(withDate.prior);
     expect(back.throughDate).toBe('2026-11-08');
@@ -95,10 +114,10 @@ describe('form window', () => {
 describe('live calendar', () => {
   it('leaves out a week that hasn’t finished', () => {
     // Through Wednesday of week 3: week 3's Tuesday game is in the log, but the week isn't over.
-    const partial = buildSeason(rawLog('2026-27', nights, { throughDate: day('2026-10-19', 16) }), prior);
+    const partial = buildSeason(rawLog('2026-27', nights, { throughDate: day('2026-10-19', 16) }), [prior]);
     expect(partial.weeks.map((w) => w.index)).toEqual([1, 2]);
     expect(Object.values(partial.games).every((g) => g.date <= day('2026-10-19', 13))).toBe(true);
-    expect(buildSeason(rawLog('2026-27', nights, { throughDate: day('2026-10-19', 20) }), prior).weeks).toHaveLength(3);
+    expect(buildSeason(rawLog('2026-27', nights, { throughDate: day('2026-10-19', 20) }), [prior]).weeks).toHaveLength(3);
   });
 });
 
