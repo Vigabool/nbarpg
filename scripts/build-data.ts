@@ -61,8 +61,13 @@ for (const job of jobs) {
   );
 }
 
-// Newest first; new runs start in the newest season.
-const seasons = built.sort((a, b) => b.season.localeCompare(a.season));
+// Newest first; new runs start in the newest season. A live season joins the list once its first
+// week is over.
+const seasons = built.filter((s) => s.weeks > 0).sort((a, b) => b.season.localeCompare(a.season));
+if (!seasons.length) {
+  console.error('No season has a finished week yet.');
+  process.exit(1);
+}
 const manifest: SeasonManifest = { current: seasons[0].season, seasons };
 writeFileSync('public/data/seasons.json', JSON.stringify(manifest));
 console.log(`Wrote public/data/seasons.json: ${seasons.map((s) => `${s.season}${s.live ? ' (live)' : ''}`).join(', ')}`);
