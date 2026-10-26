@@ -18,6 +18,10 @@ const schedule = {
           { gameId: '0022600002', gameStatus: 1, homeTeam: { teamTricode: 'LAL' }, awayTeam: { teamTricode: 'GSW' } },
         ],
       },
+      {
+        gameDate: '12/09/2026 00:00:00',
+        games: [{ gameId: '0022601201', gameStatus: 1, homeTeam: { teamTricode: null }, awayTeam: { teamTricode: '' } }],
+      },
       { gameDate: '10/24/2026 00:00:00', games: [{ gameId: '0022600003', gameStatus: 2, homeTeam: { teamTricode: 'MIA' }, awayTeam: { teamTricode: 'ORL' } }] },
     ],
   },
@@ -65,6 +69,10 @@ describe('CDN feed', () => {
     expect(s.season).toBe('2026-27');
     expect(s.games.map((g) => g.gameId)).toEqual(['0022600001', '0022600002', '0022600003']);
     expect(s.games[0]).toEqual({ gameId: '0022600001', date: '2026-10-20', status: 3, home: 'BOS', away: 'NYK' });
+  });
+
+  it('skips NBA Cup knockout games whose teams aren\u2019t known yet', () => {
+    expect(parseSchedule(schedule).games.some((g) => g.gameId === '0022601201')).toBe(false);
   });
 
   it('fails loudly if the feed changes shape', () => {

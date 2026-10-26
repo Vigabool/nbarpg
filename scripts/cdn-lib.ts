@@ -52,13 +52,11 @@ export function parseSchedule(json: unknown): { season: string; games: Scheduled
     for (const g of day.games ?? []) {
       const gameId = need(g.gameId as string | undefined, 'gameId');
       if (!isRegularSeason(gameId)) continue;
-      games.push({
-        gameId,
-        date,
-        status: Number(need(g.gameStatus, 'gameStatus')),
-        home: need((g.homeTeam as { teamTricode?: string } | undefined)?.teamTricode, 'homeTeam.teamTricode'),
-        away: need((g.awayTeam as { teamTricode?: string } | undefined)?.teamTricode, 'awayTeam.teamTricode'),
-      });
+      const home = (g.homeTeam as { teamTricode?: string | null } | undefined)?.teamTricode;
+      const away = (g.awayTeam as { teamTricode?: string | null } | undefined)?.teamTricode;
+      // NBA Cup knockout games are on the schedule before their teams are known.
+      if (!home || !away) continue;
+      games.push({ gameId, date, status: Number(need(g.gameStatus, 'gameStatus')), home, away });
     }
   }
   return { season, games };
