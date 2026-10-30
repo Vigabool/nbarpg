@@ -1,0 +1,34 @@
+name: Probe hustle stats
+
+# Checks whether GitHub's servers can reach stats.nba.com's hustle stats (scripts/probe-hustle.ts).
+# It only reads and prints; it never commits. Run it from the Actions tab (Run workflow), or push a
+# change to the probe on milestones-1-3.
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Game day to ask for (YYYY-MM-DD)'
+        default: '2026-10-25'
+      game:
+        description: 'Game ID for the hustle box score'
+        default: '0022600001'
+  push:
+    branches: [milestones-1-3]
+    paths: [.github/workflows/probe-hustle.yml, scripts/probe-hustle.ts]
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Ask stats.nba.com for hustle stats
+        run: npx tsx scripts/probe-hustle.ts --date "${{ inputs.date || '2026-10-25' }}" --game "${{ inputs.game || '0022600001' }}"
