@@ -159,6 +159,7 @@ For a wider test beyond close friends, who send feedback by text.
 
 ## Later / parked
 
+- **Play Calling (concept, exploration only):** a possible pivot where battles become basketball games: a scoreboard and quarters, and a pre-game playbook of set plays (moves that pass a bonus to the next hero, ending in a finisher), called during the game with one tap. See [concept-play-calling.md](concept-play-calling.md). Next step if pursued: a paper prototype, then a standalone simulator.
 - **New encounters:** the Colosseum (crowd favor) and the Twilight Court (bargains and illusions). Build them after item 1.
 - **Stat affinities:** from the original progression plan, a way to widen which players fit a class.
 - **More feats:** three feats per class, or a choice between two feats at each tier, for real build diversity.
