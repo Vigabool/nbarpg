@@ -614,12 +614,15 @@ export interface HordePlay {
   id: string;
   name: string;
   when: string;
+  /** The trigger in a few words, for the scouting report. */
+  short: string;
   target: 'disruptor' | 'cleric' | 'wounded' | 'lowest';
   steps: HordeStep[];
 }
 export const HORDE_PLAYS: HordePlay[] = [
   {
     id: 'reinforce',
+    short: 'crew under 4',
     name: 'Reinforce',
     when: 'the ram has fewer than 4 crew',
     target: 'disruptor',
@@ -630,6 +633,7 @@ export const HORDE_PLAYS: HordePlay[] = [
   },
   {
     id: 'hunt',
+    short: 'you clear 2+ crew',
     name: 'Hunt the Disruptor',
     when: 'a hero took down 2 or more crew last possession',
     target: 'disruptor',
@@ -640,6 +644,7 @@ export const HORDE_PLAYS: HordePlay[] = [
   },
   {
     id: 'healer',
+    short: 'Cleric heals 10+',
     name: 'Cut Off the Healer',
     when: 'the Cleric healed 10 or more last possession',
     target: 'cleric',
@@ -650,6 +655,7 @@ export const HORDE_PLAYS: HordePlay[] = [
   },
   {
     id: 'toss',
+    short: 'a hero under ⅓ HP',
     name: 'Toss',
     when: 'a hero is below a third of their HP',
     target: 'wounded',
@@ -660,6 +666,7 @@ export const HORDE_PLAYS: HordePlay[] = [
   },
   {
     id: 'pound',
+    short: 'default',
     name: 'Pound the Gate',
     when: 'otherwise',
     target: 'lowest',

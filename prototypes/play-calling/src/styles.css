@@ -930,3 +930,95 @@ th {
     transition: none !important;
   }
 }
+
+/* Game plan: compact cards that expand */
+.mini-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+.hero-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 5px;
+}
+.mini {
+  background: var(--surface);
+  border: 1.5px solid var(--line);
+  border-radius: var(--r);
+  padding: 7px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+  min-width: 0;
+}
+.mini strong {
+  font-size: 0.85rem;
+  line-height: 1.15;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+.mini .small {
+  max-width: 100%;
+  font-size: 0.72rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hero-grid .mini {
+  align-items: center;
+  text-align: center;
+  padding: 6px 4px;
+}
+.mini-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 4px;
+}
+.mini.on,
+.linerow.on {
+  border-color: var(--ball);
+  background: var(--ball-soft);
+}
+.detail {
+  border-color: var(--ball);
+  gap: 4px;
+}
+.linerow {
+  display: grid;
+  grid-template-columns: 18px auto 1fr;
+  gap: 8px;
+  align-items: baseline;
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 7px 10px;
+}
+.linerow .small {
+  text-align: right;
+}
+.slotcard {
+  padding: 0;
+  gap: 0;
+}
+.slotcard > .stack {
+  padding: 0 12px 12px;
+}
+.slothead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: none;
+  border: none;
+  padding: 12px;
+  text-align: left;
+  width: 100%;
+}
+.slothead h3 {
+  flex: 1;
+}
