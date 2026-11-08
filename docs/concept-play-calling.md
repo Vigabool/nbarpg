@@ -182,13 +182,37 @@ A class's place in a play is its identity. The Cleric is the point guard because
 
 **Before each game, the player prepares a playbook of four plays.** Gold buys a fifth and a sixth slot over the season (the playbook belongs to the team, and gold is the team's currency), with six as the cap, pending testing. A larger playbook stays readable on a phone, and the cap stops a late-season playbook from covering every situation. Plays are built from hero classes, not NBA players, so they carry over when a different player powers a hero next week.
 
-**Drawing up plays is scouting.** The playbook comes after picking games, so the horde is already known: who's Elite, which traits are coming, which specials they'll telegraph. Designing plays is game-planning against this week's opponent ("their Ogre has Second Chance, so I need a second big finisher").
+**Decided: one active playbook and a library.** Players can draw up as many plays as they like; the library keeps them all, and four to six are active in a game. (Named sets, like a goblin playbook and a crypt playbook, can come later if players want them.)
 
-- **Suggest Plays** builds a strong playbook from this week's lineup and horde. It explains each play in one line.
-- **When to call it:** each play carries a situation tag, such as *vs a big*, *vs a swarm*, *stop a special*, *need a bucket* or *protect the lead*. Players choose by situation rather than by math.
-- **Form this week:** each play shows how strong it is with this week's box scores ("Critical Taunt 🔥: your Rogue's player had 4 steals", "❄️ cold Cleric").
-- **The designer checks the passes.** It shows whether each enabler helps the next step ("Empower → Backstab ✓") or is wasted.
-- **Shareable playbooks:** a code friends can trade.
+### The Game plan screen (pre-game)
+
+**Where it sits:** Encounter → Assign heroes → Pick games → **Game plan** → Tip-off. It comes after picking games because the picks build the horde. **Back to picks** keeps the playbook intact, so changing a pick to dodge a nasty Champion costs nothing.
+
+**The top half is the scouting report:**
+- **Their roster:** each Champion's tier, traits, and the real player it mirrors ("Goblin Cutthroat · Elite · mirrors Shai's 4 steals").
+- **Decided: their full playbook, with triggers.** "They call Reinforce when the ram's crew drops below 4." In the game only the call is shown, but players who study the report can work out what the horde will switch to. Scouting rewards homework without requiring it.
+- **Objectives:** theirs (the ram, the gate's HP, the ram's damage this week from the opponents' FG%) and the party's (the Shaman Bounty and its deadline, the loot wagon), with point values.
+- **Quarter script:** who arrives when.
+- **The party's week:** each hero's offensive tier, defensive tier, touches (from true usage), and any signature or legendary finisher unlocked.
+
+**The bottom half is the playbook:**
+- **Four active slots** (up to six with gold), filled from the library.
+- **Suggest Plays** fills the whole book, and each slot has its own suggestion button. Each suggested play comes with a one-line explanation.
+- **Each play shows** its chain as hero icons, its situation tags (*vs a big*, *vs a swarm*, *stop the objective*, *need a bucket*, *protect the lead*; suggested automatically), its form this week (🔥 or ❄️, with the reason: "your Rogue's player had 4 steals", "cold Cleric") and the touches it costs each hero.
+- **Decided: a touch budget that warns, never blocks:** "Your plays use the Wizard in 3 of 4 plays. She has 6 touches; about 2 calls each." Building around a star is allowed and is a real choice; the player just sees the cost. In the game, a play a hero can no longer join shows as unavailable.
+- **Shareable playbooks** (later): a code friends can trade.
+
+**The play designer** (from any slot or the library):
+- **2–4 step slots.** For each step, pick a hero, then one of their moves; the move shows its action and enabler in one line each.
+- **The rules are enforced as the play is built:** the last step must be a finisher; no hero on back-to-back steps; at most twice per hero in a play; objective finishers (Claim, Smash) appear only when the encounter has those objectives.
+- **Each pass is checked:** the enabler arrow between steps shows **✓ boosts** or **– wasted** ("Provoke's armor → the Cleric ✓", "Read the Defense's open → Empower – wasted").
+- **The preview uses this week's real numbers** against an enemy chosen from this week's horde: "vs Ogre: open ✓, 30 damage, takedown, 2 + 4 points."
+- **Name it and save it** to the library.
+
+**Fast paths for casual players:**
+- **Decided: the first game's playbook arrives filled by Suggest Plays,** with one line explaining each play and an invitation to draw up their own. A new player can tip off in seconds.
+- **Every later week, Run it back** keeps last week's playbook, and Suggest Plays flags any play that got much weaker ("❄️ your Rogue is cold this week; consider swapping Critical Taunt").
+- **Target time:** about 10 seconds for a casual player; as long as they like for a strategic one.
 
 ## During the game
 
@@ -452,6 +476,7 @@ It is effectively a second game built on the same foundation.
 - **Class kits:** a basic move, three moves, two finishers and two big-night finishers per class (first draft in Moves, finishers and plays). Rogue Strip disables Champions; Ranger Pin works on minions.
 - **Defense:** each off-ball hero takes its class's defensive action, scaled by a defensive rating; the Rogue's is Strip the Ball (see Defense).
 - **Halftime:** a first-half box score, one horde adjustment (Normal and Hard, milder on Normal), up to two play changes of any kind, locker-room healing; the horde adjusts only at halftime for now (see Halftime).
+- **Pre-game:** one active playbook plus a library; the first game's playbook is filled by Suggest Plays; the scouting report shows the horde's full playbook with triggers; the touch budget warns, never blocks (see The Game plan screen).
 - **Goblin Horde ram:** the opposing teams' FG% sets its damage.
 - **Goblin Horde gate:** when it falls, the goblins score big and enter the city; each goblin on the field then scores every enemy turn (not ones summoned that turn).
 
@@ -460,7 +485,7 @@ It is effectively a second game built on the same foundation.
 - **The box score in detail:** exactly which stat does what. The approach: settle what possessions look like on both sides first, then fit the stats to them.
 - **Enemy plays and halftime adjustments** as the core of encounter design.
 - **How PP are earned and spent** now.
-- **The UI,** including pre-game.
+- **The UI** of the game screen (pre-game is in The Game plan screen).
 - **Fallen heroes:** foul trouble (out for a possession or two), or today's knockout?
 - **Reserves:** could a reserve check in when a hero runs out of touches? That would use the eight-player roster in battle, but it's held for later.
 - **Enemy chains:** does the horde chain buffs (for example a 📣 Floor General passing to other monsters), or only telegraph single actions?
