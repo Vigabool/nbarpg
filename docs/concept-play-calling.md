@@ -67,7 +67,7 @@ The sources pull against each other: take the open 2 now, or keep working on the
 
 **Disables do two jobs.** A Stripped or Down enemy is open, and it also drops out of the horde's next play, breaking the chain it was part of. One move helps the offense and the defense at once.
 
-**The horde scores the same way:** its finishers on heroes score unless an off-ball defender contests them. One rule works on both ends of the floor. The simulator's final scores decide whether points are multiplied up to NBA-looking totals.
+**The horde scores the same way:** open hits on heroes, hero takedowns, and progress on its own objective (see Encounters). Its finishers on heroes score unless an off-ball defender contests them. One rule works on both ends of the floor. The simulator's final scores decide whether points are multiplied up to NBA-looking totals.
 
 ## Moves, finishers and plays
 
@@ -155,7 +155,7 @@ The recap teaches without a tutorial: it shows what's working and what isn't.
 
 ## Encounters
 
-**Decided: each encounter has one or two objectives plus its own Stop.** Objectives come from a standard set (Hold, Break, Bounty), and every encounter has a Stop with its own fantasy flavor. Four types to start; Carry and Loose ball (below) are parked.
+**Decided: each encounter has one or two objectives plus the horde's own objective.** Objectives come from a standard set (Hold, Break, Bounty), and every encounter gives the horde an objective with its own fantasy flavor. Four types to start; Carry and Loose ball (below) are parked.
 
 **An objective is just another target.** It can be open or contested, enemies guard it, and setup moves open it, so objectives use the rule players already know.
 
@@ -179,27 +179,28 @@ These deal little damage to enemies and work on the objective instead. A play li
 
 **Bounty: a marked enemy worth bonus points before a deadline.** For example, "take down the Goblin Shaman before the end of the first quarter: +6." Bounties reward burst damage and timing, and they point the player at a matchup.
 
-**Stop: the enemy's own objective, one per encounter.**
-- The horde works toward something over several possessions, shown as a meter on the board.
-- **If it completes,** the horde scores big and something bad happens.
-- **Breaking a step** scores for the party: disable the enemy doing the work, or take it down.
-- Stops are where most of each encounter's fantasy flavor lives, and they make defense and disables matter (see Defense).
+**The horde's objective: one per encounter.**
+- **The horde's turn is its offense.** It moves its objective forward and tries to keep the heroes from interfering.
+- **It scores the way the party does:** open hits on heroes, hero takedowns, and progress on its objective. The goblins' ram scores for every bit of damage it does to the city gate, and much more for breaking it.
+- **Going after heroes is part of the plan:** the horde targets whoever threatens its objective, such as the Cleric keeping the party up or the Wizard and Rogue who can clear the workers.
+- **The heroes interfere** by taking down or disabling the enemies doing the work. **The horde reacts:** it calls reinforcements to pick the work back up, or goes after the hero who disrupted it.
+- Most of each encounter's fantasy flavor lives here, and it's why the horde's plays have to present a real challenge (see Open questions).
 
 **Pricing (to tune):** most objectives are worth about what a good possession earns (4–6), and a few are big swings worth two possessions (8–10), so chasing one is a real choice rather than automatically right or wrong.
 
 **Rules that keep objectives honest:**
-- **The horde goes after objectives too:** enemy plays can claim a Hold, guard a Break or push their Stop, so ignoring an objective costs points.
+- **The horde goes after objectives too:** enemy plays can claim a Hold, guard a Break or push their own objective, so ignoring an objective costs points.
 - **An objective play can't ignore the enemies.** If a playbook could win without fighting, enemies must score enough on their own to punish it.
-- **At most two standard objectives plus the Stop,** so the scouting report stays readable.
+- **At most two standard objectives plus the horde's objective,** so the scouting report stays readable.
 
 ### By encounter (first draft)
 
-| Encounter | Stop | Objectives |
+| Encounter | Horde objective | Objectives |
 | --- | --- | --- |
-| **Goblin Horde** | **Storm the Gate:** a goblin crew hauls a battering ram toward the gate, one step per enemy turn. Disable or take down the crew to halt it; if it reaches the gate, the horde scores big and the ram resets for another run | **Bounty:** the Goblin Shaman before the end of Q1 (today's "break the pack before the War Drum"). **Break:** a goblin loot wagon (a treasure chest: points and gold) |
-| **The Crypt** | **The Rising:** the Necromancer channels a ritual, which bone piles feed. If it completes, a Bone Giant rises and the horde scores big. Strip or Down the channeler, or burn the bone piles with fire and holy damage, to break steps | **Break:** the ⚱️ Phylactery (big points, and the Lich stops halving damage) |
-| **Dragon's Lair** | **The Hoard Tithe:** kobolds carry coins to the sleeping Dragon. At the threshold the Dragon wakes enraged and the horde scores big. Take down the carriers to break steps; waking the Dragon early (the ambush) seals the hoard | **Break:** hoard chests (points and gold). **Bounty:** the Wyrmling, the thief, before halftime |
-| **Giant's Hall** | **The Skald's Saga:** the Skald's war song builds each enemy turn. When it finishes, the Giant Lord's Avalanche falls and the horde scores big. Topple a giant or Strip the Skald to break the verse | **Hold:** the giant's high seat (the hearth), contested by a giant and a frost ward. **Bounty:** the first topple of the Giant Lord |
+| **Goblin Horde** | **Storm the Gate:** a battering ram needs a crew of 4 goblins. Each enemy turn it's crewed, it hits the city gate, scoring for the damage and much more for breaking the gate. A Fireball on the crew stalls it; the horde answers by calling reinforcements to pick it up, or by going after the Wizard | **Bounty:** the Goblin Shaman before the end of Q1 (today's "break the pack before the War Drum"). **Break:** a goblin loot wagon (a treasure chest: points and gold) |
+| **The Crypt** | **The Rising:** the Necromancer channels a ritual, which bone piles feed. If it completes, a Bone Giant rises and the horde scores big. Strip or Down the channeler, or burn the bone piles with fire and holy damage | **Break:** the ⚱️ Phylactery (big points, and the Lich stops halving damage) |
+| **Dragon's Lair** | **The Hoard Tithe:** kobolds carry coins to the sleeping Dragon. At the threshold the Dragon wakes enraged and the horde scores big. Take down the carriers to slow it; waking the Dragon early (the ambush) seals the hoard | **Break:** hoard chests (points and gold). **Bounty:** the Wyrmling, the thief, before halftime |
+| **Giant's Hall** | **The Skald's Saga:** the Skald's war song builds each enemy turn. When it finishes, the Giant Lord's Avalanche falls and the horde scores big. Topple a giant or Strip the Skald to stop the verse | **Hold:** the giant's high seat (the hearth), contested by a giant and a frost ward. **Bounty:** the first topple of the Giant Lord |
 
 The encounters' existing twists become scoring rules rather than special cases. The boss changes from a wall to grind down into a threat to answer: a team can win without killing it, by outscoring it.
 
@@ -256,14 +257,14 @@ It is effectively a second game built on the same foundation.
 ## Decided
 
 - **Scoring:** open and contested targets; points from shots, takedowns and objectives (see Scoring: the open look).
-- **Objectives:** each encounter has one or two objectives (Hold, Break, Bounty) plus its own Stop; plays can be built for objectives (see Encounters).
+- **Objectives:** each encounter has one or two objectives (Hold, Break, Bounty) plus the horde's own objective; plays can be built for objectives (see Encounters).
 - **Game length:** fixed quarters, 3 party possessions each, 12 in all, each followed by an enemy turn.
 - **Playbook:** four plays to start; gold buys a fifth and sixth slot; six is the cap, pending testing.
 - **Repeats:** a hero can appear at most twice in a play, never on back-to-back steps.
 
 ## Open questions
 
-- **The box score in detail:** exactly which stat does what.
+- **The box score in detail:** exactly which stat does what. The approach: settle what possessions look like on both sides first, then fit the stats to them.
 - **The class move lists,** designed for compelling choices.
 - **Defense:** beyond off-ball heroes, how steals, blocks and rebounds come in.
 - **Enemy plays and halftime adjustments** as the core of encounter design.
