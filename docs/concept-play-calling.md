@@ -183,7 +183,11 @@ These deal little damage to enemies and work on the objective instead. A play li
 - **The horde's turn is its offense.** It moves its objective forward and tries to keep the heroes from interfering.
 - **It scores the way the party does:** open hits on heroes, hero takedowns, and progress on its objective. The goblins' ram scores for every bit of damage it does to the city gate, and much more for breaking it.
 - **Going after heroes is part of the plan:** the horde targets whoever threatens its objective, such as the Cleric keeping the party up or the Wizard and Rogue who can clear the workers.
+- **Decided: minions work the objective automatically.** It's why they're there, and they aren't tied to an opposing basketball player. If enough workers are in place, the objective moves forward every enemy turn.
+- **Champions and the boss run the horde's called play:** one telegraphed chain per enemy turn, aimed at whatever protects the objective (the hero threatening the workers, the healer, an open hero). So every enemy turn threatens two things, the objective and a hero, and the party usually can't answer both in one possession.
 - **The heroes interfere** by taking down or disabling the enemies doing the work. **The horde reacts:** it calls reinforcements to pick the work back up, or goes after the hero who disrupted it.
+- **The horde chooses by fixed rules in priority order,** like today's monster behaviors: deterministic, readable, and learnable ("they always go after whoever stalled the ram"). Difficulty can become how smart the horde calls: fixed priorities on Normal; on Hard it also counters the party's last play and makes halftime adjustments.
+- **Decided: show only the horde's call, not its fallback.** If the call breaks during the party's possession (its crew falls, its finisher is Stripped), the horde switches to another play without warning. **Watch this in playtests:** if switches feel unfair, show the fallback too (*"If the crew falls: Call the Pack"*).
 - Most of each encounter's fantasy flavor lives here, and it's why the horde's plays have to present a real challenge (see Open questions).
 
 **Pricing (to tune):** most objectives are worth about what a good possession earns (4–6), and a few are big swings worth two possessions (8–10), so chasing one is a real choice rather than automatically right or wrong.
@@ -203,6 +207,64 @@ These deal little damage to enemies and work on the objective instead. A play li
 | **Giant's Hall** | **The Skald's Saga:** the Skald's war song builds each enemy turn. When it finishes, the Giant Lord's Avalanche falls and the horde scores big. Topple a giant or Strip the Skald to stop the verse | **Hold:** the giant's high seat (the hearth), contested by a giant and a frost ward. **Bounty:** the first topple of the Giant Lord |
 
 The encounters' existing twists become scoring rules rather than special cases. The boss changes from a wall to grind down into a threat to answer: a team can win without killing it, by outscoring it.
+
+### Worked example: Goblin Horde (first draft)
+
+Goblins besiege a city. Their ram works on the gate while the Champions keep the heroes busy. All numbers are placeholders for the simulator to tune.
+
+**The cast** (the same roles and mirrors as today):
+
+| Enemy | Mirrors | Job in Play Calling |
+| --- | --- | --- |
+| **Goblins** (minions, 8 HP) | Opposing teams' points (1 per 40, as now) | Crew the ram automatically. Goblins not on the ram crowd the Champions: while 2 or more free goblins stand, every Champion is contested |
+| **Goblin Shaman** | Assists leader | Playmaker: War Drum (enabler: every goblin and the ram +damage this turn), **Call the Pack** (2 goblins join and go straight to the ram), small heals |
+| **Goblin Hexer** | Top scorer | Setup: Hex Exposes a hero for the finisher after it |
+| **Goblin Sharpshooter** | Second scorer | Ranged finisher: Dirty Arrows on the lowest-armor hero (poisons) |
+| **Goblin Cutthroat** | Steals leader | Finisher on an Exposed or low-HP hero |
+| **Ogre** (hired muscle) | Leading rebounder | **Goblin Toss:** throws a goblin onto the ram (fills the crew) or at the lowest-HP hero (a finisher). Ground Slam when no goblins are left |
+| **Goblin Chieftain** (boss) | The best opposing performance | **Chieftain's Command** (enabler: the next step and the ram +damage). Its own Call the Pack every other enemy turn |
+
+**Storm the Gate (the horde's objective):**
+- **The gate** has 40 HP.
+- **The ram** needs a crew of 4. Each enemy turn it's crewed, it hits the gate for 6, +1 for each extra goblin on it (up to 8). Goblins fill the ram first and crowd the Champions with the rest.
+- **The horde scores** 1 point per 2 gate damage, and **+10 when the gate falls**.
+- **Unopposed, the gate falls around halftime** (6 damage × 7 turns), so ignoring the ram loses.
+- **Once the gate is down, the goblins enter the city.** At the end of every enemy turn, each goblin on the field scores 1 for pillaging, except goblins summoned that turn. The ram no longer matters, but every goblin left standing does, which pushes the party to clear enemies fast.
+
+**The horde's playbook,** called in this priority order:
+
+| Play | Called when | Chain |
+| --- | --- | --- |
+| **Reinforce** | The ram has fewer than 4 crew (and the gate stands) | Shaman or Chieftain: Call the Pack, 2 goblins to the ram / +damage → Sharpshooter: Dirty Arrows on the hero who took down the most crew |
+| **Hunt the Disruptor** | A hero took down 2+ crew in the party's last possession | Hexer: Hex that hero (Exposed) → Cutthroat: finisher on them |
+| **Cut Off the Healer** | The Cleric healed 10+ in the party's last possession | Hexer: Hex the Cleric → Sharpshooter: Dirty Arrows on the Cleric |
+| **Toss** | A hero is below a third of their HP | Shaman: War Drum → Ogre: Goblin Toss at that hero |
+| **Pound the Gate** (default) | Otherwise | Chieftain's Command or War Drum: the ram +3 this turn → Ogre or Cutthroat: finisher on the most open hero |
+
+**The party's objectives:**
+- **Bounty: the Goblin Shaman before the end of Q1, +6.** It's behind the pack, so the free goblins contest it. Opening it takes a Screen, Gravity or Drive. Taking it early also stops its reinforcements.
+- **Break: the goblin loot wagon** (a treasure chest) arrives in Q2: 15 HP, guarded by the Cutthroat. Worth 3 points and some gold.
+
+**The quarters** (today's waves):
+- **Q1:** the Shaman, the Hexer and 30% of the goblins, with the ram crewed from the first turn.
+- **Q2:** the weaker Champions, 35% of the goblins and the loot wagon.
+- **Halftime.**
+- **Q3:** the Chieftain, the strongest Champions and the last 35% of the goblins.
+- **Q4:** no new arrivals except Call the Pack. Crunch time.
+
+**Scoring at a glance:**
+
+| Party | Horde |
+| --- | --- |
+| Open shot: 2 (3 for long-range finishers), +1 and-one | Open hit on a hero: 2 |
+| Takedown: goblin 1, Champion 4, Elite +2, Chieftain 8 | Hero takedown: 4 (the hero sits out like foul trouble) |
+| Shaman Bounty: 6 · Loot wagon: 3 + gold | Gate damage: 1 per 2 · Gate falls: +10 · Pillage: 1 per goblin per enemy turn |
+
+**What the encounter tests:**
+- **Area damage against the crew,** and whether it's worth drawing the hunt that follows.
+- **Opening the Shaman early,** which stops reinforcements at the source.
+- **Protecting the gate** with defenders versus protecting the Wizard.
+- **Clearing fast once the gate falls.**
 
 ### Parked objective types
 
@@ -261,6 +323,8 @@ It is effectively a second game built on the same foundation.
 - **Game length:** fixed quarters, 3 party possessions each, 12 in all, each followed by an enemy turn.
 - **Playbook:** four plays to start; gold buys a fifth and sixth slot; six is the cap, pending testing.
 - **Repeats:** a hero can appear at most twice in a play, never on back-to-back steps.
+- **The horde's turn:** minions work its objective automatically; Champions and the boss run one called play. Only the call is shown, not the fallback (watch in playtests).
+- **Goblin Horde gate:** when it falls, the goblins score big and enter the city; each goblin on the field then scores every enemy turn (not ones summoned that turn).
 
 ## Open questions
 
