@@ -460,7 +460,12 @@ It is effectively a second game built on the same foundation.
    - **Close finishes:** the share of games decided by 5 points or less in the fourth quarter. This is the "action-packed" number.
    - **Every scoring route can win:** a bot that chases only one source of points should win a fair share somewhere.
    - **Suggest Plays versus the best playbook:** the suggested book should be close.
-3. **A Goblin Horde test artifact:** a standalone, playable prototype of the worked Goblin Horde encounter, separate from the game (its own artifact, not the game's test artifact), built once the pre-game and UI are settled.
+3. **A Goblin Horde test artifact ✅ Built:** https://claude.ai/artifact/MMemEKiBujoQHu4G9GaSbF, separate from the game and its test artifact. Source in `prototypes/play-calling/` (its own Vite build: `node prototypes/play-calling/build.mjs`, then publish `prototypes/play-calling/dist/page.html` to that URL).
+   - **The week:** 2025–26 week 1, every hero Good or better: Jokić (Warrior, triple-double), Dončić (Cleric), Antetokounmpo (Rogue), Gilgeous-Alexander (Wizard), Brown (Ranger). `prototypes/play-calling/scripts/pick-week.ts` picks it and builds the horde with the game's own mirror rules.
+   - **What it includes:** the Game plan (scouting report, Suggest Plays, library, play designer with pass checks and a preview), the game screen (scoreboard, objectives, the horde's call, open and contested targets, touches, the playbook dock with a glow on the best call, an always-available **Iso** of one hero and one finisher, timeouts), automatic or manual defense, halftime (box score, horde adjustment, two changes, locker room) and a final box score with a copyable play log and seconds per possession.
+   - **Testing aids:** a tuning drawer in the menu, and `npx tsx prototypes/play-calling/scripts/sim.ts`, which plays it with a greedy bot (the glow) and a random caller.
+   - **Prototype tuning (differs from the draft numbers above):** gate 50 HP, goblins 9 HP, Champion HP ×1.25, horde open hits score 3, touches = true usage ÷ 4.7, Normal at full strength and Hard ×1.12. Following the glow: Normal 62–48, Hard 60–55; random calling loses most games. The best call changes on 56–67% of possessions. Goblin HP is a cliff: at 8 a single Fireball clears the crew (Normal 64–26), at 10 the gate falls and pillage snowballs.
+   - **Left out:** traits, Fumbles, Smash and Claim finishers, signature and legendary finishers for bots, the Hoops view.
 4. **Playtest with two kinds of friends:** one who plays RPGs and one who only watches the NBA. Measure seconds per possession (target about 20 or less) and ask whether the last possession felt tense.
 
 ## Decided
