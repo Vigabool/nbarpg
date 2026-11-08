@@ -35,8 +35,8 @@ Final Fantasy XII's gambits are the nearest precedent (program behavior, watch i
 
 **About 6–7 minutes a game.** A party possession (call, target, run) takes about 15–20 seconds, and an enemy turn (animation plus the defensive choice) about 5–10. Twelve pairs plus halftime comes to about 6–7 minutes, which suits a game played once a week. The enemy turn should be short, with a speed setting, so it never feels like waiting.
 
-- **The party scores with finishers:** 2 points for a finisher, 3 for one that kills or crits, +1 for an and-one (a finisher that also disables). A long chain can add an assist point.
-- **The horde scores when its attacks land** on heroes. Defense means keeping it off the board.
+- **The party scores with shots, takedowns and objectives** (see Scoring: the open look).
+- **The horde scores the same way** on the party. Defense means keeping it off the board.
 - **A fallen hero sits out a possession or two,** like foul trouble, rather than leaving the battle.
 - **Waves become quarters.** The boss checks in later in the game, as a wave does today.
 - **Halftime** is the break where plays can change (see Halftime).
@@ -48,6 +48,26 @@ Final Fantasy XII's gambits are the nearest precedent (program behavior, watch i
 - A goblin about to score an objective can matter more than the full-strength boss.
 
 NBA fans understand these situations without a tutorial. The format also gives comebacks, close finishes and a tense last possession. Victory points can come from more than one source (see Encounters), so there's more than one way to win.
+
+## Scoring: the open look
+
+**Decided: plays can fail without randomness, because shots can be contested.** Combat has no accuracy, so a finisher that always scored would make points trivial.
+
+- **Every target is either open or contested,** shown on its card. Enemies contest each other (a Brute guarding the Shaman beside it, goblins crowding the boss), and some traits contest on their own (✋ Swat).
+- **A finisher on an open target scores.** On a contested target it deals half damage and scores nothing.
+- **Setup moves open targets:** Screen, Strip, Gravity, Drive, Read the Defense. Plays revolve around opening an enemy for a finisher, ideally one that also takes it down.
+- **It's a read, not a gamble.** Open and contested are visible before a play is called, so a play fails only when it's called into the wrong defense.
+
+**Points come from three sources:**
+- **Shots:** a finisher on an open target scores 2. Wizard and Ranger long-range finishers score 3, and an and-one (a finisher that also disables) adds 1.
+- **Takedowns:** each enemy shows a point value (to tune: goblin 1, Champion 4, Elite +2, boss 8), scored when it goes down. Takedowns also stop that enemy scoring, so damage still matters.
+- **Objectives,** which vary by encounter (see Encounters).
+
+The sources pull against each other: take the open 2 now, or keep working on the Ogre for its 4 and to stop it scoring?
+
+**Disables do two jobs.** A Stripped or Down enemy is open, and it also drops out of the horde's next play, breaking the chain it was part of. One move helps the offense and the defense at once.
+
+**The horde scores the same way:** its finishers on heroes score unless an off-ball defender contests them. One rule works on both ends of the floor. The simulator's final scores decide whether points are multiplied up to NBA-looking totals.
 
 ## Moves, finishers and plays
 
@@ -191,13 +211,14 @@ It is effectively a second game built on the same foundation.
 
 ## Decided
 
+- **Scoring:** open and contested targets; points from shots, takedowns and objectives (see Scoring: the open look).
 - **Game length:** fixed quarters, 3 party possessions each, 12 in all, each followed by an enemy turn.
 - **Playbook:** four plays to start; gold buys a fifth and sixth slot; six is the cap, pending testing.
 - **Repeats:** a hero can appear at most twice in a play, never on back-to-back steps.
 
 ## Open questions
 
-- **Scoring:** combat has no accuracy, so a finisher that always scores makes points trivial. Either plays can fail (deterministically) or points come from something else, such as objectives worth different amounts.
+- **Objectives:** a standard set of objective types, and whether plays can be built for objectives rather than shots and takedowns.
 - **The box score in detail:** exactly which stat does what.
 - **The class move lists,** designed for compelling choices.
 - **Defense:** beyond off-ball heroes, how steals, blocks and rebounds come in.
