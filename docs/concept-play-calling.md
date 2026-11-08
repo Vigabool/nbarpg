@@ -226,7 +226,7 @@ Goblins besiege a city. Their ram works on the gate while the Champions keep the
 
 **Storm the Gate (the horde's objective):**
 - **The gate** has 40 HP.
-- **The ram** needs a crew of 4. Each enemy turn it's crewed, it hits the gate for 6, +1 for each extra goblin on it (up to 8). Goblins fill the ram first and crowd the Champions with the rest.
+- **The ram** needs a crew of 4. Each enemy turn it's crewed, it hits the gate for 6, +1 for each extra goblin on it (up to 8). **The opposing teams' FG% scales the ram's damage** (an efficient offense hits harder), as it sets goblin accuracy today. Goblins fill the ram first and crowd the Champions with the rest.
 - **The horde scores** 1 point per 2 gate damage, and **+10 when the gate falls**.
 - **Unopposed, the gate falls around halftime** (6 damage × 7 turns), so ignoring the ram loses.
 - **Once the gate is down, the goblins enter the city.** At the end of every enemy turn, each goblin on the field scores 1 for pillaging, except goblins summoned that turn. The ram no longer matters, but every goblin left standing does, which pushes the party to clear enemies fast.
@@ -324,6 +324,9 @@ It is effectively a second game built on the same foundation.
 - **Playbook:** four plays to start; gold buys a fifth and sixth slot; six is the cap, pending testing.
 - **Repeats:** a hero can appear at most twice in a play, never on back-to-back steps.
 - **The horde's turn:** minions work its objective automatically; Champions and the boss run one called play. Only the call is shown, not the fallback (watch in playtests).
+- **Stats change how well a hero does things, not how much they can do.** The one exception: double-doubles and triple-doubles unlock signature and legendary finishers. This keeps the cognitive load down; revisit after playtests.
+- **Touches come from usage,** not minutes alone (formula to settle; see What the box score does).
+- **Goblin Horde ram:** the opposing teams' FG% sets its damage.
 - **Goblin Horde gate:** when it falls, the goblins score big and enter the city; each goblin on the field then scores every enemy turn (not ones summoned that turn).
 
 ## Open questions
