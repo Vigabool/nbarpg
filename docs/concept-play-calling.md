@@ -89,15 +89,86 @@ The sources pull against each other: take the open 2 now, or keep working on the
 
 Five effects in three steps, nothing wasted, and it reads like a real set play.
 
-**Sample moves by class** (a starting point for the paper prototype, not tuned):
+### Terms
 
-| Class | Role in a play | Sample move (action / enabler) | Sample finisher |
-| --- | --- | --- | --- |
-| Warrior | Starts plays | **Screen:** taunt the target / the next hero ignores its armor | **Slam:** heavy hit that knocks the target down |
-| Cleric | Middle (the point guard) | **Lay on Hands:** heal 8 / the next hero's attack +50% | A weak finisher, on purpose |
-| Rogue | Middle, shuts down threats | **Strip:** the target loses its special this round / the next hit on it crits | **Backstab:** huge against a taunted or disabled target |
-| Wizard | Finishes | **Spacing:** chip damage to every enemy / the next single-target hit also strikes a second enemy | **Fireball:** big area damage |
-| Ranger | Finishes, flexible | **Mark:** the target takes +3 per hit / the next hero can reach back-line enemies | **Aimed Shot:** large hit that ignores armor |
+**Statuses on enemies:**
+- **Open / contested:** a finisher on an open target scores and deals full damage; on a contested one it deals half damage and scores nothing. Contests only affect finishers, never the moves before them.
+- **Taunted:** open for the rest of this possession, and on the horde's next turn it must attack the Warrior.
+- **Exposed:** takes +3 from every hit for the rest of this possession.
+- **Disabled:** open, and it drops out of the horde's next play.
+- **Pinned** (minions only): off the objective for the next enemy turn. It still counts as crew, so the horde doesn't react as if it had fallen.
+
+**Enablers (what a move passes to the next hero):**
+- **+damage:** the next hero's hit deals more.
+- **Crit:** the next hero's hit deals double damage.
+- **Open:** the next hero's target counts as open, even if it's contested.
+- **Split:** the next hero's move or finisher hits one more enemy of the player's choice, at full damage. A single-target finisher hits two enemies; Fireball hits four.
+- **Heal:** the next hero heals.
+- **Armor:** the next hero takes less damage from each hit until the end of the enemy turn.
+- **Putback:** if the next hero's finisher doesn't take its target down, the hero who passed it follows up with a free hit on the same target for half the finisher's damage. It doesn't use a touch, and it scores like a finisher: shot points if the target is open, and takedown points if it finishes it. (The basketball version: the shot rims out and the big tips it in.)
+
+**Scoring a multi-target finisher:** one shot is scored, from the play's primary target; each enemy taken down scores its takedown points.
+
+### Class kits (first draft)
+
+Each class has a basic move (always available), three moves, two finishers, a signature finisher (double-double) and a legendary finisher (triple-double). Numbers are at Average tier; the class rating's tier scales them each week. An enabler always goes to the next hero in the play, and an enabler with no next hero, or one the next step can't use, is wasted (the play designer flags it).
+
+**Warrior: the big.** Opens targets with taunts, protects teammates, gives second chances.
+- **Chop** (basic). Action: 4 damage. Enabler: +2.
+- **Provoke.** Action: 3 damage, and taunts the enemy. Enabler: armor +3. *Opens a contested target, pulls a dangerous hit off a teammate, and shields whoever acts next.*
+- **Shield Wall.** Action: every hero gains armor +2 until the end of the enemy turn. Enabler: armor +3. *The defensive play, when the horde's call is aimed at the party.*
+- **Box Out.** Action: 4 damage. Enabler: putback. *Insurance on a finisher that might fall short.*
+- **Slam** (finisher). 14 damage to one enemy.
+- **Cleave** (finisher). 8 damage to each of two enemies.
+- **Bulwark** (signature). 10 damage, and every enemy is taunted through the next enemy turn.
+- **Last Stand** (legendary). 16 damage, and the Warrior can't fall for the rest of the game.
+
+**Cleric: the point guard.** The best enablers; a weak finisher by design.
+- **Mace** (basic). Action: 3 damage. Enabler: heal 4.
+- **Empower.** Action: heals an ally 6. Enabler: the next hero's hit +50%. *The core assist.*
+- **Read the Defense.** Action: Exposes an enemy. Enabler: open. *Sets up the shot two ways at once.*
+- **Bless.** Action: heals every hero 3. Enabler: doubles the next hero's enabler (+2 becomes +4, armor +3 becomes +6; open and split stay the same). *The hockey assist: it rewards longer plays.*
+- **Smite** (finisher). 9 holy damage to one enemy, and every hero heals 3.
+- **Sanctuary** (signature). 6 damage, and every hero heals 15.
+- **Divine Intervention** (legendary). 8 damage, and fallen heroes return at full HP.
+
+**Rogue: the pest.** Shuts down Champions, punishes disabled targets.
+- **Dagger** (basic). Action: 4 damage. Enabler: +2.
+- **Strip.** Action: Disables a Champion (on the boss, it Exposes instead). Enabler: crit on that enemy. *Two jobs: opens the target and breaks the horde's next play.*
+- **Poison Blade.** Action: 3 damage now and 3 more at the end of the enemy turn. Enabler: the next hero's hit +3 on a poisoned enemy.
+- **Feint.** Action: Exposes an enemy. Enabler: split.
+- **Backstab** (finisher). 10 damage to one enemy, doubled if it's Taunted or Disabled.
+- **Flurry** (finisher). 4 damage to each of three enemies.
+- **Shadowstep** (signature). A Backstab that always crits, and the Rogue can't be targeted on the next enemy turn.
+- **Assassinate** (legendary). Takes down any enemy except the boss.
+
+**Wizard: the shooter.** Area damage, 3-point finishers, and gravity that opens teammates.
+- **Magic Missile** (basic). Action: 4 damage that ignores armor. Enabler: the next hero's hit ignores armor.
+- **Gravity.** Action: 3 damage. Enabler: open. *The defense chases the shooter, and the next hero gets the open look.*
+- **Spacing.** Action: 2 damage to every enemy. Enabler: split.
+- **Frost.** Action: 5 damage, and the target's next hit deals half. Enabler: +3. *Offense that also defends.*
+- **Fireball** (finisher, 3-pointer). 8 damage to each of up to three enemies.
+- **Lightning Bolt** (finisher, 3-pointer). 14 damage to one enemy.
+- **Chain Lightning** (signature). 10 damage to every enemy.
+- **Meteor** (legendary). 20 damage to every enemy.
+
+**Ranger: the wing scorer.** Reliable damage, tough shots, and control of minions.
+- **Longbow** (basic). Action: 4 damage. Enabler: +2.
+- **Mark.** Action: Exposes an enemy, and the Mark lasts through the next possession too. Enabler: the next hero's hit on the marked enemy +3. *Sets up this play and the next one.*
+- **Drive.** Action: 5 damage. Enabler: open.
+- **Pin.** Action: Pins a minion. Enabler: +2. *Stalls an objective without drawing the horde's reaction.*
+- **Aimed Shot** (finisher). 12 damage that ignores armor, and it scores even when contested. *The tough-shot maker.*
+- **Double Strike** (finisher). Two hits of 6, on the same enemy or two.
+- **Volley** (signature). 6 damage to every enemy.
+- **Deadeye** (legendary). Three Aimed Shots at three different enemies.
+
+**What each class opens with:** Warrior Provoke, Cleric Read the Defense, Rogue Strip, Wizard Gravity, Ranger Drive.
+
+**Combos that should feel great:**
+- *Provoke → Empower → Backstab* (Critical Taunt): 10, doubled for the taunt, +50%: 30.
+- *Spacing → Fireball:* four crew goblins in one shot.
+- *Box Out → Slam:* the Slam leaves the Ogre standing, and the Warrior tips in 7 more.
+- *Bless → Mark → Backstab:* the hockey assist. Bless doubles Mark's +3 to +6, and the Exposed target takes +3 more: 19.
 
 A class's place in a play is its identity. The Cleric is the point guard because that's where it's strongest, not because it's labelled one.
 
@@ -126,13 +197,26 @@ A class's place in a play is its identity. The Cleric is the point guard because
 1. **The horde calls its play.** Today's telegraphs become the opponent's call: "Ogre: Ground Slam incoming." The read is basketball: they're running X, so I call Y.
 2. **Call a play.** A play that fits the moment can glow softly (the bot can judge this). The player always decides.
 3. **Tap the primary target.** The play runs, with each pass and the finisher shown clearly and the points floating up onto the scoreboard.
-4. **Defense.** Heroes who didn't touch the ball defend during the horde's turn: **guard** (halve one enemy's hit on them) or **help** (armor for an ally). One quick choice keeps the defensive half interactive.
+4. **Defense.** Heroes who didn't touch the ball each take their class's defensive action for the horde's turn (see Defense). Sensible defaults are set; one tap accepts them or a drag changes one.
 
 **Timeouts replace free undo.** Today's ↶ Undo invites trial and error until a round is solved by hand. Instead, a single step can be previewed before committing, and each game has a couple of timeouts that take back a possession.
 
 **The defense scouts repeated plays.** Calling the same play back to back makes it weaker (for example, its enablers lose their bonuses), and halftime clears this. Variety pays off without being forced.
 
 **Optional shot clock.** A visible 24-second clock per possession could be the most action-packed touch in the game, but it's stressful and an accessibility problem. If it exists, it's an option or a small bonus ("quick possession: +1"), never a penalty.
+
+## Defense
+
+**Much of the defense is inside the plays.** Taunts, armor that lasts through the enemy turn, Disable, Frost and Pin all blunt the horde's next turn, so calling a play with defensive parts is part of defending.
+
+**Decided: each off-ball hero has one defensive action, its class's specialty.** One tap each, with sensible defaults (protect what the horde's call is aimed at).
+- **Protect (Warrior).** Choose an ally or objective: every enemy finisher aimed at it is contested (half damage, no points). At Elite, the first one is blocked entirely.
+- **Triage (Cleric).** After the enemy turn, heals the most injured hero.
+- **Jump the Lane (Rogue).** Choose one pass in the horde's called play, and its enabler is cancelled: the enemy step after it gets no buff. At Great, that step also deals half damage. At Elite it's a steal: the step is skipped entirely (if it was the finisher, it scores nothing), and the party's next play starts with a **fast break** (+2 on the first step's hit). A pass that feeds the objective counts (the War Drum's boost to the ram, for example). Every horde play has at least one pass, so there's always one to jump.
+- **Close Out (Ranger).** Choose an enemy: its finisher is contested wherever it's aimed. At Elite, its other hits deal half damage too.
+- **Ward (Wizard).** Armor on one ally until the end of the enemy turn. A deliberately weak defender.
+
+**Decided: a defensive rating sets how well each specialty works,** in the same style as the class rating: **3 × STL + 3 × BLK + DREB**, giving a tier from Cold to Elite. The tier scales the numbers (heals, armor), and Great and Elite add the extra effects above. A hero now has two ratings from the same box score, offense from the class rating and defense from the defensive rating, and can't use both on the same possession: a hero on the ball isn't defending.
 
 ## Halftime
 
@@ -146,8 +230,9 @@ The recap teaches without a tutorial: it shows what's working and what isn't.
 ## What the box score does
 
 **Energy goes away, so real stats need new jobs.** The options, which can be combined:
-- **Minutes become touches.** Each hero can be used a set number of times per game, based on their real minutes. A 36-minute star can carry the offense, and an 18-minute bench player becomes a specialist saved for the right moment. This may be the clearest link to real stats in the whole design. **The arithmetic:** 12 possessions of about three steps is about 36 touches a game, and five starters play about 170 minutes, so **one touch per 5 minutes played** balances almost exactly: a 36-minute star gets about 7 touches, an 18-minute player 3 or 4. Spending a star's touches early or saving them for the fourth quarter becomes a coaching decision.
+- **Decided: usage becomes touches.** Each hero can be used a set number of times per game, from the player's **true usage**: possessions used plus assists, **FGA + 0.44 × FTA + TOV + AST**. It combines how much a player has the ball with how long they play, and counting assists means a pass-first point guard, the natural Cleric, has the ball a lot. The data has every input (and every player's line, so team context is available too). **The arithmetic:** 12 possessions of about three steps is about 36 touches a game for five heroes, so the total is divided by a constant to land there (to tune). Spending a star's touches early or saving them for the fourth quarter becomes a coaching decision. Players see it as "usage".
 - **Class stats scale the moves,** as tiers do today. Points power the Ranger's finishers and assists power the Cleric's enablers.
+- **Defensive stats scale the defensive action** through the defensive rating (see Defense).
 - **Big nights unlock signature and legendary finishers,** as now.
 - **Opponent turnovers give fast breaks.** Each 💫 Fumble adds a bonus possession or step. A 🫳 Pickpocket Champion does the reverse and steals one from you.
 - **The horde's scoring** can scale with the opponents' real points.
@@ -325,15 +410,15 @@ It is effectively a second game built on the same foundation.
 - **Repeats:** a hero can appear at most twice in a play, never on back-to-back steps.
 - **The horde's turn:** minions work its objective automatically; Champions and the boss run one called play. Only the call is shown, not the fallback (watch in playtests).
 - **Stats change how well a hero does things, not how much they can do.** The one exception: double-doubles and triple-doubles unlock signature and legendary finishers. This keeps the cognitive load down; revisit after playtests.
-- **Touches come from usage,** not minutes alone (formula to settle; see What the box score does).
+- **Touches come from true usage** (FGA + 0.44 × FTA + TOV + AST; see What the box score does).
+- **Class kits:** a basic move, three moves, two finishers and two big-night finishers per class (first draft in Moves, finishers and plays). Rogue Strip disables Champions; Ranger Pin works on minions.
+- **Defense:** each off-ball hero takes its class's defensive action, scaled by a defensive rating (see Defense).
 - **Goblin Horde ram:** the opposing teams' FG% sets its damage.
 - **Goblin Horde gate:** when it falls, the goblins score big and enter the city; each goblin on the field then scores every enemy turn (not ones summoned that turn).
 
 ## Open questions
 
 - **The box score in detail:** exactly which stat does what. The approach: settle what possessions look like on both sides first, then fit the stats to them.
-- **The class move lists,** designed for compelling choices.
-- **Defense:** beyond off-ball heroes, how steals, blocks and rebounds come in.
 - **Enemy plays and halftime adjustments** as the core of encounter design.
 - **How halftime works.**
 - **How PP are earned and spent** now.
