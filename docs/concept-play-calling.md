@@ -212,9 +212,18 @@ A class's place in a play is its identity. The Cleric is the point guard because
 **Decided: each off-ball hero has one defensive action, its class's specialty.** One tap each, with sensible defaults (protect what the horde's call is aimed at).
 - **Protect (Warrior).** Choose an ally or objective: every enemy finisher aimed at it is contested (half damage, no points). At Elite, the first one is blocked entirely.
 - **Triage (Cleric).** After the enemy turn, heals the most injured hero.
-- **Jump the Lane (Rogue).** Choose one pass in the horde's called play, and its enabler is cancelled: the enemy step after it gets no buff. At Great, that step also deals half damage. At Elite it's a steal: the step is skipped entirely (if it was the finisher, it scores nothing), and the party's next play starts with a **fast break** (+2 on the first step's hit). A pass that feeds the objective counts (the War Drum's boost to the ram, for example). Every horde play has at least one pass, so there's always one to jump.
+- **Strip the Ball (Rogue).** Each enemy turn, the Rogue knocks the ball loose from one minion working the horde's objective: one fewer goblin on the ram that turn, one fewer coin carried to the Dragon, one less bone pile feeding the ritual. At Elite, two workers. It's automatic, can't be wasted by the party's own play, and gives the Rogue a defensive job nobody else has: the others defend heroes or keep them standing, the Rogue slows the objective. Chosen to test. (It replaced **Jump the Lane**, choosing one pass in the horde's play to cancel: too much to read, and wasted whenever the party's play made the horde switch calls.)
 - **Close Out (Ranger).** Choose an enemy: its finisher is contested wherever it's aimed. At Elite, its other hits deal half damage too.
 - **Ward (Wizard).** Armor on one ally until the end of the enemy turn. A deliberately weak defender.
+
+**Defense may go fully automatic** (decide in playtests). The player's defensive decision then becomes who sits out of the play, which calling plays already includes. Each action needs a fixed target rule so they don't pile onto one threat:
+- **Protect:** the hero the horde's finisher is aimed at.
+- **Close Out:** the horde's ranged enemy, or the second most dangerous Champion if the first is covered.
+- **Triage:** the most injured hero.
+- **Ward:** the most injured hero not already Protected.
+- **Strip the Ball:** a worker on the objective (already automatic).
+
+The game screen shows each defender's target as a small line or icon before the possession ends.
 
 **Decided: a defensive rating sets how well each specialty works,** in the same style as the class rating: **3 × STL + 3 × BLK + DREB**, giving a tier from Cold to Elite. The tier scales the numbers (heals, armor), and Great and Elite add the extra effects above. A hero now has two ratings from the same box score, offense from the class rating and defense from the defensive rating, and can't use both on the same possession: a hero on the ball isn't defending.
 
@@ -412,7 +421,7 @@ It is effectively a second game built on the same foundation.
 - **Stats change how well a hero does things, not how much they can do.** The one exception: double-doubles and triple-doubles unlock signature and legendary finishers. This keeps the cognitive load down; revisit after playtests.
 - **Touches come from true usage** (FGA + 0.44 × FTA + TOV + AST; see What the box score does).
 - **Class kits:** a basic move, three moves, two finishers and two big-night finishers per class (first draft in Moves, finishers and plays). Rogue Strip disables Champions; Ranger Pin works on minions.
-- **Defense:** each off-ball hero takes its class's defensive action, scaled by a defensive rating (see Defense).
+- **Defense:** each off-ball hero takes its class's defensive action, scaled by a defensive rating; the Rogue's is Strip the Ball (see Defense).
 - **Goblin Horde ram:** the opposing teams' FG% sets its damage.
 - **Goblin Horde gate:** when it falls, the goblins score big and enter the city; each goblin on the field then scores every enemy turn (not ones summoned that turn).
 
