@@ -155,16 +155,60 @@ The recap teaches without a tutorial: it shows what's working and what isn't.
 
 ## Encounters
 
-**Each encounter adds its own way to score, so different playbooks win different games.**
+**Decided: each encounter has one or two objectives plus its own Stop.** Objectives come from a standard set (Hold, Break, Bounty), and every encounter has a Stop with its own fantasy flavor. Four types to start; Carry and Loose ball (below) are parked.
 
-| Encounter | Extra scoring | What it rewards |
+**An objective is just another target.** It can be open or contested, enemies guard it, and setup moves open it, so objectives use the rule players already know.
+
+**Plays can be built for objectives.** In an encounter with objectives, every class can use the **objective finishers** that encounter needs:
+- **Claim** works on a Hold.
+- **Smash** works on a Break.
+
+These deal little damage to enemies and work on the objective instead. A play like *Screen → Read the Defense → Smash* is a set play for the objective rather than for a takedown. The playbook is drawn up after the scouting report, so the objectives are known, and spending one of four slots on an objective play is a real choice.
+
+### Objective types
+
+**Hold: a spot that takes several possessions to win.**
+- **Starts contested in more than one way:** a guard standing on it and a ward, for example, each opened by a different kind of setup. It's hard to open and win in a single possession.
+- **A shared control meter:** damage dealt to the spot while it's open fills the meter, from either side.
+- **Whoever fills it claims it:** the finisher that fills the meter claims the spot for its side, which scores at once and again at the end of each of that side's possessions while it holds it. The meter then resets, and the other side can win it back.
+- **The risk:** progress belongs to no one. You can start the work and let the opponent finish it, so timing the claim matters as much as the damage.
+
+**Break: a structure worth points when destroyed.**
+- It has HP, its guards contest it, and taking it down scores.
+- **Treasure chests** are a Break variant worth fewer points but also some **gold** (the team's currency), so a chest trades points now for the season later.
+
+**Bounty: a marked enemy worth bonus points before a deadline.** For example, "take down the Goblin Shaman before the end of the first quarter: +6." Bounties reward burst damage and timing, and they point the player at a matchup.
+
+**Stop: the enemy's own objective, one per encounter.**
+- The horde works toward something over several possessions, shown as a meter on the board.
+- **If it completes,** the horde scores big and something bad happens.
+- **Breaking a step** scores for the party: disable the enemy doing the work, or take it down.
+- Stops are where most of each encounter's fantasy flavor lives, and they make defense and disables matter (see Defense).
+
+**Pricing (to tune):** most objectives are worth about what a good possession earns (4–6), and a few are big swings worth two possessions (8–10), so chasing one is a real choice rather than automatically right or wrong.
+
+**Rules that keep objectives honest:**
+- **The horde goes after objectives too:** enemy plays can claim a Hold, guard a Break or push their Stop, so ignoring an objective costs points.
+- **An objective play can't ignore the enemies.** If a playbook could win without fighting, enemies must score enough on their own to punish it.
+- **At most two standard objectives plus the Stop,** so the scouting report stays readable.
+
+### By encounter (first draft)
+
+| Encounter | Stop | Objectives |
 | --- | --- | --- |
-| Goblin Horde | Points per goblin cleared; goblins score by reaching the gate | Area damage, controlling a crowd |
-| The Crypt | Seal a tomb for 5; bone piles rise and score for the horde | Positional objectives over damage |
-| Dragon's Lair | Grab treasure while the dragon guards it; a disable opens a steal | Strips and disables, timing |
-| Giant's Hall | Topple the giant for a big swing; it scores heavily when it lands | Defense and survival, one well-timed big play |
+| **Goblin Horde** | **Storm the Gate:** a goblin crew hauls a battering ram toward the gate, one step per enemy turn. Disable or take down the crew to halt it; if it reaches the gate, the horde scores big and the ram resets for another run | **Bounty:** the Goblin Shaman before the end of Q1 (today's "break the pack before the War Drum"). **Break:** a goblin loot wagon (a treasure chest: points and gold) |
+| **The Crypt** | **The Rising:** the Necromancer channels a ritual, which bone piles feed. If it completes, a Bone Giant rises and the horde scores big. Strip or Down the channeler, or burn the bone piles with fire and holy damage, to break steps | **Break:** the ⚱️ Phylactery (big points, and the Lich stops halving damage) |
+| **Dragon's Lair** | **The Hoard Tithe:** kobolds carry coins to the sleeping Dragon. At the threshold the Dragon wakes enraged and the horde scores big. Take down the carriers to break steps; waking the Dragon early (the ambush) seals the hoard | **Break:** hoard chests (points and gold). **Bounty:** the Wyrmling, the thief, before halftime |
+| **Giant's Hall** | **The Skald's Saga:** the Skald's war song builds each enemy turn. When it finishes, the Giant Lord's Avalanche falls and the horde scores big. Topple a giant or Strip the Skald to break the verse | **Hold:** the giant's high seat (the hearth), contested by a giant and a frost ward. **Bounty:** the first topple of the Giant Lord |
 
-The boss turns from a wall to grind down into a scoring threat to answer: a team can win without killing it, by outscoring it. Traits already read like defense: ✋ Swat blocks the first shot, 🫳 Pickpocket intercepts a pass, and 📣 Floor General could shrink the party's enablers while it lives.
+The encounters' existing twists become scoring rules rather than special cases. The boss changes from a wall to grind down into a threat to answer: a team can win without killing it, by outscoring it.
+
+### Parked objective types
+
+- **Carry:** an item (treasure, relic, captive) passed along a play like an enabler and turned in with a Deliver finisher. An enemy steal knocks it loose. A literal second ball; it may return for a new encounter.
+- **Loose ball:** takedowns drop orbs for a later step or a 🏀 board token to collect.
+
+Traits already read like defense: ✋ Swat blocks the first shot, 🫳 Pickpocket intercepts a pass, and 📣 Floor General could shrink the party's enablers while it lives.
 
 ## Progression
 
@@ -212,13 +256,13 @@ It is effectively a second game built on the same foundation.
 ## Decided
 
 - **Scoring:** open and contested targets; points from shots, takedowns and objectives (see Scoring: the open look).
+- **Objectives:** each encounter has one or two objectives (Hold, Break, Bounty) plus its own Stop; plays can be built for objectives (see Encounters).
 - **Game length:** fixed quarters, 3 party possessions each, 12 in all, each followed by an enemy turn.
 - **Playbook:** four plays to start; gold buys a fifth and sixth slot; six is the cap, pending testing.
 - **Repeats:** a hero can appear at most twice in a play, never on back-to-back steps.
 
 ## Open questions
 
-- **Objectives:** a standard set of objective types, and whether plays can be built for objectives rather than shots and takedowns.
 - **The box score in detail:** exactly which stat does what.
 - **The class move lists,** designed for compelling choices.
 - **Defense:** beyond off-ball heroes, how steals, blocks and rebounds come in.
