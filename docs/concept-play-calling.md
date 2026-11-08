@@ -31,7 +31,9 @@ Final Fantasy XII's gambits are the nearest precedent (program behavior, watch i
 
 ## The battle is a game
 
-**Recommendation: a fixed length of four quarters with a scoreboard, replacing "clear every wave".** For example, two possessions per quarter, eight in all. The number of possessions is still open.
+**Decided: a fixed length of four quarters with a scoreboard, replacing "clear every wave".** Each quarter has 3 party possessions, 12 in all, and each party possession is followed by an enemy turn.
+
+**About 6–7 minutes a game.** A party possession (call, target, run) takes about 15–20 seconds, and an enemy turn (animation plus the defensive choice) about 5–10. Twelve pairs plus halftime comes to about 6–7 minutes, which suits a game played once a week. The enemy turn should be short, with a speed setting, so it never feels like waiting.
 
 - **The party scores with finishers:** 2 points for a finisher, 3 for one that kills or crits, +1 for an and-one (a finisher that also disables). A long chain can add an assist point.
 - **The horde scores when its attacks land** on heroes. Defense means keeping it off the board.
@@ -79,13 +81,15 @@ Five effects in three steps, nothing wasted, and it reads like a real set play.
 
 A class's place in a play is its identity. The Cleric is the point guard because that's where it's strongest, not because it's labelled one.
 
+**A hero can appear twice in a play, but never on back-to-back steps** (the enabler always goes to the next ally, so a hero can't pass to themselves). A star-heavy play alternates: Star → Cleric → Star (finisher). This makes building around a star a real roster choice. Three things keep it from becoming the one dominant strategy: it spends the star's touches faster (see What the box score does), a star who's always on the ball never defends, and the star's mirror Champion is already a scaled threat.
+
 **Play length is a choice made while designing.** A short play (two steps) leaves more heroes off the ball to defend. A long play (four steps) builds a bigger finisher but leaves the party exposed. The risk and reward are set in the playbook, so nobody has to calculate them mid-game.
 
 **Targeting takes one or two taps.** Each play has one primary target, chosen when it's called. Every other step targets relative to that: the primary target, the most injured ally, the next hero.
 
 ## The playbook
 
-**Before each game, the player prepares a playbook of four or five plays** (the size is still open). Plays are built from hero classes, not NBA players, so they carry over when a different player powers a hero next week.
+**Before each game, the player prepares a playbook of four plays.** Gold buys a fifth and a sixth slot over the season (the playbook belongs to the team, and gold is the team's currency), with six as the cap, pending testing. A larger playbook stays readable on a phone, and the cap stops a late-season playbook from covering every situation. Plays are built from hero classes, not NBA players, so they carry over when a different player powers a hero next week.
 
 **Drawing up plays is scouting.** The playbook comes after picking games, so the horde is already known: who's Elite, which traits are coming, which specials they'll telegraph. Designing plays is game-planning against this week's opponent ("their Ogre has Second Chance, so I need a second big finisher").
 
@@ -122,7 +126,7 @@ The recap teaches without a tutorial: it shows what's working and what isn't.
 ## What the box score does
 
 **Energy goes away, so real stats need new jobs.** The options, which can be combined:
-- **Minutes become touches.** Each hero can be used a set number of times per game, based on their real minutes. A 36-minute star can carry the offense, and an 18-minute bench player becomes a specialist saved for the right moment. This may be the clearest link to real stats in the whole design.
+- **Minutes become touches.** Each hero can be used a set number of times per game, based on their real minutes. A 36-minute star can carry the offense, and an 18-minute bench player becomes a specialist saved for the right moment. This may be the clearest link to real stats in the whole design. **The arithmetic:** 12 possessions of about three steps is about 36 touches a game, and five starters play about 170 minutes, so **one touch per 5 minutes played** balances almost exactly: a 36-minute star gets about 7 touches, an 18-minute player 3 or 4. Spending a star's touches early or saving them for the fourth quarter becomes a coaching decision.
 - **Class stats scale the moves,** as tiers do today. Points power the Ranger's finishers and assists power the Cleric's enablers.
 - **Big nights unlock signature and legendary finishers,** as now.
 - **Opponent turnovers give fast breaks.** Each 💫 Fumble adds a bonus possession or step. A 🫳 Pickpocket Champion does the reverse and steals one from you.
@@ -144,7 +148,7 @@ The boss turns from a wall to grind down into a scoring threat to answer: a team
 
 ## Progression
 
-**The playbook is the progression.** PP buys new moves and finishers rather than weapon levels, so a hero's growth shows up as new options when drawing up plays. Respec stays free, so experimenting costs nothing.
+**The playbook is the progression.** Gold buys playbook slots (see The playbook). PP buys new moves and finishers rather than weapon levels, so a hero's growth shows up as new options when drawing up plays. Respec stays free, so experimenting costs nothing.
 
 ## What carries over
 
@@ -185,14 +189,24 @@ It is effectively a second game built on the same foundation.
    - **Suggest Plays versus the best playbook:** the suggested book should be close.
 3. **Playtest with two kinds of friends:** one who plays RPGs and one who only watches the NBA. Measure seconds per possession (target about 20 or less) and ask whether the last possession felt tense.
 
+## Decided
+
+- **Game length:** fixed quarters, 3 party possessions each, 12 in all, each followed by an enemy turn.
+- **Playbook:** four plays to start; gold buys a fifth and sixth slot; six is the cap, pending testing.
+- **Repeats:** a hero can appear at most twice in a play, never on back-to-back steps.
+
 ## Open questions
 
-- **Game length:** fixed quarters, or a points target ("first to 21")? The recommendation is fixed quarters, for a predictable length.
-- **Possessions:** how many per quarter, and do they alternate with the horde's like real basketball?
-- **Playbook:** four or five plays? How many can change at halftime?
-- **Repeats:** can a hero appear twice in one play? The rule that an enabler always goes to the next ally already stops back-to-back repeats.
+- **Scoring:** combat has no accuracy, so a finisher that always scores makes points trivial. Either plays can fail (deterministically) or points come from something else, such as objectives worth different amounts.
+- **The box score in detail:** exactly which stat does what.
+- **The class move lists,** designed for compelling choices.
+- **Defense:** beyond off-ball heroes, how steals, blocks and rebounds come in.
+- **Enemy plays and halftime adjustments** as the core of encounter design.
+- **How halftime works.**
+- **How PP are earned and spent** now.
+- **The UI,** including pre-game.
 - **Fallen heroes:** foul trouble (out for a possession or two), or today's knockout?
-- **Minutes as touches:** does it limit a hero's use per game? And could reserves check in when a hero runs out? That would use the eight-player roster in battle, but it's held for later.
+- **Reserves:** could a reserve check in when a hero runs out of touches? That would use the eight-player roster in battle, but it's held for later.
 - **Enemy chains:** does the horde chain buffs (for example a 📣 Floor General passing to other monsters), or only telegraph single actions?
 
 ## Related idea: a viewpoint toggle
