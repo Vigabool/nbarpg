@@ -229,12 +229,40 @@ The game screen shows each defender's target as a small line or icon before the 
 
 ## Halftime
 
-Halftime is where the game gives the player information:
-- **A first-half recap,** such as "the Hunter has scored 12 on your Wizard; your Pick and Roll went 3 for 3."
-- **Adjustments:** swap one or two plays. Suggest Plays offers changes based on the recap.
-- **The second-half twist arrives:** the boss checks in, or the encounter changes.
+**Decided: halftime is when the player gets information and adjusts,** the way a coach does. It comes after the 6th party possession and its enemy turn, takes about 30–60 seconds, and **Keep the game plan** skips straight through.
 
-The recap teaches without a tutorial: it shows what's working and what isn't.
+**1. The first-half box score.** The game's own box score, in basketball terms:
+- **Score and scoring by source:** the party's shots, takedowns and objectives against the horde's open hits, hero takedowns and objective progress ("Ram: 14 points, gate at 12 HP").
+- **Each hero's line:** points; assists (enablers that led to a score); stops (Protect contests, workers knocked loose by Strip the Ball); touches used and left.
+- **Each play's line:** times called and points per call ("Critical Taunt: 2 calls, 22 points").
+
+Sports fans read box scores without thinking, so the recap teaches without a tutorial.
+
+**2. The horde's adjustment** (on Normal and Hard; milder on Normal). The horde makes one change from a short list, picked by a fixed rule from the first half, and it's shown before the player adjusts:
+
+| If the first half went like this | The horde adjusts | What it does |
+| --- | --- | --- |
+| One hero scored most of the points | **Double the star** | That hero's targets are contested unless a move or status opens them |
+| One play did most of the damage | **Scout the play** | That play starts the second half already scouted |
+| The horde's objective is behind schedule | **All hands on the objective** | Q3's arrivals go straight to the objective |
+| The horde is ahead | **Protect the lead** | Free minions crowd more: Champions stay contested with fewer goblins around |
+
+The horde only adjusts at halftime for now (no timeouts after big runs).
+
+**3. The player's adjustments: change up to two plays, however they like.** Plays can be drawn up in any number before the game (the library); four to six are active. At halftime the player can change up to two of the active plays:
+- **Run it back:** change nothing.
+- **Take a suggestion:** Suggest Plays offers swaps based on the box score and the horde's adjustment ("They're doubling your Wizard. Try Gravity → Drive → Aimed Shot, which doesn't need the Wizard to score").
+- **Swap in a play from the library.**
+- **Edit a play or draw up a new one** in the play designer.
+
+Casual players run it back or take a suggestion in a tap; strategic players get real tweaks. Two changes keeps halftime short and keeps the first-half game plan meaningful.
+
+**4. Locker room:**
+- Fallen heroes return at half HP, and every other hero heals 25% of their max HP.
+- Scouted plays reset, except one the horde's adjustment marks.
+- **Touches don't reset:** usage is per game, so a star used up in the first half stays used up.
+
+**5. Second-half preview:** what arrives in the third quarter (the Chieftain and the strongest Champions), where each objective stands, and the Bounty deadline if one is still live.
 
 ## What the box score does
 
@@ -408,7 +436,8 @@ It is effectively a second game built on the same foundation.
    - **Close finishes:** the share of games decided by 5 points or less in the fourth quarter. This is the "action-packed" number.
    - **Every scoring route can win:** a bot that chases only one source of points should win a fair share somewhere.
    - **Suggest Plays versus the best playbook:** the suggested book should be close.
-3. **Playtest with two kinds of friends:** one who plays RPGs and one who only watches the NBA. Measure seconds per possession (target about 20 or less) and ask whether the last possession felt tense.
+3. **A Goblin Horde test artifact:** a standalone, playable prototype of the worked Goblin Horde encounter, separate from the game (its own artifact, not the game's test artifact), built once the pre-game and UI are settled.
+4. **Playtest with two kinds of friends:** one who plays RPGs and one who only watches the NBA. Measure seconds per possession (target about 20 or less) and ask whether the last possession felt tense.
 
 ## Decided
 
@@ -422,6 +451,7 @@ It is effectively a second game built on the same foundation.
 - **Touches come from true usage** (FGA + 0.44 × FTA + TOV + AST; see What the box score does).
 - **Class kits:** a basic move, three moves, two finishers and two big-night finishers per class (first draft in Moves, finishers and plays). Rogue Strip disables Champions; Ranger Pin works on minions.
 - **Defense:** each off-ball hero takes its class's defensive action, scaled by a defensive rating; the Rogue's is Strip the Ball (see Defense).
+- **Halftime:** a first-half box score, one horde adjustment (Normal and Hard, milder on Normal), up to two play changes of any kind, locker-room healing; the horde adjusts only at halftime for now (see Halftime).
 - **Goblin Horde ram:** the opposing teams' FG% sets its damage.
 - **Goblin Horde gate:** when it falls, the goblins score big and enter the city; each goblin on the field then scores every enemy turn (not ones summoned that turn).
 
@@ -429,7 +459,6 @@ It is effectively a second game built on the same foundation.
 
 - **The box score in detail:** exactly which stat does what. The approach: settle what possessions look like on both sides first, then fit the stats to them.
 - **Enemy plays and halftime adjustments** as the core of encounter design.
-- **How halftime works.**
 - **How PP are earned and spent** now.
 - **The UI,** including pre-game.
 - **Fallen heroes:** foul trouble (out for a possession or two), or today's knockout?
