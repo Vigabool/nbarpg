@@ -462,18 +462,23 @@ function DefenseChoice(props: { manual: boolean; setManual: (m: boolean) => void
   const [info, setInfo] = useState(false);
   return (
     <>
-      <div className="row" style={{ justifyContent: 'space-between' }}>
-        <span className="eyebrow">Defense</span>
-        <button className="infobtn" aria-expanded={info} aria-controls="defense-info" onClick={() => setInfo((x) => !x)}>
-          {info ? 'Hide details' : 'ⓘ What’s the difference?'}
-        </button>
-      </div>
-      <div className="opt-group">
+      <span className="eyebrow">Defense</span>
+      <div className="opt-group" style={{ alignItems: 'center' }}>
         <button className="opt" aria-pressed={!props.manual} onClick={() => props.setManual(false)}>
           Automatic
         </button>
         <button className="opt" aria-pressed={props.manual} onClick={() => props.setManual(true)}>
           Manual
+        </button>
+        <button
+          className="helpbtn"
+          aria-expanded={info}
+          aria-controls="defense-info"
+          aria-label="What's the difference between automatic and manual defense?"
+          title="What's the difference?"
+          onClick={() => setInfo((x) => !x)}
+        >
+          ?
         </button>
       </div>
       {info && (
