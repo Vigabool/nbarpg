@@ -60,7 +60,8 @@ type Modal =
   | { kind: 'hero'; cls: Cls }
   | { kind: 'recap' };
 
-type Speed = 'slow' | 'normal' | 'fast';
+/** Step: wait for Next at every beat. Auto and Fast advance on a timer. */
+type Speed = 'step' | 'auto' | 'fast';
 interface Replay {
   frames: Frame[];
   play: Play | null;
@@ -89,7 +90,8 @@ interface Saved {
   difficulty?: Difficulty;
   manual?: boolean;
   tuning?: Tuning;
-  speed?: 'slow' | 'normal' | 'fast';
+  /** Replay pace (the older `speed` field is ignored so everyone starts on Step). */
+  pace?: 'step' | 'auto' | 'fast';
 }
 const KEY = 'play-calling-prototype-v1';
 function load(): Saved {
@@ -135,7 +137,7 @@ export function App() {
   const [replay, setReplay] = useState<Replay | null>(null);
   const [beat, setBeat] = useState(0);
   const [lastReplay, setLastReplay] = useState<Replay | null>(null);
-  const [speed, setSpeed] = useState<Speed>(saved.speed ?? 'normal');
+  const [speed, setSpeed] = useState<Speed>(saved.pace ?? 'step');
   const frames = replay?.frames ?? null;
   const [sel, setSel] = useState<string | null>(null);
   const [tgt, setTgt] = useState<string | null>(null);
@@ -148,7 +150,7 @@ export function App() {
   const startedAt = useRef<number>(0);
 
   useEffect(() => {
-    store({ custom, active, difficulty, manual, tuning, speed });
+    store({ custom, active, difficulty, manual, tuning, pace: speed });
   }, [custom, active, difficulty, manual, tuning, speed]);
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -164,7 +166,7 @@ export function App() {
 
   // Step through the possession: automatically at Normal and Fast, on tap at Slow.
   useEffect(() => {
-    if (!replay || done || speed === 'slow') return;
+    if (!replay || done || speed === 'step') return;
     const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     const justShown = beats[beat - 1];
     const base = speed === 'fast' ? 650 : 1500;
@@ -240,7 +242,7 @@ export function App() {
   function begin(g: Game, fr: Frame[], play: Play | null, head: string, s: number) {
     setHistory((h) => [...h, game]);
     setReplay({ frames: fr, play, before: game, after: g, possession: game.possession });
-    setBeat(0);
+    setBeat(speed === 'step' ? 1 : 0);
     setSel(null);
     setTgt(null);
     setSecs((x) => [...x, s]);
@@ -326,7 +328,7 @@ export function App() {
               speed={speed}
               onNext={() => setBeat((b) => Math.min(beats.length, b + 1))}
               onSkip={() => setBeat(beats.length)}
-              onSpeed={() => setSpeed((x) => (x === 'normal' ? 'fast' : x === 'fast' ? 'slow' : 'normal'))}
+              onSpeed={() => setSpeed((x) => (x === 'step' ? 'auto' : x === 'auto' ? 'fast' : 'step'))}
               onDone={finishPlayback}
             />
           ) : selPlay ? (
@@ -1431,7 +1433,7 @@ function ReplaySheet(props: {
     <div className="sheet replay" onClick={() => !done && props.onNext()}>
       <div className="sheet-inner">
         <div className="row" style={{ justifyContent: 'space-between' }}>
-          <span className="small muted">{done ? 'Recap' : props.speed === 'slow' ? 'Tap to step through' : 'Tap to step ahead'}</span>
+          <span className="small muted">{done ? 'Recap' : props.speed === 'step' ? 'Waiting for you: tap Next' : 'Playing on its own: tap to step ahead'}</span>
           <button
             className="btn quiet small"
             onClick={(e) => {
@@ -1439,7 +1441,7 @@ function ReplaySheet(props: {
               props.onSpeed();
             }}
           >
-            Speed: {props.speed === 'slow' ? 'Slow (tap)' : props.speed === 'fast' ? 'Fast' : 'Normal'}
+            Pace: {props.speed === 'step' ? 'Step by step' : props.speed === 'fast' ? 'Fast' : 'Auto'}
           </button>
         </div>
         <ReplayBody replay={props.replay} beats={props.beats} beat={props.beat} />
