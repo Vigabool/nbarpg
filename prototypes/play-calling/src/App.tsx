@@ -8,6 +8,7 @@ import {
   MOVE,
   MOVES,
   TEMPLATES,
+  TIER_MULT,
   isFinisher,
   tierIndex,
   type Cls,
@@ -745,16 +746,72 @@ function PlanScreen(props: {
 function PlaySlot(props: { play: Play; open: boolean; onToggle: () => void; onChange: () => void; onEdit: () => void }) {
   const p = props.play;
   const form = playForm(p);
+  const [step, setStep] = useState<number | null>(null);
+  useEffect(() => {
+    if (!props.open) setStep(null);
+  }, [props.open]);
+  const s = step !== null ? p.steps[step] : null;
+  const m = s ? MOVE[s.move] : null;
+  const next = step !== null && step < p.steps.length - 1 ? p.steps[step + 1] : null;
+  const nextMove = next ? MOVE[next.move] : undefined;
+  const hero = s ? week.heroes.find((h) => h.cls === s.cls)! : null;
   return (
     <div className="panel slotcard">
       <button className="slothead" aria-expanded={props.open} onClick={props.onToggle}>
         <h3>{p.name}</h3>
-        <span className="small muted">{p.steps.map((s) => CLASS_INFO[s.cls].icon).join(' → ')}</span>
+        <span className="small muted">{p.steps.map((x) => CLASS_INFO[x.cls].icon).join(' → ')}</span>
         {form && <span className="chip ball">{form.split(' ')[0]}</span>}
       </button>
       {props.open && (
         <div className="stack">
-          <span className="small">{chainText(p)}</span>
+          <div className="steprow" style={{ gridTemplateColumns: `repeat(${p.steps.length}, minmax(0, 1fr))` }}>
+            {p.steps.map((x, i) => {
+              const mv = MOVE[x.move];
+              return (
+                <button
+                  key={i}
+                  className={`stepcard ${step === i ? 'on' : ''} ${isFinisher(mv) ? 'fin' : ''}`}
+                  aria-expanded={step === i}
+                  onClick={() => setStep(step === i ? null : i)}
+                >
+                  <span className="sc-top">
+                    <span>{CLASS_INFO[x.cls].icon}</span>
+                    <span className="sc-n num">{i + 1}</span>
+                  </span>
+                  <strong>{mv.name}</strong>
+                  <span className="small muted">{isFinisher(mv) ? 'Finisher' : CLASS_INFO[x.cls].name}</span>
+                </button>
+              );
+            })}
+          </div>
+          {s && m && hero ? (
+            <div className="panel detail small">
+              <strong>
+                Step {step! + 1} · {CLASS_INFO[s.cls].name} ({lastName(hero.player)}) · {m.name}
+              </strong>
+              <span>
+                <b>Action:</b> {m.action}.
+              </span>
+              {isFinisher(m) ? (
+                <span>
+                  <b>Finisher:</b> ends the play. Scores {m.three ? 3 : 2}{' '}
+                  {m.ignoresContest ? 'whether or not the target is open' : 'on an open target (nothing when contested)'}, plus takedown points.
+                </span>
+              ) : (
+                <span>
+                  <b>Pass to the {CLASS_INFO[next!.cls].name}:</b> {m.enablerText}.{' '}
+                  {passHelps(m, nextMove) ? <span className="ok">✓ boosts {nextMove?.name}</span> : <span className="err">– wasted on {nextMove?.name}</span>}
+                </span>
+              )}
+              {m.note && <span className="muted">{m.note}</span>}
+              <span className="muted">
+                {lastName(hero.player)} is {hero.tier === 'average' ? 'Average' : tierLabel(hero.tier as Tier)} this week, so numbers are ×
+                {TIER_MULT[hero.tier as Tier]}.
+              </span>
+            </div>
+          ) : (
+            <span className="small muted">Tap a move for details.</span>
+          )}
           <div className="chips">
             {p.tags.map((t) => (
               <span className="chip" key={t}>

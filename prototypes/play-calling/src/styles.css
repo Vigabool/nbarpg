@@ -1086,3 +1086,55 @@ th {
   color: var(--ink);
   border-bottom-color: var(--ball);
 }
+
+/* Playbook: each step is a card */
+.steprow {
+  display: grid;
+  gap: 14px;
+}
+.stepcard {
+  position: relative;
+  background: var(--bg);
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 7px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+  min-width: 0;
+}
+.stepcard strong {
+  font-size: 0.85rem;
+  line-height: 1.15;
+}
+.stepcard .small {
+  font-size: 0.7rem;
+}
+.stepcard:not(:last-child)::after {
+  content: '→';
+  position: absolute;
+  right: -12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+.stepcard.fin {
+  border-style: dashed;
+}
+.stepcard.on {
+  border-color: var(--ball);
+  background: var(--ball-soft);
+  border-style: solid;
+}
+.sc-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.sc-n {
+  font-size: 0.68rem;
+  color: var(--muted);
+  font-weight: 700;
+}
