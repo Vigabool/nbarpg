@@ -57,7 +57,31 @@ type Modal =
   | { kind: 'menu' }
   | { kind: 'guide' }
   | { kind: 'enemy'; id: string }
-  | { kind: 'hero'; cls: Cls };
+  | { kind: 'hero'; cls: Cls }
+  | { kind: 'recap' };
+
+type Speed = 'slow' | 'normal' | 'fast';
+interface Replay {
+  frames: Frame[];
+  play: Play | null;
+  before: Game;
+  after: Game;
+  possession: number;
+}
+type Beat = number | 'break';
+/** The order beats are revealed: the party's frames, a pause, then the horde's turn. */
+function beatsOf(frames: Frame[]): Beat[] {
+  const party = frames.flatMap((f, i) => (f.phase === 'party' ? [i] : []));
+  const horde = frames.flatMap((f, i) => (f.phase === 'horde' ? [i] : []));
+  return horde.length ? [...party, 'break', ...horde] : party;
+}
+function currentFrame(frames: Frame[], beats: Beat[], beat: number): Frame | null {
+  for (let i = Math.min(beat, beats.length) - 1; i >= 0; i--) {
+    const b = beats[i];
+    if (b !== 'break') return frames[b];
+  }
+  return null;
+}
 
 interface Saved {
   custom?: Play[];
@@ -65,6 +89,7 @@ interface Saved {
   difficulty?: Difficulty;
   manual?: boolean;
   tuning?: Tuning;
+  speed?: 'slow' | 'normal' | 'fast';
 }
 const KEY = 'play-calling-prototype-v1';
 function load(): Saved {
@@ -107,9 +132,11 @@ export function App() {
   const playbook = useMemo(() => active.map((id) => library.find((p) => p.id === id)!).filter(Boolean), [active, library]);
   const [game, setGame] = useState<Game>(() => newGame(tuning, difficulty));
   const [history, setHistory] = useState<Game[]>([]);
-  const [frames, setFrames] = useState<Frame[] | null>(null);
-  const [fi, setFi] = useState(0);
-  const pending = useRef<Game | null>(null);
+  const [replay, setReplay] = useState<Replay | null>(null);
+  const [beat, setBeat] = useState(0);
+  const [lastReplay, setLastReplay] = useState<Replay | null>(null);
+  const [speed, setSpeed] = useState<Speed>(saved.speed ?? 'normal');
+  const frames = replay?.frames ?? null;
   const [sel, setSel] = useState<string | null>(null);
   const [tgt, setTgt] = useState<string | null>(null);
   const [override, setOverride] = useState<Defense>({});
@@ -121,8 +148,8 @@ export function App() {
   const startedAt = useRef<number>(0);
 
   useEffect(() => {
-    store({ custom, active, difficulty, manual, tuning });
-  }, [custom, active, difficulty, manual, tuning]);
+    store({ custom, active, difficulty, manual, tuning, speed });
+  }, [custom, active, difficulty, manual, tuning, speed]);
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [screen]);
@@ -130,26 +157,28 @@ export function App() {
     startedAt.current = performance.now();
   }, [game.possession, screen]);
 
-  const shown = frames ? frames[Math.min(fi, frames.length - 1)].game : game;
+  const beats = useMemo(() => (replay ? beatsOf(replay.frames) : []), [replay]);
+  const done = !!replay && beat >= beats.length;
+  const curFrame = replay ? currentFrame(replay.frames, beats, beat) : null;
+  const shown = replay ? (curFrame?.game ?? replay.before) : game;
 
-  // Replay the possession's frames.
+  // Step through the possession: automatically at Normal and Fast, on tap at Slow.
   useEffect(() => {
-    if (!frames) return;
-    if (fi >= frames.length - 1) {
-      const t = setTimeout(() => finishPlayback(), 900);
-      return () => clearTimeout(t);
-    }
+    if (!replay || done || speed === 'slow') return;
     const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    const t = setTimeout(() => setFi((i) => i + 1), reduce ? 450 : 800);
+    const justShown = beats[beat - 1];
+    const base = speed === 'fast' ? 650 : 1500;
+    const delay = beat === 0 ? 350 : justShown === 'break' ? base * 1.6 : reduce ? base * 0.7 : base;
+    const t = setTimeout(() => setBeat((b) => b + 1), delay);
     return () => clearTimeout(t);
-  });
+  }, [replay, beat, done, speed, beats]);
 
   function finishPlayback() {
-    const g = pending.current;
-    if (!g) return;
-    pending.current = null;
-    setFrames(null);
-    setFi(0);
+    if (!replay) return;
+    const g = replay.after;
+    setLastReplay(replay);
+    setReplay(null);
+    setBeat(0);
     setGame(g);
     if (g.phase === 'halftime') {
       setAdjustment(halftimeAdjustment(g, playbook));
@@ -201,18 +230,17 @@ export function App() {
     if (!selPlay || !tgt) return;
     const s = (performance.now() - startedAt.current) / 1000;
     const res = runPossession(game, selPlay, tgt, defense);
-    begin(res.game, res.frames, `P${game.possession + 1} · ${selPlay.name} on ${game.enemies.find((e) => e.id === tgt)?.name} (${s.toFixed(1)} s)`, s);
+    begin(res.game, res.frames, selPlay, `P${game.possession + 1} · ${selPlay.name} on ${game.enemies.find((e) => e.id === tgt)?.name} (${s.toFixed(1)} s)`, s);
   }
   function hold() {
     const s = (performance.now() - startedAt.current) / 1000;
     const res = holdPossession(game, autoDefense(game, new Set()));
-    begin(res.game, res.frames, `P${game.possession + 1} · held the ball (${s.toFixed(1)} s)`, s);
+    begin(res.game, res.frames, null, `P${game.possession + 1} · held the ball (${s.toFixed(1)} s)`, s);
   }
-  function begin(g: Game, fr: Frame[], head: string, s: number) {
+  function begin(g: Game, fr: Frame[], play: Play | null, head: string, s: number) {
     setHistory((h) => [...h, game]);
-    pending.current = g;
-    setFrames(fr);
-    setFi(0);
+    setReplay({ frames: fr, play, before: game, after: g, possession: game.possession });
+    setBeat(0);
     setSel(null);
     setTgt(null);
     setSecs((x) => [...x, s]);
@@ -267,6 +295,7 @@ export function App() {
             onTimeout={timeout}
             canTimeout={!!history.length && game.timeouts > 0 && !frames}
             onMenu={() => setModal({ kind: 'menu' })}
+            onLast={lastReplay && !frames ? () => setModal({ kind: 'recap' }) : undefined}
           />
           <div className="wrap">
             <Objectives game={shown} />
@@ -276,25 +305,29 @@ export function App() {
               projections={projections}
               picking={!!selPlay && !frames}
               target={tgt}
-              frame={frames ? frames[Math.min(fi, frames.length - 1)] : null}
+              frame={curFrame}
               onPick={(id) => (selPlay && !frames ? setTgt(id) : setModal({ kind: 'enemy', id }))}
             />
             <HeroRow
               game={shown}
               inPlay={inPlay}
               defense={selPlay && !frames ? defense : null}
-              frame={frames ? frames[Math.min(fi, frames.length - 1)] : null}
+              frame={curFrame}
               onTap={(cls) => setModal({ kind: 'hero', cls })}
             />
             <Dock game={game} playbook={playbook} isoPlays={isoPlays} sel={sel} best={best} busy={!!frames} onChoose={choosePlay} onHold={hold} />
-            <div className="spacer" />
+            <div className="spacer" style={replay ? { height: '62vh' } : undefined} />
           </div>
-          {frames ? (
-            <Ticker
-              frame={frames[Math.min(fi, frames.length - 1)]}
-              index={fi}
-              total={frames.length}
-              onSkip={() => (fi >= frames.length - 1 ? finishPlayback() : setFi(frames.length - 1))}
+          {replay ? (
+            <ReplaySheet
+              replay={replay}
+              beats={beats}
+              beat={beat}
+              speed={speed}
+              onNext={() => setBeat((b) => Math.min(beats.length, b + 1))}
+              onSkip={() => setBeat(beats.length)}
+              onSpeed={() => setSpeed((x) => (x === 'normal' ? 'fast' : x === 'fast' ? 'slow' : 'normal'))}
+              onDone={finishPlayback}
             />
           ) : selPlay ? (
             <ConfirmSheet
@@ -407,6 +440,11 @@ export function App() {
         />
       )}
       {modal?.kind === 'guide' && <Guide onClose={() => setModal(null)} />}
+      {modal?.kind === 'recap' && lastReplay && (
+        <ModalShell title={`Possession ${lastReplay.possession + 1}`} onClose={() => setModal(null)}>
+          <ReplayBody replay={lastReplay} beats={beatsOf(lastReplay.frames)} beat={Infinity} />
+        </ModalShell>
+      )}
       {modal?.kind === 'enemy' && <EnemyDetail game={shown} id={modal.id} onClose={() => setModal(null)} />}
       {modal?.kind === 'hero' && <HeroDetail game={shown} cls={modal.cls} onClose={() => setModal(null)} />}
     </>
@@ -837,7 +875,7 @@ function PlaySlot(props: { play: Play; open: boolean; onToggle: () => void; onCh
 
 // ---------- Game screen ----------
 
-function Scoreboard(props: { game: Game; onTimeout: () => void; canTimeout: boolean; onMenu: () => void }) {
+function Scoreboard(props: { game: Game; onTimeout: () => void; canTimeout: boolean; onMenu: () => void; onLast?: () => void }) {
   const g = props.game;
   const q = quarterOf(Math.min(11, g.possession));
   const inQ = Math.min(11, g.possession) % 3;
@@ -863,10 +901,13 @@ function Scoreboard(props: { game: Game; onTimeout: () => void; canTimeout: bool
       </div>
       <div className="board-tools">
         <button onClick={props.onTimeout} disabled={!props.canTimeout} title="Take back the last possession">
-          Timeout ({g.timeouts})
+          Timeouts: {g.timeouts}
         </button>
-        <span>Possession {Math.min(12, g.possession + 1)} of 12</span>
-        <button onClick={props.onMenu}>Menu</button>
+        <span style={{ whiteSpace: 'nowrap' }}>{Math.min(12, g.possession + 1)} of 12</span>
+        <span className="row" style={{ gap: 6 }}>
+          {props.onLast && <button onClick={props.onLast}>Recap</button>}
+          <button onClick={props.onMenu}>Menu</button>
+        </span>
       </div>
     </div>
   );
@@ -1272,19 +1313,169 @@ function DefenseLine(props: {
   );
 }
 
-function Ticker(props: { frame: Frame; index: number; total: number; onSkip: () => void }) {
-  const f = props.frame;
+function ReplayBody(props: { replay: Replay; beats: Beat[]; beat: number }) {
+  const { replay, beats } = props;
+  const shownBeats = beats.slice(0, props.beat);
+  const shownIdx = new Set(shownBeats.filter((b): b is number => b !== 'break'));
+  const fr = replay.frames;
+  const partyFrames = fr.map((f, i) => ({ f, i })).filter((x) => x.f.phase === 'party');
+  const hordeFrames = fr.map((f, i) => ({ f, i })).filter((x) => x.f.phase === 'horde' && shownIdx.has(x.i));
+  const lastShown = [...shownBeats].reverse().find((b) => b !== 'break');
+  const pastBreak = shownBeats.includes('break');
+  const partyPts = partyFrames.filter((x) => shownIdx.has(x.i)).reduce((s, x) => s + (x.f.side === 'party' ? (x.f.pts ?? 0) : 0), 0);
+  const hordePts = hordeFrames.reduce((s, x) => s + (x.f.side === 'horde' ? (x.f.pts ?? 0) : 0), 0);
+  const play = replay.play;
+  const info = partyFrames.filter((x) => x.f.step === undefined && shownIdx.has(x.i));
+  const hordeRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    hordeRef.current?.scrollIntoView({ block: 'nearest' });
+  }, [hordeFrames.length]);
   return (
-    <div className="sheet ticker" onClick={props.onSkip} role="status" aria-live="polite">
+    <div className="stack">
+      <div className="row" style={{ justifyContent: 'space-between' }}>
+        <span className="eyebrow" style={{ color: 'var(--party)' }}>
+          Your possession{play ? ` · ${play.name}` : ''}
+        </span>
+        <span className="floatpts num">+{partyPts}</span>
+      </div>
+      {info.map((x) => (
+        <span key={x.i} className="small muted">
+          {x.f.text}
+        </span>
+      ))}
+      {play && (
+        <div className="steprow" style={{ gridTemplateColumns: `repeat(${play.steps.length}, minmax(0, 1fr))` }}>
+          {play.steps.map((st, si) => {
+            const mv = MOVE[st.move];
+            const mine = partyFrames.filter((x) => x.f.step === si && shownIdx.has(x.i));
+            const main = mine.find((x) => x.f.kind === 'step');
+            const kos = mine.filter((x) => x.f.kind === 'ko').length;
+            const put = mine.find((x) => x.f.kind === 'putback');
+            const pts = mine.reduce((s, x) => s + (x.f.pts ?? 0), 0);
+            const current = mine.some((x) => x.i === lastShown) && !pastBreak;
+            const next = play.steps[si + 1];
+            return (
+              <div key={si} className={`stepcard result ${main ? 'done' : 'todo'} ${current ? 'on' : ''}`}>
+                <span className="sc-top">
+                  <span>{CLASS_INFO[st.cls].icon}</span>
+                  <span className="sc-n num">{si + 1}</span>
+                </span>
+                <strong>{mv.name}</strong>
+                {main ? (
+                  <>
+                    <span className="sc-res">{main.f.result}</span>
+                    {put && <span className="sc-res">{put.f.result}</span>}
+                    {next && mv.enablerText && (
+                      <span className="sc-pass">
+                        → {mv.enablerText} to the {CLASS_INFO[next.cls].name}
+                      </span>
+                    )}
+                    {(kos > 0 || pts > 0) && (
+                      <span className="sc-pts num">
+                        {kos ? `${kos} KO · ` : ''}+{pts}
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  <span className="small muted">{isFinisher(mv) ? 'Finisher' : CLASS_INFO[st.cls].name}</span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+      {pastBreak && (
+        <>
+          <div className="row turnhead" style={{ justifyContent: 'space-between' }}>
+            <span className="eyebrow" style={{ color: 'var(--horde)' }}>
+              Their turn{replay.before.call ? ` · ${replay.before.call.name}` : ''}
+            </span>
+            <span className="floatpts num" style={{ color: 'var(--horde)' }}>
+              +{hordePts}
+            </span>
+          </div>
+          <div className="hordelist">
+            {hordeFrames.map((x) => (
+              <div key={x.i} className={`hrow ${x.f.side} ${x.i === lastShown ? 'on' : ''}`}>
+                <span>{x.f.text}</span>
+                {x.f.pts ? <span className="num hpts">+{x.f.pts}</span> : null}
+              </div>
+            ))}
+            <div ref={hordeRef} />
+          </div>
+        </>
+      )}
+      {props.beat >= beats.length && (
+        <div className="recapline num">
+          This possession: Heroes +{partyPts}, Goblins +{hordePts} · Score {replay.after.score.party}–{replay.after.score.horde}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ReplaySheet(props: {
+  replay: Replay;
+  beats: Beat[];
+  beat: number;
+  speed: Speed;
+  onNext: () => void;
+  onSkip: () => void;
+  onSpeed: () => void;
+  onDone: () => void;
+}) {
+  const done = props.beat >= props.beats.length;
+  const after = props.replay.after;
+  const doneLabel = after.phase === 'halftime' ? 'To halftime' : after.phase === 'final' ? 'Final score' : 'Next possession';
+  return (
+    <div className="sheet replay" onClick={() => !done && props.onNext()}>
       <div className="sheet-inner">
         <div className="row" style={{ justifyContent: 'space-between' }}>
-          <span className="eyebrow">{f.side === 'horde' ? 'Horde' : f.side === 'party' ? 'Heroes' : 'Play-by-play'}</span>
-          <span className="small muted num">
-            {props.index + 1}/{props.total} · tap to skip
-          </span>
+          <span className="small muted">{done ? 'Recap' : props.speed === 'slow' ? 'Tap to step through' : 'Tap to step ahead'}</span>
+          <button
+            className="btn quiet small"
+            onClick={(e) => {
+              e.stopPropagation();
+              props.onSpeed();
+            }}
+          >
+            Speed: {props.speed === 'slow' ? 'Slow (tap)' : props.speed === 'fast' ? 'Fast' : 'Normal'}
+          </button>
         </div>
-        <p className={`line ${f.side}`}>{f.text}</p>
-        {f.pts ? <span className="floatpts">+{f.pts}</span> : null}
+        <ReplayBody replay={props.replay} beats={props.beats} beat={props.beat} />
+        {done ? (
+          <button
+            className="btn primary big"
+            onClick={(e) => {
+              e.stopPropagation();
+              props.onDone();
+            }}
+          >
+            {doneLabel}
+          </button>
+        ) : (
+          <div className="row">
+            <button
+              className="btn primary"
+              style={{ flex: 1 }}
+              onClick={(e) => {
+                e.stopPropagation();
+                props.onNext();
+              }}
+            >
+              Next ▸
+            </button>
+            <button
+              className="btn quiet"
+              onClick={(e) => {
+                e.stopPropagation();
+                props.onSkip();
+              }}
+            >
+              Skip to recap
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -169,6 +169,13 @@ export interface Frame {
   actor?: Cls | string;
   target?: Cls | string;
   pts?: number;
+  /** Which half of the possession: the party's play, the horde's turn, or the closing state. */
+  phase?: 'party' | 'horde' | 'end';
+  /** The play step this beat belongs to. */
+  step?: number;
+  kind?: 'step' | 'ko' | 'putback';
+  /** The step's result in a few words (for the step strip). */
+  result?: string;
 }
 
 const clone = <T>(x: T): T => structuredClone(x);
@@ -605,7 +612,7 @@ function takedown(g: Game, e: Enemy, by: Cls, frames: Frame[], rec: boolean, pla
   // Crew takedowns provoke the horde's Hunt.
   if (wasCrew) g.last.crewDowns[by] = (g.last.crewDowns[by] ?? 0) + 1;
   award(g, by, pts, playId);
-  if (rec) frames.push({ game: clone(g), text, side: 'party', actor: by, target: e.id, pts });
+  if (rec) frames.push({ game: clone(g), text, side: 'party', actor: by, target: e.id, pts, kind: 'ko' });
 }
 
 /** Score every enemy that has just gone down. */
@@ -640,6 +647,7 @@ export function runPossession(g0: Game, play: Play, primaryId: string, defense: 
   const startScore = g.score.party;
 
   play.steps.forEach((step, i) => {
+    const firstFrame = frames.length;
     const h = g.heroes[step.cls];
     const m = MOVE[step.move];
     const mult = tm(h.tier);
@@ -811,6 +819,8 @@ export function runPossession(g0: Game, play: Play, primaryId: string, defense: 
         actor: h.cls,
         target: primary.id,
         pts: g.score.party - scoreBefore || undefined,
+        kind: 'step',
+        result: parts.join(', '),
       });
       sweep(g, h.cls, frames, rec, play.id);
 
@@ -833,16 +843,25 @@ export function runPossession(g0: Game, play: Play, primaryId: string, defense: 
           actor: p.cls,
           target: primary.id,
           pts: pts || undefined,
+          kind: 'putback',
+          result: `putback ${dealt}${pts ? `, +${pts}` : ''}`,
         });
         sweep(g, p.cls, frames, rec, play.id);
       }
     } else {
-      frames.push({ game: snap(), text: `${CLASS_INFO[h.cls].name} · ${m.name}: ${parts.join(', ') || 'no target'}`, side: 'party', actor: h.cls });
+      frames.push({
+        game: snap(),
+        text: `${CLASS_INFO[h.cls].name} · ${m.name}: ${parts.join(', ') || 'no target'}`,
+        side: 'party',
+        actor: h.cls,
+        kind: 'step',
+        result: parts.join(', ') || 'no target',
+      });
     }
 
     // Pass on.
     carry = enablerCarry(m.enabler, mult, carry.double, scouted, h.cls);
-    void i;
+    for (let k = firstFrame; k < frames.length; k++) frames[k].step = i;
   });
 
   g.log.push({ t: `${play.name}: +${g.score.party - startScore}`, side: 'party', pts: g.score.party - startScore });
@@ -853,9 +872,16 @@ export function runPossession(g0: Game, play: Play, primaryId: string, defense: 
   if (opts.preview) return { game: g, frames };
 
   const inPlay = new Set(play.steps.map((s) => s.cls));
+  const partyEnd = frames.length;
   enemyTurn(g, inPlay, defense, frames);
   endPossession(g, frames);
+  markPhases(frames, partyEnd);
   return { game: g, frames };
+}
+
+function markPhases(frames: Frame[], partyEnd: number) {
+  frames.forEach((f, k) => (f.phase = k < partyEnd ? 'party' : 'horde'));
+  frames[frames.length - 1].phase = 'end';
 }
 
 /** The always-available fallback: one hero takes a finisher alone. */
@@ -872,6 +898,7 @@ export function holdPossession(g0: Game, defense: Defense): { game: Game; frames
   for (const e of g.enemies) e.exposed = Math.max(0, e.exposed - 1);
   enemyTurn(g, new Set(), defense, frames);
   endPossession(g, frames);
+  markPhases(frames, 1);
   return { game: g, frames };
 }
 
@@ -1014,7 +1041,7 @@ function enemyTurn(g: Game, inPlay: Set<Cls>, defense: Defense, frames: Frame[])
       const actor = g.enemies.find((e) => e.id === call!.actors[i]);
       if (!actor || actor.hp <= 0) return;
       if (actor.disabled) {
-        frames.push({ game: clone(g), text: `${actor.name} is Disabled and drops out of ${call!.name}.`, side: 'horde', actor: actor.id });
+        frames.push({ game: clone(g), text: `${actor.name} is Disabled and drops out of ${call!.name}.`, side: 'party', actor: actor.id });
         bonus = 0;
         return;
       }

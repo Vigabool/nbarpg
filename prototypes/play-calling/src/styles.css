@@ -307,7 +307,11 @@ body::before {
   gap: 8px;
   font-size: 0.8rem;
 }
+.board-tools > span {
+  align-self: center;
+}
 .board-tools button {
+  white-space: nowrap;
   background: rgb(255 255 255 / 0.1);
   border: 1px solid rgb(255 255 255 / 0.2);
   color: var(--board-ink);
@@ -1137,4 +1141,77 @@ th {
   font-size: 0.68rem;
   color: var(--muted);
   font-weight: 700;
+}
+
+/* Replay: the play's steps fill in, then the horde's turn */
+.sheet.replay {
+  max-height: 64vh;
+  overflow-y: auto;
+  border-top-color: var(--ink);
+}
+.stepcard.result {
+  cursor: default;
+  gap: 3px;
+}
+.stepcard.todo {
+  opacity: 0.5;
+}
+.stepcard.done {
+  background: var(--surface);
+}
+.sc-res {
+  font-size: 0.72rem;
+  line-height: 1.25;
+}
+.sc-pass {
+  font-size: 0.68rem;
+  color: var(--party);
+  font-weight: 700;
+  line-height: 1.2;
+}
+.sc-pts {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1rem;
+  color: var(--ball);
+}
+.turnhead {
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+}
+.hordelist {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.hrow {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.85rem;
+  padding: 5px 8px;
+  border-radius: 6px;
+  background: var(--surface-2);
+}
+.hrow.horde {
+  color: var(--horde);
+}
+.hrow.party {
+  color: var(--party);
+}
+.hrow.info {
+  color: var(--muted);
+}
+.hrow.on {
+  outline: 2px solid currentColor;
+}
+.hpts {
+  font-family: var(--font-display);
+  font-weight: 800;
+}
+.recapline {
+  font-weight: 700;
+  font-size: 0.9rem;
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
 }
