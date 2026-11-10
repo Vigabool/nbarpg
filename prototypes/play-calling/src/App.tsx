@@ -505,6 +505,12 @@ function PlanScreen(props: {
   const g = props.game;
   const [open, setOpen] = useState<string | null>(null);
   const toggle = (id: string) => setOpen((o) => (o === id ? null : id));
+  const [tab, setTab] = useState<'heroes' | 'horde'>('heroes');
+  const pickTab = (t: 'heroes' | 'horde') => {
+    setTab(t);
+    setOpen(null);
+    window.scrollTo(0, 0);
+  };
   const counts: Partial<Record<Cls, number>> = {};
   for (const p of props.playbook) for (const s of p.steps) counts[s.cls] = (counts[s.cls] ?? 0) + 1;
   const warnings = (Object.entries(counts) as [Cls, number][])
@@ -521,197 +527,218 @@ function PlanScreen(props: {
   const openPlay = HORDE_PLAYS.find((p) => `hp-${p.id}` === open);
 
   return (
-    <div className="wrap">
-      <div className="row" style={{ justifyContent: 'space-between' }}>
-        <div className="stack" style={{ gap: 2 }}>
-          <span className="eyebrow">Game plan · Goblin Horde</span>
-          <h2>Scouting report</h2>
-        </div>
-        <button className="btn quiet" onClick={props.onMenu}>
-          Menu
-        </button>
-      </div>
-      <p className="small muted">Tap anything for details.</p>
-
-      <section className="stack">
-        <span className="eyebrow">The horde</span>
-        <div className="mini-grid">
-          {champs.map((e) => (
-            <button key={e.id} className={`mini ${open === e.id ? 'on' : ''}`} aria-expanded={open === e.id} onClick={() => toggle(e.id)}>
-              <span className="mini-top">
-                <span>{ENEMY_INFO[e.kind].icon}</span>
-                <span className={`tier ${e.tier}`}>{tierLabel(e.tier!)}</span>
-              </span>
-              <strong>{e.name.replace('Goblin ', '')}</strong>
-              <span className="small muted">
-                {lastName(e.player ?? '')} · Q{e.quarter}
-              </span>
+    <>
+      <div className="tabbar">
+        <div className="tabbar-inner">
+          <div className="row" style={{ justifyContent: 'space-between' }}>
+            <span className="eyebrow">Game plan · Goblin Horde</span>
+            <button className="btn quiet small" onClick={props.onMenu}>
+              Menu
             </button>
-          ))}
-          <button className={`mini ${open === 'goblins' ? 'on' : ''}`} aria-expanded={open === 'goblins'} onClick={() => toggle('goblins')}>
-            <span className="mini-top">
-              <span>👺</span>
-              <span className="tier">×{goblins.length}</span>
-            </span>
-            <strong>Goblins</strong>
-            <span className="small muted">crew the ram</span>
-          </button>
-        </div>
-        {openChamp && (
-          <div className="panel detail">
-            <strong>
-              {openChamp.name}
-              {openChamp.boss ? ' · boss' : ''}
-            </strong>
-            <span className="small muted">
-              {openChamp.player} ({openChamp.team}) · mirrors your {ENEMY_INFO[openChamp.kind].mirrors} · arrives in Q{openChamp.quarter}
-            </span>
-            <span className="small num">
-              {openChamp.maxHp} HP · hits for {openChamp.damage} · worth 🏀 {openChamp.points}
-            </span>
-            <span className="small">{ENEMY_INFO[openChamp.kind].job}</span>
           </div>
-        )}
-        {open === 'goblins' && (
-          <div className="panel detail">
-            <strong>{goblins.length} goblins</strong>
-            <span className="small muted">
-              1 per 40 opposing points ({week.teams.map((t) => `${t.team} ${t.pts}`).join(', ')}). Q1 {goblins.filter((x) => x.quarter === 1).length}, Q2{' '}
-              {goblins.filter((x) => x.quarter === 2).length}, Q3 {goblins.filter((x) => x.quarter === 3).length}.
-            </span>
-            <span className="small num">{g.tuning.goblinHp} HP · worth 🏀 1</span>
-            <span className="small">{ENEMY_INFO.goblin.job}</span>
-          </div>
-        )}
-      </section>
-
-      <section className="stack">
-        <span className="eyebrow">Objectives</span>
-        <div className="mini-grid">
-          <button className={`mini ${open === 'gate' ? 'on' : ''}`} aria-expanded={open === 'gate'} onClick={() => toggle('gate')}>
-            <span>🚪</span>
-            <strong>Storm the Gate</strong>
-            <span className="small muted">theirs · ram hits {g.ramBase}</span>
-          </button>
-          <button className={`mini ${open === 'bounty' ? 'on' : ''}`} aria-expanded={open === 'bounty'} onClick={() => toggle('bounty')}>
-            <span>🎯</span>
-            <strong>Shaman bounty</strong>
-            <span className="small muted">+{g.tuning.bountyPoints} by end of Q1</span>
-          </button>
-          <button className={`mini ${open === 'wagon' ? 'on' : ''}`} aria-expanded={open === 'wagon'} onClick={() => toggle('wagon')}>
-            <span>📦</span>
-            <strong>Loot wagon</strong>
-            <span className="small muted">Q2 · points and gold</span>
-          </button>
-        </div>
-        {open === 'gate' && (
-          <div className="panel detail small">
-            The ram needs 4 goblins pushing. It hits the {g.gate.max}-HP gate for {g.ramBase} each enemy turn, +1 per extra goblin (the opponents shot{' '}
-            {(opponentsFg() * 100).toFixed(1)}% this week). The horde scores 1 per 2 gate damage and 10 when it falls; after that, every goblin on the field
-            pillages for 1 a turn.
-          </div>
-        )}
-        {open === 'bounty' && (
-          <div className="panel detail small">
-            Take down the Goblin Shaman before the end of the first quarter for +{g.tuning.bountyPoints} on top of its takedown. It also stops the
-            reinforcements at the source.
-          </div>
-        )}
-        {open === 'wagon' && (
-          <div className="panel detail small">Arrives in Q2 with 15 HP. Breaking it scores 3 and 5 gold. It's contested while the Cutthroat stands.</div>
-        )}
-      </section>
-
-      <section className="stack">
-        <span className="eyebrow">Their playbook</span>
-        <div className="stack" style={{ gap: 4 }}>
-          {HORDE_PLAYS.map((p, i) => (
-            <button
-              key={p.id}
-              className={`linerow ${open === `hp-${p.id}` ? 'on' : ''}`}
-              aria-expanded={open === `hp-${p.id}`}
-              onClick={() => toggle(`hp-${p.id}`)}
-            >
-              <span className="num muted">{i + 1}</span>
-              <strong>{p.name}</strong>
-              <span className="small muted">{p.short}</span>
-            </button>
-          ))}
-        </div>
-        {openPlay && (
-          <div className="panel detail small">
-            Called {openPlay.when === 'otherwise' ? 'when nothing else fits' : `when ${openPlay.when}`}:{' '}
-            {openPlay.steps.map((s) => s.actors.map((a) => ENEMY_INFO[a].name.replace('Goblin ', '')).join(' or ')).join(' → ')}. Only their call shows during
-            the game; if your play breaks it, they switch to the next play that fits, in this order.
-          </div>
-        )}
-      </section>
-
-      <section className="stack">
-        <span className="eyebrow">Your week</span>
-        <div className="hero-grid">
-          {CLASSES.map((c) => {
-            const h = g.heroes[c];
-            return (
-              <button key={c} className={`mini ${open === `hero-${c}` ? 'on' : ''}`} aria-expanded={open === `hero-${c}`} onClick={() => toggle(`hero-${c}`)}>
-                <span>{CLASS_INFO[c].icon}</span>
-                <strong>{CLASS_INFO[c].name}</strong>
-                <span className="small muted">{lastName(h.player)}</span>
-                <span className="small muted">{h.touchesMax} touches</span>
+          <div className="bigtabs" role="tablist" aria-label="Game plan">
+            {(['heroes', 'horde'] as const).map((t) => (
+              <button key={t} role="tab" id={`tab-${t}`} aria-selected={tab === t} aria-controls="plan-panel" onClick={() => pickTab(t)}>
+                {t === 'heroes' ? 'Heroes' : 'Horde'}
               </button>
-            );
-          })}
+            ))}
+          </div>
         </div>
-        {openHero &&
-          (() => {
-            const h = g.heroes[openHero];
-            const l = h.line;
-            return (
-              <div className="panel detail">
-                <strong>
-                  {CLASS_INFO[openHero].name} · {h.player}
-                </strong>
-                <span className="small muted num">
-                  vs {h.opp}: {l.pts} pts, {l.reb} reb, {l.ast} ast, {l.stl} stl, {l.blk} blk, {l.fg3m} 3PM, {l.tov} tov, {l.min} min
-                </span>
-                <span className="row">
-                  <span className={`tier ${h.tier}`}>Offense {tierLabel(h.tier)}</span>
-                  <span className={`tier ${h.defTier}`}>Defense {tierLabel(h.defTier)}</span>
-                </span>
-                <span className="small">
-                  {h.touchesMax} touches · {CLASS_INFO[openHero].defense} on defense
-                  {h.td ? ' · triple-double: signature and legendary finishers' : h.dd ? ' · double-double: signature finisher' : ''}
-                </span>
+      </div>
+      <div className="wrap" id="plan-panel" role="tabpanel" aria-labelledby={`tab-${tab}`}>
+        <p className="small muted">Tap anything for details.</p>
+        {tab === 'horde' && (
+          <>
+            <section className="stack">
+              <span className="eyebrow">The horde</span>
+              <div className="mini-grid">
+                {champs.map((e) => (
+                  <button key={e.id} className={`mini ${open === e.id ? 'on' : ''}`} aria-expanded={open === e.id} onClick={() => toggle(e.id)}>
+                    <span className="mini-top">
+                      <span>{ENEMY_INFO[e.kind].icon}</span>
+                      <span className={`tier ${e.tier}`}>{tierLabel(e.tier!)}</span>
+                    </span>
+                    <strong>{e.name.replace('Goblin ', '')}</strong>
+                    <span className="small muted">
+                      {lastName(e.player ?? '')} · Q{e.quarter}
+                    </span>
+                  </button>
+                ))}
+                <button className={`mini ${open === 'goblins' ? 'on' : ''}`} aria-expanded={open === 'goblins'} onClick={() => toggle('goblins')}>
+                  <span className="mini-top">
+                    <span>👺</span>
+                    <span className="tier">×{goblins.length}</span>
+                  </span>
+                  <strong>Goblins</strong>
+                  <span className="small muted">crew the ram</span>
+                </button>
               </div>
-            );
-          })()}
-      </section>
+              {openChamp && (
+                <div className="panel detail">
+                  <strong>
+                    {openChamp.name}
+                    {openChamp.boss ? ' · boss' : ''}
+                  </strong>
+                  <span className="small muted">
+                    {openChamp.player} ({openChamp.team}) · mirrors your {ENEMY_INFO[openChamp.kind].mirrors} · arrives in Q{openChamp.quarter}
+                  </span>
+                  <span className="small num">
+                    {openChamp.maxHp} HP · hits for {openChamp.damage} · worth 🏀 {openChamp.points}
+                  </span>
+                  <span className="small">{ENEMY_INFO[openChamp.kind].job}</span>
+                </div>
+              )}
+              {open === 'goblins' && (
+                <div className="panel detail">
+                  <strong>{goblins.length} goblins</strong>
+                  <span className="small muted">
+                    1 per 40 opposing points ({week.teams.map((t) => `${t.team} ${t.pts}`).join(', ')}). Q1 {goblins.filter((x) => x.quarter === 1).length}, Q2{' '}
+                    {goblins.filter((x) => x.quarter === 2).length}, Q3 {goblins.filter((x) => x.quarter === 3).length}.
+                  </span>
+                  <span className="small num">{g.tuning.goblinHp} HP · worth 🏀 1</span>
+                  <span className="small">{ENEMY_INFO.goblin.job}</span>
+                </div>
+              )}
+            </section>
 
-      <div className="row" style={{ justifyContent: 'space-between' }}>
-        <h2>Your playbook</h2>
-        <button className="btn" onClick={props.onSuggest}>
-          Suggest plays
+            <section className="stack">
+              <span className="eyebrow">Objectives</span>
+              <div className="mini-grid">
+                <button className={`mini ${open === 'gate' ? 'on' : ''}`} aria-expanded={open === 'gate'} onClick={() => toggle('gate')}>
+                  <span>🚪</span>
+                  <strong>Storm the Gate</strong>
+                  <span className="small muted">theirs · ram hits {g.ramBase}</span>
+                </button>
+                <button className={`mini ${open === 'bounty' ? 'on' : ''}`} aria-expanded={open === 'bounty'} onClick={() => toggle('bounty')}>
+                  <span>🎯</span>
+                  <strong>Shaman bounty</strong>
+                  <span className="small muted">+{g.tuning.bountyPoints} by end of Q1</span>
+                </button>
+                <button className={`mini ${open === 'wagon' ? 'on' : ''}`} aria-expanded={open === 'wagon'} onClick={() => toggle('wagon')}>
+                  <span>📦</span>
+                  <strong>Loot wagon</strong>
+                  <span className="small muted">Q2 · points and gold</span>
+                </button>
+              </div>
+              {open === 'gate' && (
+                <div className="panel detail small">
+                  The ram needs 4 goblins pushing. It hits the {g.gate.max}-HP gate for {g.ramBase} each enemy turn, +1 per extra goblin (the opponents shot{' '}
+                  {(opponentsFg() * 100).toFixed(1)}% this week). The horde scores 1 per 2 gate damage and 10 when it falls; after that, every goblin on the
+                  field pillages for 1 a turn.
+                </div>
+              )}
+              {open === 'bounty' && (
+                <div className="panel detail small">
+                  Take down the Goblin Shaman before the end of the first quarter for +{g.tuning.bountyPoints} on top of its takedown. It also stops the
+                  reinforcements at the source.
+                </div>
+              )}
+              {open === 'wagon' && (
+                <div className="panel detail small">Arrives in Q2 with 15 HP. Breaking it scores 3 and 5 gold. It's contested while the Cutthroat stands.</div>
+              )}
+            </section>
+
+            <section className="stack">
+              <span className="eyebrow">Their playbook</span>
+              <div className="stack" style={{ gap: 4 }}>
+                {HORDE_PLAYS.map((p, i) => (
+                  <button
+                    key={p.id}
+                    className={`linerow ${open === `hp-${p.id}` ? 'on' : ''}`}
+                    aria-expanded={open === `hp-${p.id}`}
+                    onClick={() => toggle(`hp-${p.id}`)}
+                  >
+                    <span className="num muted">{i + 1}</span>
+                    <strong>{p.name}</strong>
+                    <span className="small muted">{p.short}</span>
+                  </button>
+                ))}
+              </div>
+              {openPlay && (
+                <div className="panel detail small">
+                  Called {openPlay.when === 'otherwise' ? 'when nothing else fits' : `when ${openPlay.when}`}:{' '}
+                  {openPlay.steps.map((s) => s.actors.map((a) => ENEMY_INFO[a].name.replace('Goblin ', '')).join(' or ')).join(' → ')}. Only their call shows
+                  during the game; if your play breaks it, they switch to the next play that fits, in this order.
+                </div>
+              )}
+            </section>
+          </>
+        )}
+        {tab === 'heroes' && (
+          <>
+            <section className="stack">
+              <span className="eyebrow">Your week</span>
+              <div className="hero-grid">
+                {CLASSES.map((c) => {
+                  const h = g.heroes[c];
+                  return (
+                    <button
+                      key={c}
+                      className={`mini ${open === `hero-${c}` ? 'on' : ''}`}
+                      aria-expanded={open === `hero-${c}`}
+                      onClick={() => toggle(`hero-${c}`)}
+                    >
+                      <span>{CLASS_INFO[c].icon}</span>
+                      <strong>{CLASS_INFO[c].name}</strong>
+                      <span className="small muted">{lastName(h.player)}</span>
+                      <span className="small muted">{h.touchesMax} touches</span>
+                    </button>
+                  );
+                })}
+              </div>
+              {openHero &&
+                (() => {
+                  const h = g.heroes[openHero];
+                  const l = h.line;
+                  return (
+                    <div className="panel detail">
+                      <strong>
+                        {CLASS_INFO[openHero].name} · {h.player}
+                      </strong>
+                      <span className="small muted num">
+                        vs {h.opp}: {l.pts} pts, {l.reb} reb, {l.ast} ast, {l.stl} stl, {l.blk} blk, {l.fg3m} 3PM, {l.tov} tov, {l.min} min
+                      </span>
+                      <span className="row">
+                        <span className={`tier ${h.tier}`}>Offense {tierLabel(h.tier)}</span>
+                        <span className={`tier ${h.defTier}`}>Defense {tierLabel(h.defTier)}</span>
+                      </span>
+                      <span className="small">
+                        {h.touchesMax} touches · {CLASS_INFO[openHero].defense} on defense
+                        {h.td ? ' · triple-double: signature and legendary finishers' : h.dd ? ' · double-double: signature finisher' : ''}
+                      </span>
+                    </div>
+                  );
+                })()}
+            </section>
+
+            <div className="row" style={{ justifyContent: 'space-between' }}>
+              <h2>Your playbook</h2>
+              <button className="btn" onClick={props.onSuggest}>
+                Suggest plays
+              </button>
+            </div>
+            {props.playbook.map((p, i) => (
+              <PlaySlot
+                key={i}
+                play={p}
+                open={open === `slot-${i}`}
+                onToggle={() => toggle(`slot-${i}`)}
+                onChange={() => props.onChange(i)}
+                onEdit={() => props.onEdit(i)}
+              />
+            ))}
+            {warnings.map((w) => (
+              <p className="warn" key={w}>
+                ⚠ {w}
+              </p>
+            ))}
+          </>
+        )}
+        <button className="btn primary big" onClick={props.onTipOff}>
+          Tip off
         </button>
       </div>
-      {props.playbook.map((p, i) => (
-        <PlaySlot
-          key={i}
-          play={p}
-          open={open === `slot-${i}`}
-          onToggle={() => toggle(`slot-${i}`)}
-          onChange={() => props.onChange(i)}
-          onEdit={() => props.onEdit(i)}
-        />
-      ))}
-      {warnings.map((w) => (
-        <p className="warn" key={w}>
-          ⚠ {w}
-        </p>
-      ))}
-      <button className="btn primary big" onClick={props.onTipOff}>
-        Tip off
-      </button>
-    </div>
+    </>
   );
 }
 
