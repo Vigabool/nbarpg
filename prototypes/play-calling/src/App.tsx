@@ -446,19 +446,7 @@ function Intro(props: {
             </button>
           ))}
         </div>
-        <span className="eyebrow">Defense</span>
-        <div className="opt-group">
-          <button className="opt" aria-pressed={!props.manual} onClick={() => props.setManual(false)}>
-            Automatic
-          </button>
-          <button className="opt" aria-pressed={props.manual} onClick={() => props.setManual(true)}>
-            Manual
-          </button>
-        </div>
-        <p className="muted small">
-          Heroes who don’t touch the ball defend. Automatic picks their targets; Manual lets you choose who the Warrior protects, who the Ranger closes out and
-          who the Wizard wards.
-        </p>
+        <DefenseChoice manual={props.manual} setManual={props.setManual} />
       </div>
       <button className="btn primary big" onClick={props.onStart}>
         Game plan
@@ -467,6 +455,34 @@ function Intro(props: {
         How it works
       </button>
     </div>
+  );
+}
+
+function DefenseChoice(props: { manual: boolean; setManual: (m: boolean) => void }) {
+  const [info, setInfo] = useState(false);
+  return (
+    <>
+      <div className="row" style={{ justifyContent: 'space-between' }}>
+        <span className="eyebrow">Defense</span>
+        <button className="infobtn" aria-expanded={info} aria-controls="defense-info" onClick={() => setInfo((x) => !x)}>
+          {info ? 'Hide details' : 'ⓘ What’s the difference?'}
+        </button>
+      </div>
+      <div className="opt-group">
+        <button className="opt" aria-pressed={!props.manual} onClick={() => props.setManual(false)}>
+          Automatic
+        </button>
+        <button className="opt" aria-pressed={props.manual} onClick={() => props.setManual(true)}>
+          Manual
+        </button>
+      </div>
+      {info && (
+        <p id="defense-info" className="muted small">
+          Heroes who don’t touch the ball defend. Automatic picks their targets; Manual lets you choose who the Warrior protects, who the Ranger closes out and
+          who the Wizard wards.
+        </p>
+      )}
+    </>
   );
 }
 
@@ -1740,15 +1756,7 @@ function Menu(props: {
   return (
     <ModalShell title="Menu" onClose={props.onClose}>
       <div className="panel">
-        <span className="eyebrow">Defense</span>
-        <div className="opt-group">
-          <button className="opt" aria-pressed={!props.manual} onClick={() => props.setManual(false)}>
-            Automatic
-          </button>
-          <button className="opt" aria-pressed={props.manual} onClick={() => props.setManual(true)}>
-            Manual
-          </button>
-        </div>
+        <DefenseChoice manual={props.manual} setManual={props.setManual} />
         <span className="eyebrow">Difficulty (next game)</span>
         <div className="opt-group">
           {(['normal', 'hard'] as Difficulty[]).map((d) => (
