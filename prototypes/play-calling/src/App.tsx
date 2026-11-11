@@ -20,7 +20,13 @@ import {
   DEFAULT_TUNING,
   activeHeroes,
   autoDefense,
+  beginLive,
   bestCall,
+  describeCarry,
+  finishLive,
+  liveOptions,
+  liveStep,
+  previewLive,
   contestedBase,
   crew,
   defenders,
@@ -45,6 +51,7 @@ import {
   type Enemy,
   type Frame,
   type Game,
+  type Live,
   type Projection,
   type Tuning,
 } from './engine';
@@ -62,6 +69,11 @@ type Modal =
 
 /** Step: wait for Next at every beat. Auto and Fast advance on a timer. */
 type Speed = 'step' | 'auto' | 'fast';
+/** Live: build each possession move by move. Plays: call a drawn-up play. */
+type Offense = 'live' | 'plays';
+type Proj = { damage: number; kills: number; points: number };
+const needsTarget = (m: { targets?: string }) => m.targets === 'primary' || m.targets === 'multi' || m.targets === 'double';
+const LIVE_PLAY_NAME = 'Live possession';
 interface Replay {
   frames: Frame[];
   play: Play | null;
@@ -89,6 +101,7 @@ interface Saved {
   active?: string[];
   difficulty?: Difficulty;
   manual?: boolean;
+  offense?: Offense;
   tuning?: Tuning;
   /** Replay pace (the older `speed` field is ignored so everyone starts on Step). */
   pace?: 'step' | 'auto' | 'fast';
@@ -124,6 +137,12 @@ export function App() {
   const [screen, setScreen] = useState<Screen>('intro');
   const [difficulty, setDifficulty] = useState<Difficulty>(saved.difficulty ?? 'normal');
   const [manual, setManual] = useState<boolean>(saved.manual ?? false);
+  const [offense, setOffense] = useState<Offense>(saved.offense ?? 'live');
+  const isLive = offense === 'live';
+  const [live, setLive] = useState<Live | null>(null);
+  const [liveHero, setLiveHero] = useState<Cls | null>(null);
+  const [liveMove, setLiveMove] = useState<string | null>(null);
+  const [liveDefending, setLiveDefending] = useState(false);
   const [tuning, setTuning] = useState<Tuning>({ ...DEFAULT_TUNING, ...(saved.tuning ?? {}) });
   const [custom, setCustom] = useState<Play[]>(saved.custom ?? []);
   const library = useMemo(() => [...TEMPLATES, ...custom], [custom]);
@@ -150,8 +169,8 @@ export function App() {
   const startedAt = useRef<number>(0);
 
   useEffect(() => {
-    store({ custom, active, difficulty, manual, tuning, pace: speed });
-  }, [custom, active, difficulty, manual, tuning, speed]);
+    store({ custom, active, difficulty, manual, tuning, pace: speed, offense });
+  }, [custom, active, difficulty, manual, tuning, speed, offense]);
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [screen]);
@@ -162,7 +181,12 @@ export function App() {
   const beats = useMemo(() => (replay ? beatsOf(replay.frames) : []), [replay]);
   const done = !!replay && beat >= beats.length;
   const curFrame = replay ? currentFrame(replay.frames, beats, beat) : null;
-  const shown = replay ? (curFrame?.game ?? replay.before) : game;
+  const liveBase = useMemo(
+    () => (isLive && screen === 'game' && !replay && game.phase === 'party' ? (live ?? beginLive(game)) : null),
+    [isLive, screen, replay, live, game],
+  );
+  const shown = replay ? (curFrame?.game ?? replay.before) : live ? live.ctx.g : game;
+  const liveFrame = live && live.ctx.frames.length ? live.ctx.frames[live.ctx.frames.length - 1] : null;
 
   // Step through the possession: automatically at Normal and Fast, on tap at Slow.
   useEffect(() => {
@@ -198,8 +222,15 @@ export function App() {
     setSecs([]);
     setSel(null);
     setTgt(null);
+    clearLive();
     setAdjustment(null);
     setScreen('plan');
+  }
+  function clearLive() {
+    setLive(null);
+    setLiveHero(null);
+    setLiveMove(null);
+    setLiveDefending(false);
   }
 
   const isoPlays = useMemo(() => CLASSES.map(isoPlay), []);
@@ -239,6 +270,46 @@ export function App() {
     const res = holdPossession(game, autoDefense(game, new Set()));
     begin(res.game, res.frames, null, `P${game.possession + 1} · held the ball (${s.toFixed(1)} s)`, s);
   }
+  // ---- Live possessions ----
+  const liveInPlay = useMemo(() => new Set<Cls>(live ? live.steps.map((x) => x.cls) : []), [live]);
+  const liveDefense: Defense = useMemo(() => {
+    if (!live) return {};
+    const auto = autoDefense(live.ctx.g, liveInPlay);
+    return manual ? { ...auto, ...override } : auto;
+  }, [live, liveInPlay, manual, override]);
+  const liveMoveObj = liveMove ? MOVE[liveMove] : null;
+  const liveTargeting = !!(liveBase && liveHero && liveMoveObj && needsTarget(liveMoveObj));
+  const liveProjections = useMemo(() => {
+    if (!liveBase || !liveHero || !liveMove || !liveTargeting) return new Map<string, Proj>();
+    return new Map(onField(liveBase.ctx.g).map((e) => [e.id, previewLive(liveBase, { cls: liveHero, move: liveMove }, e.id)]));
+  }, [liveBase, liveHero, liveMove, liveTargeting]);
+  function liveDo(targetId?: string) {
+    if (!liveBase || !liveHero || !liveMove) return;
+    const next = liveStep(liveBase, { cls: liveHero, move: liveMove }, targetId);
+    setLive(next);
+    setLiveHero(null);
+    setLiveMove(null);
+    if (liveOptions(next).done) endLive(next);
+  }
+  function endLive(l: Live) {
+    if (manual) {
+      setOverride({});
+      setLiveDefending(true);
+      return;
+    }
+    finishLiveWith(l, autoDefense(l.ctx.g, new Set(l.steps.map((x) => x.cls))));
+  }
+  function finishLiveWith(l: Live, def: Defense) {
+    const s = (performance.now() - startedAt.current) / 1000;
+    const res = finishLive(l, def);
+    const play: Play = { id: 'live', name: LIVE_PLAY_NAME, steps: l.steps, tags: [] };
+    begin(res.game, res.frames, play, `P${game.possession + 1} · ${l.steps.map((x) => MOVE[x.move].name).join(' → ') || 'no shot'} (${s.toFixed(1)} s)`, s);
+    const bs = beatsOf(res.frames);
+    const brk = bs.indexOf('break');
+    setBeat(brk >= 0 ? brk + 1 + (speed === 'step' ? 1 : 0) : bs.length);
+    clearLive();
+  }
+
   function begin(g: Game, fr: Frame[], play: Play | null, head: string, s: number) {
     setHistory((h) => [...h, game]);
     setReplay({ frames: fr, play, before: game, after: g, possession: game.possession });
@@ -249,13 +320,14 @@ export function App() {
     setLog((l) => [...l, head, ...fr.map((f) => `   ${f.text}`), `   Score ${g.score.party}–${g.score.horde}`]);
   }
   function timeout() {
-    if (!history.length || game.timeouts <= 0 || frames) return;
+    if (!history.length || game.timeouts <= 0 || frames || live) return;
     const prev = structuredClone(history[history.length - 1]);
     prev.timeouts = game.timeouts - 1;
     setHistory((h) => h.slice(0, -1));
     setGame(prev);
     setSel(null);
     setTgt(null);
+    clearLive();
     setLog((l) => [...l, `Timeout: possession ${prev.possession + 1} taken back.`]);
   }
 
@@ -275,6 +347,8 @@ export function App() {
           setDifficulty={setDifficulty}
           manual={manual}
           setManual={setManual}
+          offense={offense}
+          setOffense={setOffense}
           onStart={startGame}
           onGuide={() => setModal({ kind: 'guide' })}
         />
@@ -282,6 +356,7 @@ export function App() {
       {screen === 'plan' && (
         <PlanScreen
           game={game}
+          live={isLive}
           playbook={playbook}
           onSuggest={() => setActive(DEFAULT_PLAYBOOK)}
           onChange={(slot) => setModal({ kind: 'library', slot })}
@@ -295,7 +370,7 @@ export function App() {
           <Scoreboard
             game={shown}
             onTimeout={timeout}
-            canTimeout={!!history.length && game.timeouts > 0 && !frames}
+            canTimeout={!!history.length && game.timeouts > 0 && !frames && !live}
             onMenu={() => setModal({ kind: 'menu' })}
             onLast={lastReplay && !frames ? () => setModal({ kind: 'recap' }) : undefined}
           />
@@ -304,21 +379,26 @@ export function App() {
             <CallBanner game={shown} />
             <Board
               game={shown}
-              projections={projections}
-              picking={!!selPlay && !frames}
+              projections={isLive ? liveProjections : projections}
+              picking={isLive ? liveTargeting : !!selPlay && !frames}
               target={tgt}
-              frame={curFrame}
-              onPick={(id) => (selPlay && !frames ? setTgt(id) : setModal({ kind: 'enemy', id }))}
+              frame={curFrame ?? liveFrame}
+              onPick={(id) => (isLive && liveTargeting ? liveDo(id) : selPlay && !frames ? setTgt(id) : setModal({ kind: 'enemy', id }))}
             />
             <HeroRow
               game={shown}
-              inPlay={inPlay}
-              defense={selPlay && !frames ? defense : null}
-              frame={curFrame}
-              onTap={(cls) => setModal({ kind: 'hero', cls })}
+              inPlay={isLive ? liveInPlay : inPlay}
+              defense={isLive ? (liveDefending ? liveDefense : null) : selPlay && !frames ? defense : null}
+              frame={curFrame ?? liveFrame}
+              onTap={(cls) => {
+                if (isLive && liveBase && !liveDefending && !liveOptions(liveBase).done && liveOptions(liveBase).heroes.includes(cls)) {
+                  setLiveHero(cls);
+                  setLiveMove(null);
+                } else setModal({ kind: 'hero', cls });
+              }}
             />
-            <Dock game={game} playbook={playbook} isoPlays={isoPlays} sel={sel} best={best} busy={!!frames} onChoose={choosePlay} onHold={hold} />
-            <div className="spacer" style={replay ? { height: '62vh' } : undefined} />
+            {!isLive && <Dock game={game} playbook={playbook} isoPlays={isoPlays} sel={sel} best={best} busy={!!frames} onChoose={choosePlay} onHold={hold} />}
+            <div className="spacer" style={replay || isLive ? { height: '62vh' } : undefined} />
           </div>
           {replay ? (
             <ReplaySheet
@@ -330,6 +410,28 @@ export function App() {
               onSkip={() => setBeat(beats.length)}
               onSpeed={() => setSpeed((x) => (x === 'step' ? 'auto' : x === 'auto' ? 'fast' : 'step'))}
               onDone={finishPlayback}
+            />
+          ) : isLive && liveBase ? (
+            <LivePanel
+              live={liveBase}
+              hero={liveHero}
+              move={liveMove}
+              projections={liveProjections}
+              defending={liveDefending}
+              defense={liveDefense}
+              manual={manual}
+              setOverride={setOverride}
+              onHero={(c) => {
+                setLiveHero(c);
+                setLiveMove(null);
+              }}
+              onMove={setLiveMove}
+              onBack={() => (liveMove ? setLiveMove(null) : setLiveHero(null))}
+              onGo={() => liveDo()}
+              onTarget={(id) => liveDo(id)}
+              onHold={hold}
+              onEndNoShot={() => live && endLive(live)}
+              onDefend={() => live && finishLiveWith(live, liveDefense)}
             />
           ) : selPlay ? (
             <ConfirmSheet
@@ -355,6 +457,7 @@ export function App() {
       {screen === 'halftime' && adjustment && (
         <Halftime
           game={game}
+          live={isLive}
           adjustment={adjustment}
           playbook={playbook}
           library={library}
@@ -376,7 +479,7 @@ export function App() {
           game={game}
           log={log}
           secs={secs}
-          names={Object.fromEntries(library.map((p) => [p.id, p.name]))}
+          names={{ ...Object.fromEntries(library.map((p) => [p.id, p.name])), live: 'Live possessions' }}
           onAgain={startGame}
           onTitle={() => setScreen('intro')}
         />
@@ -417,6 +520,13 @@ export function App() {
           setDifficulty={setDifficulty}
           manual={manual}
           setManual={setManual}
+          offense={offense}
+          setOffense={(o) => {
+            setOffense(o);
+            clearLive();
+            setSel(null);
+            setTgt(null);
+          }}
           tuning={tuning}
           log={log}
           onApplyTuning={(t) => {
@@ -460,6 +570,8 @@ function Intro(props: {
   setDifficulty: (d: Difficulty) => void;
   manual: boolean;
   setManual: (m: boolean) => void;
+  offense: Offense;
+  setOffense: (o: Offense) => void;
   onStart: () => void;
   onGuide: () => void;
 }) {
@@ -471,8 +583,8 @@ function Intro(props: {
           Play <span>Calling</span>
         </h1>
         <p>
-          The Goblin Horde, played as a basketball game: four quarters, twelve possessions. Draw up your plays, read the horde’s call, then call yours, tap a
-          target and run it.
+          The Goblin Horde, played as a basketball game: four quarters, twelve possessions. Read the horde’s call, run your offense one move at a time, and
+          outscore them.
         </p>
         <p className="muted small">
           Week of {week.week.start} to {week.week.end}, 2025–26. Your heroes are powered by {week.heroes.map((h) => lastName(h.player)).join(', ')}.
@@ -487,6 +599,7 @@ function Intro(props: {
             </button>
           ))}
         </div>
+        <OffenseChoice offense={props.offense} setOffense={props.setOffense} />
         <DefenseChoice manual={props.manual} setManual={props.setManual} />
       </div>
       <button className="btn primary big" onClick={props.onStart}>
@@ -532,10 +645,236 @@ function DefenseChoice(props: { manual: boolean; setManual: (m: boolean) => void
   );
 }
 
+function OffenseChoice(props: { offense: Offense; setOffense: (o: Offense) => void }) {
+  const [info, setInfo] = useState(false);
+  return (
+    <>
+      <span className="eyebrow">Offense</span>
+      <div className="opt-group" style={{ alignItems: 'center' }}>
+        <button className="opt" aria-pressed={props.offense === 'live'} onClick={() => props.setOffense('live')}>
+          Live moves
+        </button>
+        <button className="opt" aria-pressed={props.offense === 'plays'} onClick={() => props.setOffense('plays')}>
+          Called plays
+        </button>
+        <button
+          className="helpbtn"
+          aria-expanded={info}
+          aria-label="What's the difference between live moves and called plays?"
+          title="What's the difference?"
+          onClick={() => setInfo((x) => !x)}
+        >
+          ?
+        </button>
+      </div>
+      {info && (
+        <p className="muted small">
+          Live moves: each possession you pick a hero, a move and a target, one action at a time, passing the ball until a finisher. Called plays: you draw up
+          plays before the game and call one per possession, and it runs on its own.
+        </p>
+      )}
+    </>
+  );
+}
+
+function LivePanel(props: {
+  live: Live;
+  hero: Cls | null;
+  move: string | null;
+  projections: Map<string, Proj>;
+  defending: boolean;
+  defense: Defense;
+  manual: boolean;
+  setOverride: (f: (d: Defense) => Defense) => void;
+  onHero: (c: Cls) => void;
+  onMove: (id: string) => void;
+  onBack: () => void;
+  onGo: () => void;
+  onTarget: (id: string) => void;
+  onHold: () => void;
+  onEndNoShot: () => void;
+  onDefend: () => void;
+}) {
+  const l = props.live;
+  const g = l.ctx.g;
+  const opts = liveOptions(l);
+  const left = 4 - l.steps.length;
+  const ball = describeCarry(l.ctx.carry);
+  const prev = l.steps.length ? MOVE[l.steps[l.steps.length - 1].move] : undefined;
+  const m = props.move ? MOVE[props.move] : null;
+  const fr = l.ctx.frames;
+  const why = (c: Cls) => {
+    const h = g.heroes[c];
+    if (h.benched > 0 || h.hp <= 0) return 'on the bench';
+    if (h.touches <= 0) return 'no touches';
+    if (l.steps.length && l.steps[l.steps.length - 1].cls === c) return 'just acted';
+    if (l.steps.filter((x) => x.cls === c).length >= 2) return 'twice already';
+    return '';
+  };
+  const best = [...props.projections.entries()].sort((a, b) => b[1].points - a[1].points || b[1].damage - a[1].damage)[0];
+  const hero = props.hero ? g.heroes[props.hero] : null;
+  const moves = hero ? MOVES.filter((mv) => mv.cls === hero.cls && (mv.kind !== 'signature' || hero.dd) && (mv.kind !== 'legendary' || hero.td)) : [];
+  const compact = !!m && needsTarget(m);
+  return (
+    <div className={`sheet livepanel ${compact ? 'compact' : ''}`}>
+      <div className="sheet-inner">
+        <div className="row" style={{ justifyContent: 'space-between' }}>
+          <span className="shotclock" aria-label={`${left} actions left on the shot clock`}>
+            <span className="eyebrow">Shot clock</span>
+            <span className="pips">
+              {[0, 1, 2, 3].map((i) => (
+                <span key={i} className={`pip ${i < left ? 'on' : ''}`} />
+              ))}
+            </span>
+            <span className="small">{opts.done ? 'done' : opts.finishersOnly ? 'last action: finish it' : `${left} left`}</span>
+          </span>
+          <span className={`ballchip ${ball.length ? 'has' : ''}`}>🏀 {ball.length ? ball.join(' · ') : 'no pass yet'}</span>
+        </div>
+        {!compact && l.steps.length > 0 && (
+          <div className="livesteps">
+            {l.steps.map((st, i) => {
+              const mine = fr.filter((f) => f.step === i);
+              const main = mine.find((f) => f.kind === 'step');
+              const pts = mine.reduce((sum, f) => sum + (f.pts ?? 0), 0);
+              const kos = mine.filter((f) => f.kind === 'ko').length;
+              return (
+                <div key={i} className="lstep">
+                  <strong>
+                    {CLASS_INFO[st.cls].icon} {MOVE[st.move].name}
+                  </strong>
+                  <span className="small">{main?.result}</span>
+                  {(pts > 0 || kos > 0) && (
+                    <span className="sc-pts num">
+                      {kos ? `${kos} KO · ` : ''}+{pts}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {props.defending ? (
+          <>
+            <h3>Defense</h3>
+            <p className="small muted">The heroes who didn’t touch the ball defend the horde’s turn.</p>
+            <div className="defrow">
+              {defenders(g, new Set(l.steps.map((x) => x.cls))).map((c) => (
+                <DefenseLine
+                  key={c}
+                  cls={c}
+                  game={g}
+                  defense={props.defense}
+                  manual={props.manual}
+                  heroes={activeHeroes(g).map((h) => h.cls)}
+                  champs={onField(g).filter((e) => e.kind !== 'goblin' && e.kind !== 'wagon')}
+                  setOverride={props.setOverride}
+                />
+              ))}
+            </div>
+            <button className="btn primary big" onClick={props.onDefend}>
+              Defend
+            </button>
+          </>
+        ) : !hero ? (
+          <>
+            <span className="small">{l.steps.length ? 'Pass to: who takes the next action?' : 'Who has the ball? Pick a hero to act.'}</span>
+            <div className="livepick">
+              {CLASSES.map((c) => {
+                const w = why(c);
+                return (
+                  <button key={c} className="lhero" disabled={!!w} onClick={() => props.onHero(c)}>
+                    <span>{CLASS_INFO[c].icon}</span>
+                    <strong>{CLASS_INFO[c].name}</strong>
+                    <span className="small muted">{w || `${g.heroes[c].touches} touches`}</span>
+                  </button>
+                );
+              })}
+            </div>
+            {opts.heroes.length === 0 && l.steps.length === 0 && (
+              <button className="btn primary" onClick={props.onHold}>
+                Hold the ball (no touches left)
+              </button>
+            )}
+            {opts.heroes.length === 0 && l.steps.length > 0 && (
+              <button className="btn primary" onClick={props.onEndNoShot}>
+                End the possession without a shot
+              </button>
+            )}
+          </>
+        ) : compact && m ? (
+          <div className="row" style={{ justifyContent: 'space-between' }}>
+            <span>
+              <strong>{m.name}</strong>: tap a target.{' '}
+              {best && (
+                <button className="linkish" onClick={() => props.onTarget(best[0])}>
+                  Best: {g.enemies.find((e) => e.id === best[0])?.name.replace('Goblin ', '')} (+{best[1].points})
+                </button>
+              )}
+            </span>
+            <button className="btn quiet small" onClick={props.onBack}>
+              Back
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="row" style={{ justifyContent: 'space-between' }}>
+              <span>
+                {CLASS_INFO[hero.cls].icon} <strong>{CLASS_INFO[hero.cls].name}</strong> · {lastName(hero.player)} · {hero.touches} touches
+              </span>
+              <button className="btn quiet small" onClick={props.onBack}>
+                Back
+              </button>
+            </div>
+            <div className="livemoves">
+              {moves.map((mv) => {
+                const fin = isFinisher(mv);
+                const used = hero.usedSpecial.includes(mv.id);
+                const blocked = (opts.finishersOnly && !fin) || used;
+                const usesBall = prev ? passHelps(prev, mv) : false;
+                const chosen = props.move === mv.id;
+                const preview = chosen && !needsTarget(mv) ? previewLive(l, { cls: hero.cls, move: mv.id }) : null;
+                return (
+                  <div key={mv.id} className={`lmove ${chosen ? 'on' : ''} ${fin ? 'fin' : ''}`}>
+                    <button className="lmove-btn" disabled={blocked} onClick={() => props.onMove(mv.id)}>
+                      <span className="row" style={{ justifyContent: 'space-between' }}>
+                        <strong>{mv.name}</strong>
+                        <span className="chips">
+                          {usesBall && <span className="chip open">uses the ball ✓</span>}
+                          {fin && <span className="chip ball">finisher</span>}
+                        </span>
+                      </span>
+                      <span className="small">{mv.action}</span>
+                      {mv.enablerText && !fin && <span className="small muted">Pass: {mv.enablerText}</span>}
+                      {used && <span className="small err">used this game</span>}
+                    </button>
+                    {preview && (
+                      <div className="row" style={{ justifyContent: 'space-between' }}>
+                        <span className="small">
+                          {preview.damage ? `${preview.damage} damage · ` : ''}
+                          {preview.kills ? `${preview.kills} KO · ` : ''}+{preview.points}
+                        </span>
+                        <button className="btn primary small" onClick={props.onGo}>
+                          Go
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ---------- Pre-game ----------
 
 function PlanScreen(props: {
   game: Game;
+  live: boolean;
   playbook: Play[];
   onSuggest: () => void;
   onChange: (slot: number) => void;
@@ -747,32 +1086,51 @@ function PlanScreen(props: {
                         {h.touchesMax} touches · {CLASS_INFO[openHero].defense} on defense
                         {h.td ? ' · triple-double: signature and legendary finishers' : h.dd ? ' · double-double: signature finisher' : ''}
                       </span>
+                      <span className="chips">
+                        {MOVES.filter((m) => m.cls === openHero && (m.kind !== 'signature' || h.dd) && (m.kind !== 'legendary' || h.td)).map((m) => (
+                          <span key={m.id} className={`chip ${isFinisher(m) ? 'ball' : ''}`}>
+                            {m.name}
+                          </span>
+                        ))}
+                      </span>
                     </div>
                   );
                 })()}
             </section>
 
-            <div className="row" style={{ justifyContent: 'space-between' }}>
-              <h2>Your playbook</h2>
-              <button className="btn" onClick={props.onSuggest}>
-                Suggest plays
-              </button>
-            </div>
-            {props.playbook.map((p, i) => (
-              <PlaySlot
-                key={i}
-                play={p}
-                open={open === `slot-${i}`}
-                onToggle={() => toggle(`slot-${i}`)}
-                onChange={() => props.onChange(i)}
-                onEdit={() => props.onEdit(i)}
-              />
-            ))}
-            {warnings.map((w) => (
-              <p className="warn" key={w}>
-                ⚠ {w}
-              </p>
-            ))}
+            {props.live ? (
+              <div className="panel small">
+                <strong>Live offense</strong>
+                <span>
+                  You build each possession during the game: pick a hero, pick a move, pick a target, then pass to the next hero. Up to 4 actions; the last must
+                  be a finisher. Tap a hero above to see their moves.
+                </span>
+              </div>
+            ) : (
+              <>
+                <div className="row" style={{ justifyContent: 'space-between' }}>
+                  <h2>Your playbook</h2>
+                  <button className="btn" onClick={props.onSuggest}>
+                    Suggest plays
+                  </button>
+                </div>
+                {props.playbook.map((p, i) => (
+                  <PlaySlot
+                    key={i}
+                    play={p}
+                    open={open === `slot-${i}`}
+                    onToggle={() => toggle(`slot-${i}`)}
+                    onChange={() => props.onChange(i)}
+                    onEdit={() => props.onEdit(i)}
+                  />
+                ))}
+                {warnings.map((w) => (
+                  <p className="warn" key={w}>
+                    ⚠ {w}
+                  </p>
+                ))}
+              </>
+            )}
           </>
         )}
         <button className="btn primary big" onClick={props.onTipOff}>
@@ -985,7 +1343,7 @@ function statusChips(g: Game, e: Enemy) {
   return out;
 }
 
-function projText(p: Projection | undefined) {
+function projText(p: Proj | undefined) {
   if (!p) return '';
   const bits = [`${p.damage} dmg`];
   if (p.kills) bits.push(`${p.kills} KO`);
@@ -995,7 +1353,7 @@ function projText(p: Projection | undefined) {
 
 function Board(props: {
   game: Game;
-  projections: Map<string, Projection>;
+  projections: Map<string, Proj>;
   picking: boolean;
   target: string | null;
   frame: Frame | null;
@@ -1336,7 +1694,7 @@ function ReplayBody(props: { replay: Replay; beats: Beat[]; beat: number }) {
     <div className="stack">
       <div className="row" style={{ justifyContent: 'space-between' }}>
         <span className="eyebrow" style={{ color: 'var(--party)' }}>
-          Your possession{play ? ` · ${play.name}` : ''}
+          Your possession{play && play.id !== 'live' ? ` · ${play.name}` : ''}
         </span>
         <span className="floatpts num">+{partyPts}</span>
       </div>
@@ -1607,6 +1965,7 @@ function BoxScore(props: { game: Game; names: Record<string, string> }) {
 
 function Halftime(props: {
   game: Game;
+  live: boolean;
   adjustment: Adjustment;
   playbook: Play[];
   library: Play[];
@@ -1641,7 +2000,7 @@ function Halftime(props: {
         </h1>
         <span className="muted">{g.score.party >= g.score.horde ? 'Heroes lead' : 'Goblins lead'}</span>
       </div>
-      <BoxScore game={g} names={Object.fromEntries(props.library.map((p) => [p.id, p.name]))} />
+      <BoxScore game={g} names={{ ...Object.fromEntries(props.library.map((p) => [p.id, p.name])), live: 'Live possessions' }} />
       <div className="panel adj">
         <span className="eyebrow" style={{ color: 'var(--horde)' }}>
           The horde adjusts
@@ -1649,55 +2008,59 @@ function Halftime(props: {
         <h3>{a.name}</h3>
         <p>{a.text}</p>
       </div>
-      <div className="row" style={{ justifyContent: 'space-between' }}>
-        <h2>Your adjustments</h2>
-        <span className="small">{props.changesLeft} of 2 changes left</span>
-      </div>
-      {suggestions[0] && weakest >= 0 && props.changesLeft > 0 && (
-        <div className="panel">
-          <span className="eyebrow">Suggested</span>
-          <p>
-            Swap <strong>{props.playbook[weakest].name}</strong> for <strong>{suggestions[0].name}</strong>: {suggestions[0].blurb}
-          </p>
-          <button className="btn" onClick={() => props.onSwap(weakest, suggestions[0].id)}>
-            Make this swap
-          </button>
-        </div>
-      )}
-      {props.playbook.map((p, i) => (
-        <div className="panel" key={i}>
-          <div className="slot">
-            <div className="stack" style={{ gap: 3, minWidth: 0 }}>
-              <h3>{p.name}</h3>
-              <span className="small">{chainText(p)}</span>
-              <span className="small muted num">
-                {g.stats.plays[p.id]?.calls ?? 0} calls, {g.stats.plays[p.id]?.pts ?? 0} pts
-              </span>
-            </div>
-            <div className="stack">
-              <select
-                id={`swap-${i}`}
-                aria-label={`Swap ${p.name}`}
-                disabled={props.changesLeft <= 0}
-                value={p.id}
-                onChange={(e) => props.onSwap(i, e.target.value)}
-                style={{ maxWidth: 150, padding: 6, borderRadius: 6 }}
-              >
-                {props.library
-                  .filter((x) => x.id === p.id || !inBook.has(x.id))
-                  .map((x) => (
-                    <option key={x.id} value={x.id}>
-                      {x.name}
-                    </option>
-                  ))}
-              </select>
-              <button className="btn quiet" disabled={props.changesLeft <= 0} onClick={() => props.onEdit(i)}>
-                Edit
+      {!props.live && (
+        <>
+          <div className="row" style={{ justifyContent: 'space-between' }}>
+            <h2>Your adjustments</h2>
+            <span className="small">{props.changesLeft} of 2 changes left</span>
+          </div>
+          {suggestions[0] && weakest >= 0 && props.changesLeft > 0 && (
+            <div className="panel">
+              <span className="eyebrow">Suggested</span>
+              <p>
+                Swap <strong>{props.playbook[weakest].name}</strong> for <strong>{suggestions[0].name}</strong>: {suggestions[0].blurb}
+              </p>
+              <button className="btn" onClick={() => props.onSwap(weakest, suggestions[0].id)}>
+                Make this swap
               </button>
             </div>
-          </div>
-        </div>
-      ))}
+          )}
+          {props.playbook.map((p, i) => (
+            <div className="panel" key={i}>
+              <div className="slot">
+                <div className="stack" style={{ gap: 3, minWidth: 0 }}>
+                  <h3>{p.name}</h3>
+                  <span className="small">{chainText(p)}</span>
+                  <span className="small muted num">
+                    {g.stats.plays[p.id]?.calls ?? 0} calls, {g.stats.plays[p.id]?.pts ?? 0} pts
+                  </span>
+                </div>
+                <div className="stack">
+                  <select
+                    id={`swap-${i}`}
+                    aria-label={`Swap ${p.name}`}
+                    disabled={props.changesLeft <= 0}
+                    value={p.id}
+                    onChange={(e) => props.onSwap(i, e.target.value)}
+                    style={{ maxWidth: 150, padding: 6, borderRadius: 6 }}
+                  >
+                    {props.library
+                      .filter((x) => x.id === p.id || !inBook.has(x.id))
+                      .map((x) => (
+                        <option key={x.id} value={x.id}>
+                          {x.name}
+                        </option>
+                      ))}
+                  </select>
+                  <button className="btn quiet" disabled={props.changesLeft <= 0} onClick={() => props.onEdit(i)}>
+                    Edit
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </>
+      )}
       <div className="panel">
         <span className="eyebrow">Locker room</span>
         <p className="small">Fallen heroes return at half HP; everyone else heals 25% of their max. Touches don’t reset.</p>
@@ -1709,7 +2072,7 @@ function Halftime(props: {
         </p>
       </div>
       <button className="btn primary big" onClick={props.onStart}>
-        {props.changesLeft === 2 ? 'Keep the game plan' : 'Start the second half'}
+        {props.live ? 'Start the second half' : props.changesLeft === 2 ? 'Keep the game plan' : 'Start the second half'}
       </button>
     </div>
   );
@@ -2012,6 +2375,8 @@ function Menu(props: {
   setDifficulty: (d: Difficulty) => void;
   manual: boolean;
   setManual: (m: boolean) => void;
+  offense: Offense;
+  setOffense: (o: Offense) => void;
   tuning: Tuning;
   log: string[];
   onApplyTuning: (t: Tuning) => void;
@@ -2038,6 +2403,7 @@ function Menu(props: {
   return (
     <ModalShell title="Menu" onClose={props.onClose}>
       <div className="panel">
+        <OffenseChoice offense={props.offense} setOffense={props.setOffense} />
         <DefenseChoice manual={props.manual} setManual={props.setManual} />
         <span className="eyebrow">Difficulty (next game)</span>
         <div className="opt-group">

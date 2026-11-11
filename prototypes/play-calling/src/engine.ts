@@ -17,6 +17,7 @@ import {
   type HordePlay,
   type Move,
   type Play,
+  type PlayStep,
   type Tier,
 } from './content';
 import week from './week.json';
@@ -503,7 +504,7 @@ export function chooseCall(g: Game): HordeCall | null {
 
 // ---------- The party's possession ----------
 
-interface Carry {
+export interface Carry {
   dmg: number;
   crit: boolean;
   empower: boolean;
@@ -633,236 +634,252 @@ function award(g: Game, by: Cls, pts: number, playId?: string) {
  * Run the party's play on a primary target, then (unless preview) the enemy turn.
  * Returns every frame so the UI can replay the possession.
  */
+interface StepCtx {
+  g: Game;
+  frames: Frame[];
+  rec: boolean;
+  carry: Carry;
+  scouted: boolean;
+  playId: string;
+}
+
+/** One hero's step: receive the pass, act, score, then pass on. */
+function doStep(ctx: StepCtx, step: PlayStep, i: number, primaryId: string) {
+  const { g, frames, rec, scouted } = ctx;
+  const snap = () => (rec ? clone(g) : g);
+  let carry = ctx.carry;
+  const firstFrame = frames.length;
+  const h = g.heroes[step.cls];
+  const m = MOVE[step.move];
+  const mult = tm(h.tier);
+  h.touches -= 1;
+  g.stats.heroes[h.cls].touches += 1;
+  // Receive the pass.
+  if (carry.heal) {
+    const healed = Math.min(h.maxHp - h.hp, carry.heal);
+    h.hp += healed;
+    if (carry.passer === 'cleric') g.last.clericHealed += healed;
+  }
+  if (carry.armor) h.armor += carry.armor;
+  const primary = g.enemies.find((e) => e.id === primaryId && e.hp > 0) ?? onField(g)[0];
+  if (m.kind === 'signature' || m.kind === 'legendary') h.usedSpecial.push(m.id);
+  const scoreBefore = g.score.party;
+  const parts: string[] = [];
+
+  // Effects that don't need an enemy.
+  switch (m.effect) {
+    case 'partyArmor':
+      for (const x of activeHeroes(g)) x.armor += Math.round((m.amount ?? 0) * mult);
+      parts.push(`every hero +${Math.round((m.amount ?? 0) * mult)} armor`);
+      break;
+    case 'healAlly': {
+      const t = [...activeHeroes(g)].sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
+      if (t) {
+        const healed = Math.min(t.maxHp - t.hp, Math.round((m.amount ?? 0) * mult));
+        t.hp += healed;
+        g.last.clericHealed += healed;
+        parts.push(healed ? `heals the ${CLASS_INFO[t.cls].name} ${healed}` : 'no one needs healing');
+      }
+      break;
+    }
+    case 'healParty':
+    case 'healParty15': {
+      let total = 0;
+      for (const x of activeHeroes(g)) {
+        const healed = Math.min(x.maxHp - x.hp, Math.round((m.amount ?? 0) * mult));
+        x.hp += healed;
+        total += healed;
+      }
+      g.last.clericHealed += total;
+      parts.push(`heals the party ${total}`);
+      break;
+    }
+    case 'lastStand':
+      h.lastStand = true;
+      parts.push("can't fall for the rest of the game");
+      break;
+    case 'shadow':
+      h.untargetable = true;
+      break;
+    case 'revive':
+      for (const x of CLASSES.map((c) => g.heroes[c]))
+        if (x.benched > 0) {
+          x.benched = 0;
+          x.hp = x.maxHp;
+          parts.push(`the ${CLASS_INFO[x.cls].name} returns`);
+        }
+      break;
+  }
+
+  if (primary) {
+    const fin = isFinisher(m);
+    // Targets.
+    let targets: Enemy[] = [];
+    if (m.targets === 'all') targets = onField(g);
+    else if (m.targets === 'multi') targets = pickTargets(g, primary, (m.count ?? 1) + (carry.split ? 1 : 0));
+    else if (m.targets === 'primary' || m.targets === 'double') targets = carry.split ? pickTargets(g, primary, 2) : [primary];
+    if (m.effect === 'pin' && primary.kind !== 'goblin') {
+      const c = crew(g).find((e) => !e.pinned);
+      targets = c ? [c] : [];
+    }
+    const openPrimary = m.ignoresContest || carry.open || !(contestedBase(g, primary) || starDoubled(g, h.cls));
+
+    const hit = (e: Enemy, base: number): number => {
+      if (e.hp <= 0) return 0;
+      let d = base * mult + carry.dmg;
+      if (e.exposed > 0) d += 3;
+      if (e.poison > 0) d += carry.vsPoison;
+      if (e.exposed > 0) d += carry.vsMarked;
+      if (m.doubleVsShaken && (e.taunted || e.disabled)) d *= 2;
+      if (carry.crit || m.alwaysCrit) d *= 2;
+      if (carry.empower) d *= 1.5;
+      const contested = fin && !m.ignoresContest && !carry.open && (contestedBase(g, e) || starDoubled(g, h.cls));
+      if (contested) d *= 0.5;
+      if (!(m.ignoreArmor || carry.ignoreArmor)) d -= e.armor;
+      const dealt = Math.max(0, Math.min(e.hp, Math.round(d)));
+      e.hp -= dealt;
+      g.stats.heroes[h.cls].dmg += dealt;
+      return dealt;
+    };
+
+    if (m.effect === 'assassinate') {
+      if (!primary.boss) {
+        const dealt = primary.hp;
+        primary.hp = 0;
+        parts.push(`assassinates the ${primary.name}`);
+        g.stats.heroes[h.cls].dmg += dealt;
+      } else parts.push(`${hit(primary, m.damage ?? 0)} to the ${primary.name}`);
+    } else if (m.damage) {
+      if (m.targets === 'double') {
+        const first = hit(primary, m.damage);
+        const next = primary.hp > 0 ? primary : pickTargets(g, primary, 2)[1];
+        const second = next ? hit(next, m.damage) : 0;
+        parts.push(`${first} + ${second} damage`);
+        for (const t of targets.slice(1)) parts.push(`${hit(t, m.damage)} to the ${t.name}`);
+      } else {
+        const dealt = targets.map((t) => ({ t, d: hit(t, m.damage!) }));
+        parts.push(dealt.length === 1 ? `${dealt[0].d} to the ${dealt[0].t.name}` : `${dealt.reduce((s, x) => s + x.d, 0)} across ${dealt.length} enemies`);
+      }
+    }
+
+    // Statuses on the enemy.
+    switch (m.effect) {
+      case 'taunt':
+        primary.taunted = true;
+        parts.push('taunted');
+        break;
+      case 'tauntAll':
+        for (const e of onField(g)) e.taunted = true;
+        parts.push('every enemy taunted');
+        break;
+      case 'expose':
+        for (const t of targets) t.exposed = Math.max(t.exposed, 1);
+        parts.push('Exposed');
+        break;
+      case 'mark':
+        primary.exposed = 2;
+        parts.push('Marked');
+        break;
+      case 'strip':
+        if (isChampion(primary) && !primary.boss) {
+          primary.disabled = true;
+          parts.push('Disabled');
+        } else {
+          primary.exposed = Math.max(primary.exposed, 1);
+          parts.push('Exposed');
+        }
+        break;
+      case 'poison':
+        primary.poison = Math.round((m.amount ?? 3) * mult);
+        parts.push('poisoned');
+        break;
+      case 'pin':
+        for (const t of targets) t.pinned = true;
+        parts.push(targets.length ? 'a goblin Pinned off the ram' : 'no goblin to Pin');
+        break;
+      case 'frost':
+        primary.frost = true;
+        parts.push('Frosted');
+        break;
+    }
+
+    if (fin) {
+      const name = primary.name;
+      if (openPrimary) {
+        const pts = m.three ? 3 : g.tuning.shotPoints;
+        g.stats.party.shots += pts;
+        award(g, h.cls, pts, ctx.playId);
+        if (carry.passer) g.stats.heroes[carry.passer].ast += 1;
+        parts.push(`open look on the ${name}: +${pts}`);
+      } else parts.push(`contested by the crowd: no shot points`);
+    }
+    frames.push({
+      game: snap(),
+      text: `${CLASS_INFO[h.cls].name} · ${m.name}: ${parts.join(', ')}`,
+      side: 'party',
+      actor: h.cls,
+      target: primary.id,
+      pts: g.score.party - scoreBefore || undefined,
+      kind: 'step',
+      result: parts.join(', '),
+    });
+    sweep(g, h.cls, frames, rec, ctx.playId);
+
+    // Putback.
+    if (fin && carry.putbackFrom && primary.hp > 0) {
+      const p = g.heroes[carry.putbackFrom];
+      const half = Math.max(1, Math.round(((m.damage ?? 0) * mult) / 2));
+      const dealt = Math.min(primary.hp, Math.max(0, half - primary.armor));
+      primary.hp -= dealt;
+      let pts = 0;
+      if (!(contestedBase(g, primary) || starDoubled(g, p.cls))) {
+        pts = g.tuning.shotPoints;
+        g.stats.party.shots += pts;
+        award(g, p.cls, pts, ctx.playId);
+      }
+      frames.push({
+        game: snap(),
+        text: `${CLASS_INFO[p.cls].name} · putback: ${dealt} to the ${primary.name}${pts ? `: +${pts}` : ''}`,
+        side: 'party',
+        actor: p.cls,
+        target: primary.id,
+        pts: pts || undefined,
+        kind: 'putback',
+        result: `putback ${dealt}${pts ? `, +${pts}` : ''}`,
+      });
+      sweep(g, p.cls, frames, rec, ctx.playId);
+    }
+  } else {
+    frames.push({
+      game: snap(),
+      text: `${CLASS_INFO[h.cls].name} · ${m.name}: ${parts.join(', ') || 'no target'}`,
+      side: 'party',
+      actor: h.cls,
+      kind: 'step',
+      result: parts.join(', ') || 'no target',
+    });
+  }
+
+  // Pass on.
+  carry = enablerCarry(m.enabler, mult, carry.double, scouted, h.cls);
+  for (let k = firstFrame; k < frames.length; k++) frames[k].step = i;
+  ctx.carry = carry;
+}
+
 export function runPossession(g0: Game, play: Play, primaryId: string, defense: Defense, opts: { preview?: boolean } = {}): { game: Game; frames: Frame[] } {
   const g = clone(g0);
   const frames: Frame[] = [];
   const rec = !opts.preview;
-  const snap = () => (rec ? clone(g) : g);
   const scouted = g.lastPlayId === play.id;
   g.stats.plays[play.id] ??= { calls: 0, pts: 0 };
   g.stats.plays[play.id].calls += 1;
   g.last = { crewDowns: {}, clericHealed: 0 };
-  if (scouted) frames.push({ game: snap(), text: `${play.name} was just run: the defense has it scouted, so its passes count for half.`, side: 'info' });
-  let carry = emptyCarry();
+  if (scouted)
+    frames.push({ game: rec ? clone(g) : g, text: `${play.name} was just run: the defense has it scouted, so its passes count for half.`, side: 'info' });
   const startScore = g.score.party;
 
-  play.steps.forEach((step, i) => {
-    const firstFrame = frames.length;
-    const h = g.heroes[step.cls];
-    const m = MOVE[step.move];
-    const mult = tm(h.tier);
-    h.touches -= 1;
-    g.stats.heroes[h.cls].touches += 1;
-    // Receive the pass.
-    if (carry.heal) {
-      const healed = Math.min(h.maxHp - h.hp, carry.heal);
-      h.hp += healed;
-      if (carry.passer === 'cleric') g.last.clericHealed += healed;
-    }
-    if (carry.armor) h.armor += carry.armor;
-    const primary = g.enemies.find((e) => e.id === primaryId && e.hp > 0) ?? onField(g)[0];
-    if (m.kind === 'signature' || m.kind === 'legendary') h.usedSpecial.push(m.id);
-    const scoreBefore = g.score.party;
-    const parts: string[] = [];
-
-    // Effects that don't need an enemy.
-    switch (m.effect) {
-      case 'partyArmor':
-        for (const x of activeHeroes(g)) x.armor += Math.round((m.amount ?? 0) * mult);
-        parts.push(`every hero +${Math.round((m.amount ?? 0) * mult)} armor`);
-        break;
-      case 'healAlly': {
-        const t = [...activeHeroes(g)].sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
-        if (t) {
-          const healed = Math.min(t.maxHp - t.hp, Math.round((m.amount ?? 0) * mult));
-          t.hp += healed;
-          g.last.clericHealed += healed;
-          parts.push(`heals the ${CLASS_INFO[t.cls].name} ${healed}`);
-        }
-        break;
-      }
-      case 'healParty':
-      case 'healParty15': {
-        let total = 0;
-        for (const x of activeHeroes(g)) {
-          const healed = Math.min(x.maxHp - x.hp, Math.round((m.amount ?? 0) * mult));
-          x.hp += healed;
-          total += healed;
-        }
-        g.last.clericHealed += total;
-        parts.push(`heals the party ${total}`);
-        break;
-      }
-      case 'lastStand':
-        h.lastStand = true;
-        parts.push("can't fall for the rest of the game");
-        break;
-      case 'shadow':
-        h.untargetable = true;
-        break;
-      case 'revive':
-        for (const x of CLASSES.map((c) => g.heroes[c]))
-          if (x.benched > 0) {
-            x.benched = 0;
-            x.hp = x.maxHp;
-            parts.push(`the ${CLASS_INFO[x.cls].name} returns`);
-          }
-        break;
-    }
-
-    if (primary) {
-      const fin = isFinisher(m);
-      // Targets.
-      let targets: Enemy[] = [];
-      if (m.targets === 'all') targets = onField(g);
-      else if (m.targets === 'multi') targets = pickTargets(g, primary, (m.count ?? 1) + (carry.split ? 1 : 0));
-      else if (m.targets === 'primary' || m.targets === 'double') targets = carry.split ? pickTargets(g, primary, 2) : [primary];
-      if (m.effect === 'pin' && primary.kind !== 'goblin') {
-        const c = crew(g).find((e) => !e.pinned);
-        targets = c ? [c] : [];
-      }
-      const openPrimary = m.ignoresContest || carry.open || !(contestedBase(g, primary) || starDoubled(g, h.cls));
-
-      const hit = (e: Enemy, base: number): number => {
-        if (e.hp <= 0) return 0;
-        let d = base * mult + carry.dmg;
-        if (e.exposed > 0) d += 3;
-        if (e.poison > 0) d += carry.vsPoison;
-        if (e.exposed > 0) d += carry.vsMarked;
-        if (m.doubleVsShaken && (e.taunted || e.disabled)) d *= 2;
-        if (carry.crit || m.alwaysCrit) d *= 2;
-        if (carry.empower) d *= 1.5;
-        const contested = fin && !m.ignoresContest && !carry.open && (contestedBase(g, e) || starDoubled(g, h.cls));
-        if (contested) d *= 0.5;
-        if (!(m.ignoreArmor || carry.ignoreArmor)) d -= e.armor;
-        const dealt = Math.max(0, Math.min(e.hp, Math.round(d)));
-        e.hp -= dealt;
-        g.stats.heroes[h.cls].dmg += dealt;
-        return dealt;
-      };
-
-      if (m.effect === 'assassinate') {
-        if (!primary.boss) {
-          const dealt = primary.hp;
-          primary.hp = 0;
-          parts.push(`assassinates the ${primary.name}`);
-          g.stats.heroes[h.cls].dmg += dealt;
-        } else parts.push(`${hit(primary, m.damage ?? 0)} to the ${primary.name}`);
-      } else if (m.damage) {
-        if (m.targets === 'double') {
-          const first = hit(primary, m.damage);
-          const next = primary.hp > 0 ? primary : pickTargets(g, primary, 2)[1];
-          const second = next ? hit(next, m.damage) : 0;
-          parts.push(`${first} + ${second} damage`);
-          for (const t of targets.slice(1)) parts.push(`${hit(t, m.damage)} to the ${t.name}`);
-        } else {
-          const dealt = targets.map((t) => ({ t, d: hit(t, m.damage!) }));
-          parts.push(dealt.length === 1 ? `${dealt[0].d} to the ${dealt[0].t.name}` : `${dealt.reduce((s, x) => s + x.d, 0)} across ${dealt.length} enemies`);
-        }
-      }
-
-      // Statuses on the enemy.
-      switch (m.effect) {
-        case 'taunt':
-          primary.taunted = true;
-          parts.push('taunted');
-          break;
-        case 'tauntAll':
-          for (const e of onField(g)) e.taunted = true;
-          parts.push('every enemy taunted');
-          break;
-        case 'expose':
-          for (const t of targets) t.exposed = Math.max(t.exposed, 1);
-          parts.push('Exposed');
-          break;
-        case 'mark':
-          primary.exposed = 2;
-          parts.push('Marked');
-          break;
-        case 'strip':
-          if (isChampion(primary) && !primary.boss) {
-            primary.disabled = true;
-            parts.push('Disabled');
-          } else {
-            primary.exposed = Math.max(primary.exposed, 1);
-            parts.push('Exposed');
-          }
-          break;
-        case 'poison':
-          primary.poison = Math.round((m.amount ?? 3) * mult);
-          parts.push('poisoned');
-          break;
-        case 'pin':
-          for (const t of targets) t.pinned = true;
-          parts.push(targets.length ? 'a goblin Pinned off the ram' : 'no goblin to Pin');
-          break;
-        case 'frost':
-          primary.frost = true;
-          parts.push('Frosted');
-          break;
-      }
-
-      if (fin) {
-        const name = primary.name;
-        if (openPrimary) {
-          const pts = m.three ? 3 : g.tuning.shotPoints;
-          g.stats.party.shots += pts;
-          award(g, h.cls, pts, play.id);
-          if (carry.passer) g.stats.heroes[carry.passer].ast += 1;
-          parts.push(`open look on the ${name}: +${pts}`);
-        } else parts.push(`contested by the crowd: no shot points`);
-      }
-      frames.push({
-        game: snap(),
-        text: `${CLASS_INFO[h.cls].name} · ${m.name}: ${parts.join(', ')}`,
-        side: 'party',
-        actor: h.cls,
-        target: primary.id,
-        pts: g.score.party - scoreBefore || undefined,
-        kind: 'step',
-        result: parts.join(', '),
-      });
-      sweep(g, h.cls, frames, rec, play.id);
-
-      // Putback.
-      if (fin && carry.putbackFrom && primary.hp > 0) {
-        const p = g.heroes[carry.putbackFrom];
-        const half = Math.max(1, Math.round(((m.damage ?? 0) * mult) / 2));
-        const dealt = Math.min(primary.hp, Math.max(0, half - primary.armor));
-        primary.hp -= dealt;
-        let pts = 0;
-        if (!(contestedBase(g, primary) || starDoubled(g, p.cls))) {
-          pts = g.tuning.shotPoints;
-          g.stats.party.shots += pts;
-          award(g, p.cls, pts, play.id);
-        }
-        frames.push({
-          game: snap(),
-          text: `${CLASS_INFO[p.cls].name} · putback: ${dealt} to the ${primary.name}${pts ? `: +${pts}` : ''}`,
-          side: 'party',
-          actor: p.cls,
-          target: primary.id,
-          pts: pts || undefined,
-          kind: 'putback',
-          result: `putback ${dealt}${pts ? `, +${pts}` : ''}`,
-        });
-        sweep(g, p.cls, frames, rec, play.id);
-      }
-    } else {
-      frames.push({
-        game: snap(),
-        text: `${CLASS_INFO[h.cls].name} · ${m.name}: ${parts.join(', ') || 'no target'}`,
-        side: 'party',
-        actor: h.cls,
-        kind: 'step',
-        result: parts.join(', ') || 'no target',
-      });
-    }
-
-    // Pass on.
-    carry = enablerCarry(m.enabler, mult, carry.double, scouted, h.cls);
-    for (let k = firstFrame; k < frames.length; k++) frames[k].step = i;
-  });
+  const ctx: StepCtx = { g, frames, rec, carry: emptyCarry(), scouted, playId: play.id };
+  play.steps.forEach((step, i) => doStep(ctx, step, i, primaryId));
 
   g.log.push({ t: `${play.name}: +${g.score.party - startScore}`, side: 'party', pts: g.score.party - startScore });
   g.lastPlayId = play.id;
@@ -876,6 +893,90 @@ export function runPossession(g0: Game, play: Play, primaryId: string, defense: 
   enemyTurn(g, inPlay, defense, frames);
   endPossession(g, frames);
   markPhases(frames, partyEnd);
+  return { game: g, frames };
+}
+
+// ---------- Live possessions: one step at a time ----------
+
+export interface Live {
+  ctx: StepCtx;
+  steps: PlayStep[];
+  startScore: number;
+}
+
+export function beginLive(g0: Game): Live {
+  const g = clone(g0);
+  g.last = { crewDowns: {}, clericHealed: 0 };
+  g.stats.plays.live ??= { calls: 0, pts: 0 };
+  g.stats.plays.live.calls += 1;
+  return { ctx: { g, frames: [], rec: true, carry: emptyCarry(), scouted: false, playId: 'live' }, steps: [], startScore: g.score.party };
+}
+
+export function liveStep(l0: Live, step: PlayStep, targetId?: string): Live {
+  const l = structuredClone(l0);
+  doStep(l.ctx, step, l.steps.length, targetId ?? onField(l.ctx.g)[0]?.id ?? '');
+  l.steps.push(step);
+  return l;
+}
+
+/** What a step would do, without recording it. */
+export function previewLive(l: Live, step: PlayStep, targetId?: string): { damage: number; kills: number; points: number; open: boolean } {
+  const ctx: StepCtx = { ...l.ctx, g: clone(l.ctx.g), frames: [], rec: false, carry: { ...l.ctx.carry } };
+  const before = new Map(ctx.g.enemies.map((e) => [e.id, e.hp]));
+  const shots = ctx.g.stats.party.shots;
+  doStep(ctx, step, l.steps.length, targetId ?? onField(ctx.g)[0]?.id ?? '');
+  let damage = 0;
+  let kills = 0;
+  for (const e of ctx.g.enemies) {
+    const b = before.get(e.id) ?? 0;
+    if (b > 0) damage += b - Math.max(0, e.hp);
+    if (b > 0 && e.hp <= 0) kills += 1;
+  }
+  return { damage, kills, points: ctx.g.score.party - l.ctx.g.score.party, open: ctx.g.stats.party.shots > shots };
+}
+
+/** Which heroes can take the next step, and whether the shot clock leaves only finishers. */
+export function liveOptions(l: Live): { heroes: Cls[]; finishersOnly: boolean; done: boolean } {
+  const g = l.ctx.g;
+  const last = l.steps[l.steps.length - 1];
+  const finished = !!last && isFinisher(MOVE[last.move]);
+  const heroes = activeHeroes(g)
+    .filter((h) => h.touches > 0 && h.cls !== last?.cls && l.steps.filter((s) => s.cls === h.cls).length < 2)
+    .map((h) => h.cls);
+  return { heroes, finishersOnly: l.steps.length >= 3, done: finished || l.steps.length >= 4 };
+}
+
+export function describeCarry(c: Carry): string[] {
+  const out: string[] = [];
+  if (c.dmg) out.push(`+${c.dmg} damage`);
+  if (c.crit) out.push('crit (double damage)');
+  if (c.empower) out.push('+50% damage');
+  if (c.open) out.push('open look');
+  if (c.split) out.push('split (+1 target)');
+  if (c.heal) out.push(`heal ${c.heal}`);
+  if (c.armor) out.push(`armor +${c.armor}`);
+  if (c.putbackFrom) out.push('putback');
+  if (c.ignoreArmor) out.push('ignores armor');
+  if (c.double) out.push("doubles the next hero's pass");
+  if (c.vsPoison) out.push(`+${c.vsPoison} on a poisoned enemy`);
+  if (c.vsMarked) out.push(`+${c.vsMarked} on the marked enemy`);
+  return out;
+}
+
+/** End the party's half (with or without a finisher) and play the horde's turn. */
+export function finishLive(l: Live, defense: Defense): { game: Game; frames: Frame[] } {
+  const g = clone(l.ctx.g);
+  const frames = [...l.ctx.frames];
+  const last = l.steps[l.steps.length - 1];
+  if (!last || !isFinisher(MOVE[last.move])) frames.push({ game: clone(g), text: 'Shot-clock violation: the possession ends without a shot.', side: 'info' });
+  g.log.push({ t: `Live possession: +${g.score.party - l.startScore}`, side: 'party', pts: g.score.party - l.startScore });
+  g.lastPlayId = null;
+  for (const e of g.enemies) e.exposed = Math.max(0, e.exposed - 1);
+  const inPlay = new Set(l.steps.map((s) => s.cls));
+  const partyEnd = frames.length;
+  enemyTurn(g, inPlay, defense, frames);
+  endPossession(g, frames);
+  markPhases(frames, Math.max(1, partyEnd));
   return { game: g, frames };
 }
 
@@ -1222,6 +1323,13 @@ export function halftimeAdjustment(g: Game, playbook: Play[]): Adjustment {
   );
   const star = CLASSES.map((c) => ({ c, p: g.stats.heroes[c].pts })).sort((a, b) => b.p - a.p)[0];
   if (star.p / total >= 0.4)
+    return {
+      id: 'double',
+      name: 'Double the star',
+      star: star.c,
+      text: `They double the ${CLASS_INFO[star.c].name}: its finishers are contested unless a move or status opens the target${mild ? ', in the third quarter' : ''}.`,
+    };
+  if (!playbook.length)
     return {
       id: 'double',
       name: 'Double the star',

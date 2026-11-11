@@ -466,6 +466,8 @@ It is effectively a second game built on the same foundation.
    - **Testing aids:** a tuning drawer in the menu, and `npx tsx prototypes/play-calling/scripts/sim.ts`, which plays it with a greedy bot (the glow) and a random caller.
    - **Prototype tuning (differs from the draft numbers above):** gate 50 HP, goblins 9 HP, Champion HP ×1.25, horde open hits score 3, touches = true usage ÷ 4.7, Normal at full strength and Hard ×1.12. Following the glow: Normal 62–48, Hard 60–55; random calling loses most games. The best call changes on 56–67% of possessions. Goblin HP is a cliff: at 8 a single Fireball clears the crew (Normal 64–26), at 10 the gate falls and pillage snowballs.
    - **Left out:** traits, Fumbles, Smash and Claim finishers, signature and legendary finishers for bots, the Hoops view.
+   - **Live moves (Nov 11):** an Offense option on the title screen. **Live moves** (the default) builds each possession one action at a time: pick a hero, a move and a target, with the ball (the last pass) and a 4-action shot clock shown; the 4th action must be a finisher, and a finisher ends the half. **Called plays** keeps the drawn-up playbook. Being explored because auto-run plays left the player disconnected from the possession.
+   - **Watch:** in a scripted test, a one-action possession every time (a lone finisher) won Normal 68–12. Short possessions leave four heroes on defense, which shuts the horde down; live play may need a cost for short possessions or a cap on defenders.
 4. **Playtest with two kinds of friends:** one who plays RPGs and one who only watches the NBA. Measure seconds per possession (target about 20 or less) and ask whether the last possession felt tense.
 
 ## Decided
