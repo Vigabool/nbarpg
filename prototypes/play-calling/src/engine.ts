@@ -33,7 +33,6 @@ export interface Tuning {
   hordeDamage: number;
   championHp: number;
   hordeHitPoints: number;
-  crowd: number;
 }
 export const DEFAULT_TUNING: Tuning = {
   gateHp: 50,
@@ -45,8 +44,7 @@ export const DEFAULT_TUNING: Tuning = {
   usagePerTouch: 4.7,
   hordeDamage: 1,
   championHp: 1.25,
-  hordeHitPoints: 3,
-  crowd: 2,
+  hordeHitPoints: 2,
 };
 export type Difficulty = 'normal' | 'hard';
 
@@ -92,10 +90,16 @@ export interface Enemy {
   taunted: boolean;
   exposed: number;
   disabled: boolean;
-  pinned: boolean;
+  /** Knocked off the ram by Strip the Ball for this enemy turn. */
   stripped: boolean;
-  poison: number;
-  frost: boolean;
+  /** Loses Quick, and its next hit deals half. */
+  slowed: boolean;
+  /** Defenses: Taunt, Quick, a Barrier it casts on its allies, and Block. */
+  taunts: boolean;
+  quick: boolean;
+  quickUsed: boolean;
+  barrier: number;
+  block: boolean;
   summonedThisTurn: boolean;
   /** Taken down and already scored. */
   down: boolean;
@@ -161,6 +165,10 @@ export interface Game {
   chieftainTurns: number;
   /** An Elite Protect has blocked a hit this enemy turn. */
   blocked: boolean;
+  /** The horde's Block has been used this possession. */
+  blockUsed: boolean;
+  /** The double-team has smothered the star's first hit this possession. */
+  starBlockUsed: boolean;
 }
 
 export interface Frame {
@@ -249,7 +257,7 @@ export function newGame(tuning: Tuning = DEFAULT_TUNING, difficulty: Difficulty 
       maxHp: Math.round(c.hp * mult * tuning.championHp),
       hp: Math.round(c.hp * mult * tuning.championHp),
       damage: Math.round(c.damage * mult * tuning.hordeDamage),
-      armor: kind === 'ogre' || kind === 'chieftain' ? 2 : 0,
+      armor: kind === 'ogre' ? 3 : kind === 'chieftain' ? 2 : 0,
       points: c.boss ? tuning.bossPoints : tuning.championPoints + (elite ? 2 : 0),
       boss: c.boss,
       onRam: false,
@@ -258,10 +266,13 @@ export function newGame(tuning: Tuning = DEFAULT_TUNING, difficulty: Difficulty 
       taunted: false,
       exposed: 0,
       disabled: false,
-      pinned: false,
       stripped: false,
-      poison: 0,
-      frost: false,
+      slowed: false,
+      taunts: kind === 'ogre',
+      quick: kind === 'cutthroat' || kind === 'sharpshooter',
+      quickUsed: false,
+      barrier: kind === 'shaman' ? 2 : 0,
+      block: kind === 'chieftain',
       summonedThisTurn: false,
       down: false,
     } satisfies Enemy;
@@ -285,6 +296,7 @@ export function newGame(tuning: Tuning = DEFAULT_TUNING, difficulty: Difficulty 
     maxHp: 15,
     hp: 15,
     damage: 0,
+    armor: 2,
     points: 3,
   });
 
@@ -317,6 +329,8 @@ export function newGame(tuning: Tuning = DEFAULT_TUNING, difficulty: Difficulty 
     log: [],
     chieftainTurns: 0,
     blocked: false,
+    blockUsed: false,
+    starBlockUsed: false,
   };
   arrive(g);
   g.call = chooseCall(g);
@@ -340,10 +354,13 @@ function goblin(id: string, tuning: Tuning, quarter: number): Enemy {
     taunted: false,
     exposed: 0,
     disabled: false,
-    pinned: false,
     stripped: false,
-    poison: 0,
-    frost: false,
+    slowed: false,
+    taunts: false,
+    quick: false,
+    quickUsed: false,
+    barrier: 0,
+    block: false,
     summonedThisTurn: false,
     down: false,
   };
@@ -367,28 +384,34 @@ function arrive(g: Game) {
 export const onField = (g: Game) => g.enemies.filter((e) => e.arrived && e.hp > 0);
 export const crew = (g: Game) => onField(g).filter((e) => e.kind === 'goblin' && e.onRam);
 /** Goblins actually pushing the ram this turn. */
-export const pushing = (g: Game) => crew(g).filter((e) => !e.pinned && !e.stripped);
+export const pushing = (g: Game) => crew(g).filter((e) => !e.stripped);
 export const freeGoblins = (g: Game) => onField(g).filter((e) => e.kind === 'goblin' && !e.onRam);
 export const activeHeroes = (g: Game) => CLASSES.map((c) => g.heroes[c]).filter((h) => h.benched === 0 && h.hp > 0);
 const isChampion = (e: Enemy) => e.kind !== 'goblin' && e.kind !== 'wagon';
 
-export function crowdLimit(g: Game) {
-  const a = g.adjustment;
-  const lead = a?.id === 'lead' && (g.difficulty === 'hard' || quarterOf(g.possession) === 3);
-  return lead ? Math.max(1, g.tuning.crowd - 1) : g.tuning.crowd;
-}
+const adjusting = (g: Game, id: Adjustment['id']) => g.adjustment?.id === id && (g.difficulty === 'hard' || quarterOf(g.possession) === 3);
 
-/** Whether an enemy is contested before any of this play's effects. */
-export function contestedBase(g: Game, e: Enemy): boolean {
-  if (e.taunted || e.disabled) return false;
-  if (e.kind === 'goblin') return false;
-  if (e.kind === 'wagon') return onField(g).some((x) => x.kind === 'cutthroat');
-  return freeGoblins(g).length >= crowdLimit(g);
-}
+/** The enemy whose Taunt is forcing hits onto itself, if any. */
+export const taunter = (g: Game) => onField(g).find((e) => e.taunts && !e.disabled);
+/** Whether this enemy will evade the next hit. */
+export const hasQuick = (e: Enemy) => e.quick && !e.quickUsed && !e.slowed && !e.disabled;
+/** Armor a Champion or the boss gets from an ally's Barrier (goblins and the wagon get none). */
+export const barrierFor = (g: Game, e: Enemy) =>
+  !isChampion(e)
+    ? 0
+    : Math.max(
+        0,
+        ...onField(g)
+          .filter((x) => x.barrier > 0 && x.id !== e.id)
+          .map((x) => x.barrier),
+      );
+/** Whether the horde's Block is still up this possession. */
+export const blockUp = (g: Game) => !g.blockUsed && onField(g).some((e) => e.block);
+/** Everything that reduces a hit on this enemy. */
+export const armorOf = (g: Game, e: Enemy) => e.armor + barrierFor(g, e) + (adjusting(g, 'lead') && isChampion(e) ? 1 : 0);
 
 function starDoubled(g: Game, cls: Cls) {
-  const a = g.adjustment;
-  return a?.id === 'double' && a.star === cls && (g.difficulty === 'hard' || quarterOf(g.possession) === 3);
+  return adjusting(g, 'double') && g.adjustment?.star === cls;
 }
 
 export function playAvailable(g: Game, play: Play): { ok: boolean; why?: string } {
@@ -431,20 +454,9 @@ export function passHelps(from: Move, to: Move | undefined): boolean {
   const e = from.enabler;
   if (!e || !to) return false;
   const deals = (to.damage ?? 0) > 0;
-  switch (e.kind) {
-    case 'heal':
-    case 'armor':
-      return true;
-    case 'open':
-    case 'putback':
-      return isFinisher(to);
-    case 'split':
-      return deals && to.targets !== 'all';
-    case 'double':
-      return !!to.enabler && ['damage', 'heal', 'armor', 'vsPoison', 'vsMarked'].includes(to.enabler.kind);
-    default:
-      return deals;
-  }
+  if (e.kind === 'armor') return true;
+  if (e.kind === 'split') return deals && to.targets !== 'all';
+  return deals;
 }
 
 // ---------- The horde's call ----------
@@ -505,82 +517,22 @@ export function chooseCall(g: Game): HordeCall | null {
 // ---------- The party's possession ----------
 
 export interface Carry {
-  dmg: number;
-  crit: boolean;
-  empower: boolean;
-  open: boolean;
-  split: boolean;
-  heal: number;
   armor: number;
-  putbackFrom: Cls | null;
-  ignoreArmor: boolean;
-  double: boolean;
-  vsPoison: number;
-  vsMarked: number;
+  sure: boolean;
+  crit: boolean;
+  pierce: boolean;
+  split: boolean;
   passer: Cls | null;
 }
-const emptyCarry = (): Carry => ({
-  dmg: 0,
-  crit: false,
-  empower: false,
-  open: false,
-  split: false,
-  heal: 0,
-  armor: 0,
-  putbackFrom: null,
-  ignoreArmor: false,
-  double: false,
-  vsPoison: 0,
-  vsMarked: 0,
-  passer: null,
-});
+const emptyCarry = (): Carry => ({ armor: 0, sure: false, crit: false, pierce: false, split: false, passer: null });
 
-function enablerCarry(e: Enabler | undefined, mult: number, double: boolean, scouted: boolean, from: Cls): Carry {
+function enablerCarry(e: Enabler | undefined, mult: number, scouted: boolean, from: Cls): Carry {
   const c = emptyCarry();
   c.passer = from;
   if (!e) return c;
-  const k = (double ? 2 : 1) * (scouted ? 0.5 : 1);
-  const n = (x: number) => Math.round(x * mult * k);
-  if (scouted && (e.kind === 'open' || e.kind === 'split' || e.kind === 'crit' || e.kind === 'empower' || e.kind === 'putback' || e.kind === 'double'))
-    return c;
-  switch (e.kind) {
-    case 'damage':
-      c.dmg = n(e.amount);
-      break;
-    case 'crit':
-      c.crit = true;
-      break;
-    case 'empower':
-      c.empower = true;
-      break;
-    case 'open':
-      c.open = true;
-      break;
-    case 'split':
-      c.split = true;
-      break;
-    case 'heal':
-      c.heal = n(e.amount);
-      break;
-    case 'armor':
-      c.armor = n(e.amount);
-      break;
-    case 'putback':
-      c.putbackFrom = from;
-      break;
-    case 'ignoreArmor':
-      c.ignoreArmor = true;
-      break;
-    case 'double':
-      c.double = true;
-      break;
-    case 'vsPoison':
-      c.vsPoison = n(e.amount);
-      break;
-    case 'vsMarked':
-      c.vsMarked = n(e.amount);
-      break;
-  }
+  // A scouted play's passes count for half: Armor is halved and the rest are lost.
+  if (e.kind === 'armor') c.armor = Math.round(e.amount * mult * (scouted ? 0.5 : 1));
+  else if (!scouted) c[e.kind] = true;
   return c;
 }
 
@@ -647,7 +599,7 @@ interface StepCtx {
 function doStep(ctx: StepCtx, step: PlayStep, i: number, primaryId: string) {
   const { g, frames, rec, scouted } = ctx;
   const snap = () => (rec ? clone(g) : g);
-  let carry = ctx.carry;
+  const carry = ctx.carry;
   const firstFrame = frames.length;
   const h = g.heroes[step.cls];
   const m = MOVE[step.move];
@@ -655,23 +607,21 @@ function doStep(ctx: StepCtx, step: PlayStep, i: number, primaryId: string) {
   h.touches -= 1;
   g.stats.heroes[h.cls].touches += 1;
   // Receive the pass.
-  if (carry.heal) {
-    const healed = Math.min(h.maxHp - h.hp, carry.heal);
-    h.hp += healed;
-    if (carry.passer === 'cleric') g.last.clericHealed += healed;
-  }
   if (carry.armor) h.armor += carry.armor;
-  const primary = g.enemies.find((e) => e.id === primaryId && e.hp > 0) ?? onField(g)[0];
   if (m.kind === 'signature' || m.kind === 'legendary') h.usedSpecial.push(m.id);
   const scoreBefore = g.score.party;
   const parts: string[] = [];
+  const fin = isFinisher(m);
+  const chosen = g.enemies.find((e) => e.id === primaryId && e.hp > 0 && e.arrived) ?? onField(g)[0];
 
-  // Effects that don't need an enemy.
+  // Effects on the party.
   switch (m.effect) {
-    case 'partyArmor':
-      for (const x of activeHeroes(g)) x.armor += Math.round((m.amount ?? 0) * mult);
-      parts.push(`every hero +${Math.round((m.amount ?? 0) * mult)} armor`);
+    case 'partyArmor': {
+      const a = Math.round((m.amount ?? 0) * mult);
+      for (const x of activeHeroes(g)) x.armor += a;
+      parts.push(`every hero Armor +${a}`);
       break;
+    }
     case 'healAlly': {
       const t = [...activeHeroes(g)].sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
       if (t) {
@@ -682,8 +632,7 @@ function doStep(ctx: StepCtx, step: PlayStep, i: number, primaryId: string) {
       }
       break;
     }
-    case 'healParty':
-    case 'healParty15': {
+    case 'healParty': {
       let total = 0;
       for (const x of activeHeroes(g)) {
         const healed = Math.min(x.maxHp - x.hp, Math.round((m.amount ?? 0) * mult));
@@ -711,107 +660,147 @@ function doStep(ctx: StepCtx, step: PlayStep, i: number, primaryId: string) {
       break;
   }
 
-  if (primary) {
-    const fin = isFinisher(m);
-    // Targets.
+  if (chosen) {
+    const sure = !!m.sure || carry.sure;
+    const pierce = !!m.pierce || carry.pierce;
+    const deals = (m.damage ?? 0) > 0;
+    const extra = carry.split ? 1 : 0;
+    const short = (e: Enemy) => e.name.replace('Goblin ', '');
+
+    // Taunt: a single-target hit must go to the taunter; a wider one must include it.
+    const t = deals ? taunter(g) : undefined;
+    let primary = chosen;
+    if (t && m.targets === 'primary' && t.id !== chosen.id) {
+      primary = t;
+      parts.push(`the ${short(t)} Taunts: the hit goes to it`);
+    }
     let targets: Enemy[] = [];
     if (m.targets === 'all') targets = onField(g);
-    else if (m.targets === 'multi') targets = pickTargets(g, primary, (m.count ?? 1) + (carry.split ? 1 : 0));
-    else if (m.targets === 'primary' || m.targets === 'double') targets = carry.split ? pickTargets(g, primary, 2) : [primary];
-    if (m.effect === 'pin' && primary.kind !== 'goblin') {
-      const c = crew(g).find((e) => !e.pinned);
-      targets = c ? [c] : [];
-    }
-    const openPrimary = m.ignoresContest || carry.open || !(contestedBase(g, primary) || starDoubled(g, h.cls));
+    else if (m.targets === 'multi') {
+      const n = (m.count ?? 1) + extra;
+      targets = pickTargets(g, chosen, n);
+      if (t && !targets.some((x) => x.id === t.id)) targets = [t, ...targets].slice(0, n);
+    } else if (m.targets === 'primary') targets = extra ? pickTargets(g, primary, 2) : [primary];
 
+    let champDamaged = false;
+    const notes: string[] = [];
+    const note = (s: string) => {
+      if (!notes.includes(s)) notes.push(s);
+    };
+    /** One hit. Returns the damage dealt, or -1 if it was cancelled or evaded. */
     const hit = (e: Enemy, base: number): number => {
       if (e.hp <= 0) return 0;
-      let d = base * mult + carry.dmg;
+      if (!sure) {
+        if (starDoubled(g, h.cls) && !g.starBlockUsed) {
+          g.starBlockUsed = true;
+          note('the double-team smothers the first hit');
+          return -1;
+        }
+        if (blockUp(g)) {
+          g.blockUsed = true;
+          note(`Blocked on the ${short(e)}`);
+          return -1;
+        }
+        if (hasQuick(e)) {
+          e.quickUsed = true;
+          note(`the ${short(e)} evades`);
+          return -1;
+        }
+      }
+      e.quickUsed = true;
+      let d = base * mult;
       if (e.exposed > 0) d += 3;
-      if (e.poison > 0) d += carry.vsPoison;
-      if (e.exposed > 0) d += carry.vsMarked;
       if (m.doubleVsShaken && (e.taunted || e.disabled)) d *= 2;
-      if (carry.crit || m.alwaysCrit) d *= 2;
-      if (carry.empower) d *= 1.5;
-      const contested = fin && !m.ignoresContest && !carry.open && (contestedBase(g, e) || starDoubled(g, h.cls));
-      if (contested) d *= 0.5;
-      if (!(m.ignoreArmor || carry.ignoreArmor)) d -= e.armor;
+      if (carry.crit) d *= 1.5;
+      if (!pierce) d -= armorOf(g, e);
       const dealt = Math.max(0, Math.min(e.hp, Math.round(d)));
       e.hp -= dealt;
       g.stats.heroes[h.cls].dmg += dealt;
+      if (dealt > 0 && isChampion(e)) champDamaged = true;
       return dealt;
     };
 
-    if (m.effect === 'assassinate') {
-      if (!primary.boss) {
-        const dealt = primary.hp;
-        primary.hp = 0;
-        parts.push(`assassinates the ${primary.name}`);
-        g.stats.heroes[h.cls].dmg += dealt;
-      } else parts.push(`${hit(primary, m.damage ?? 0)} to the ${primary.name}`);
-    } else if (m.damage) {
-      if (m.targets === 'double') {
-        const first = hit(primary, m.damage);
-        const next = primary.hp > 0 ? primary : pickTargets(g, primary, 2)[1];
-        const second = next ? hit(next, m.damage) : 0;
-        parts.push(`${first} + ${second} damage`);
-        for (const t of targets.slice(1)) parts.push(`${hit(t, m.damage)} to the ${t.name}`);
-      } else {
-        const dealt = targets.map((t) => ({ t, d: hit(t, m.damage!) }));
-        parts.push(dealt.length === 1 ? `${dealt[0].d} to the ${dealt[0].t.name}` : `${dealt.reduce((s, x) => s + x.d, 0)} across ${dealt.length} enemies`);
+    // Whether the move connected with its main target (statuses need that).
+    let connected = !deals;
+    if (m.effect === 'assassinate' && !primary.boss) {
+      g.stats.heroes[h.cls].dmg += primary.hp;
+      if (isChampion(primary)) champDamaged = true;
+      primary.hp = 0;
+      connected = true;
+      parts.push(`assassinates the ${short(primary)}`);
+    } else if (deals && m.hits) {
+      const total = m.hits + extra;
+      let idx = 0;
+      let dmg = 0;
+      let landed = 0;
+      for (let k = 0; k < total; k++) {
+        const alive = targets.filter((x) => x.hp > 0);
+        let e: Enemy | undefined;
+        if (m.spread) e = targets[Math.min(idx, targets.length - 1)];
+        else e = k >= m.hits && targets[1] ? targets[1] : targets[0];
+        if (!e || e.hp <= 0) e = alive[0] ?? onField(g).find((x) => x.kind !== 'wagon');
+        if (!e) break;
+        const r = hit(e, m.damage!);
+        if (r >= 0) {
+          dmg += r;
+          landed += 1;
+          if (e.id === primary.id) connected = true;
+          if (m.spread) idx += 1;
+        }
+      }
+      parts.push(`${dmg} damage from ${landed} of ${total} hits`);
+    } else if (deals) {
+      const res = targets.map((x) => ({ x, d: hit(x, m.damage!) }));
+      connected = res.some((r) => r.x.id === primary.id && r.d >= 0);
+      const landed = res.filter((r) => r.d >= 0);
+      const dmg = landed.reduce((s, r) => s + r.d, 0);
+      if (res.length === 1) parts.push(landed.length ? `${dmg} to the ${short(res[0].x)}` : `misses the ${short(res[0].x)}`);
+      else parts.push(`${dmg} across ${landed.length} of ${res.length} enemies`);
+    }
+    for (const n of notes) parts.push(n);
+
+    // Statuses on the enemy.
+    if (m.effect === 'tauntAll') {
+      for (const e of onField(g)) e.taunted = true;
+      parts.push('every enemy Taunted');
+    } else if (connected && primary.hp > 0) {
+      switch (m.effect) {
+        case 'taunt':
+          primary.taunted = true;
+          parts.push('Taunted');
+          break;
+        case 'expose':
+          primary.exposed = Math.max(primary.exposed, 1);
+          parts.push('Exposed');
+          break;
+        case 'mark':
+          primary.exposed = 2;
+          parts.push('Marked');
+          break;
+        case 'strip':
+          if (isChampion(primary) && !primary.boss) {
+            primary.disabled = true;
+            parts.push('Disabled');
+          } else {
+            primary.exposed = Math.max(primary.exposed, 1);
+            parts.push('Exposed');
+          }
+          break;
+        case 'slow':
+          primary.slowed = true;
+          parts.push('Slowed');
+          break;
       }
     }
 
-    // Statuses on the enemy.
-    switch (m.effect) {
-      case 'taunt':
-        primary.taunted = true;
-        parts.push('taunted');
-        break;
-      case 'tauntAll':
-        for (const e of onField(g)) e.taunted = true;
-        parts.push('every enemy taunted');
-        break;
-      case 'expose':
-        for (const t of targets) t.exposed = Math.max(t.exposed, 1);
-        parts.push('Exposed');
-        break;
-      case 'mark':
-        primary.exposed = 2;
-        parts.push('Marked');
-        break;
-      case 'strip':
-        if (isChampion(primary) && !primary.boss) {
-          primary.disabled = true;
-          parts.push('Disabled');
-        } else {
-          primary.exposed = Math.max(primary.exposed, 1);
-          parts.push('Exposed');
-        }
-        break;
-      case 'poison':
-        primary.poison = Math.round((m.amount ?? 3) * mult);
-        parts.push('poisoned');
-        break;
-      case 'pin':
-        for (const t of targets) t.pinned = true;
-        parts.push(targets.length ? 'a goblin Pinned off the ram' : 'no goblin to Pin');
-        break;
-      case 'frost':
-        primary.frost = true;
-        parts.push('Frosted');
-        break;
-    }
-
     if (fin) {
-      const name = primary.name;
-      if (openPrimary) {
-        const pts = m.three ? 3 : g.tuning.shotPoints;
+      if (champDamaged) {
+        const pts = g.tuning.shotPoints;
         g.stats.party.shots += pts;
         award(g, h.cls, pts, ctx.playId);
         if (carry.passer) g.stats.heroes[carry.passer].ast += 1;
-        parts.push(`open look on the ${name}: +${pts}`);
-      } else parts.push(`contested by the crowd: no shot points`);
+        parts.push(`bucket: +${pts}`);
+      } else parts.push('no bucket');
     }
     frames.push({
       game: snap(),
@@ -824,31 +813,6 @@ function doStep(ctx: StepCtx, step: PlayStep, i: number, primaryId: string) {
       result: parts.join(', '),
     });
     sweep(g, h.cls, frames, rec, ctx.playId);
-
-    // Putback.
-    if (fin && carry.putbackFrom && primary.hp > 0) {
-      const p = g.heroes[carry.putbackFrom];
-      const half = Math.max(1, Math.round(((m.damage ?? 0) * mult) / 2));
-      const dealt = Math.min(primary.hp, Math.max(0, half - primary.armor));
-      primary.hp -= dealt;
-      let pts = 0;
-      if (!(contestedBase(g, primary) || starDoubled(g, p.cls))) {
-        pts = g.tuning.shotPoints;
-        g.stats.party.shots += pts;
-        award(g, p.cls, pts, ctx.playId);
-      }
-      frames.push({
-        game: snap(),
-        text: `${CLASS_INFO[p.cls].name} · putback: ${dealt} to the ${primary.name}${pts ? `: +${pts}` : ''}`,
-        side: 'party',
-        actor: p.cls,
-        target: primary.id,
-        pts: pts || undefined,
-        kind: 'putback',
-        result: `putback ${dealt}${pts ? `, +${pts}` : ''}`,
-      });
-      sweep(g, p.cls, frames, rec, ctx.playId);
-    }
   } else {
     frames.push({
       game: snap(),
@@ -861,9 +825,8 @@ function doStep(ctx: StepCtx, step: PlayStep, i: number, primaryId: string) {
   }
 
   // Pass on.
-  carry = enablerCarry(m.enabler, mult, carry.double, scouted, h.cls);
+  ctx.carry = enablerCarry(m.enabler, mult, scouted, h.cls);
   for (let k = firstFrame; k < frames.length; k++) frames[k].step = i;
-  ctx.carry = carry;
 }
 
 export function runPossession(g0: Game, play: Play, primaryId: string, defense: Defense, opts: { preview?: boolean } = {}): { game: Game; frames: Frame[] } {
@@ -948,18 +911,11 @@ export function liveOptions(l: Live): { heroes: Cls[]; finishersOnly: boolean; d
 
 export function describeCarry(c: Carry): string[] {
   const out: string[] = [];
-  if (c.dmg) out.push(`+${c.dmg} damage`);
-  if (c.crit) out.push('crit (double damage)');
-  if (c.empower) out.push('+50% damage');
-  if (c.open) out.push('open look');
-  if (c.split) out.push('split (+1 target)');
-  if (c.heal) out.push(`heal ${c.heal}`);
-  if (c.armor) out.push(`armor +${c.armor}`);
-  if (c.putbackFrom) out.push('putback');
-  if (c.ignoreArmor) out.push('ignores armor');
-  if (c.double) out.push("doubles the next hero's pass");
-  if (c.vsPoison) out.push(`+${c.vsPoison} on a poisoned enemy`);
-  if (c.vsMarked) out.push(`+${c.vsMarked} on the marked enemy`);
+  if (c.armor) out.push(`Armor +${c.armor}`);
+  if (c.sure) out.push('Sure');
+  if (c.crit) out.push('Crit (+50%)');
+  if (c.pierce) out.push('Pierce');
+  if (c.split) out.push('Split (+1 target)');
   return out;
 }
 
@@ -1047,30 +1003,28 @@ function hordeHit(g: Game, actor: Enemy, targetCls: Cls, bonus: number, defense:
     cls = alt.cls;
   }
   let d = actor.damage + bonus + (h.exposed ? 3 : 0);
-  if (actor.frost) {
-    d = Math.floor(d / 2);
-    actor.frost = false;
-  }
-  const protectedHere = off.has('warrior') && defense.protect === cls;
-  const closedOut = off.has('ranger') && defense.closeOut === actor.id;
-  const contested = protectedHere || closedOut;
   const notes: string[] = [];
+  if (actor.slowed) {
+    d = Math.floor(d / 2);
+    actor.slowed = false;
+    notes.push('Slowed: half damage');
+  }
+  // An Elite Warrior's Protect is a Block: the first hit on that hero is cancelled.
+  const protectedHere = off.has('warrior') && defense.protect === cls;
   if (protectedHere && tierIndex(g.heroes.warrior.defTier) >= tierIndex('elite') && !g.blocked) {
     g.blocked = true;
     d = 0;
-    notes.push('blocked by the Warrior');
-  } else if (contested) {
-    d = Math.floor(d / 2);
-    notes.push(protectedHere ? 'contested by the Warrior' : 'contested by the Ranger');
+    notes.push('Blocked by the Warrior');
   }
-  if (contested) g.stats.heroes[protectedHere ? 'warrior' : 'ranger'].stops += 1;
+  const before = d;
   d = Math.max(0, d - h.armor);
+  if (h.armor > 0 && before > 0) notes.push(`Armor ${h.armor}`);
   h.hp -= d;
   let pts = 0;
-  if (!contested && d > 0) {
+  if (d > 0) {
     pts += g.tuning.hordeHitPoints;
     g.stats.horde.hits += g.tuning.hordeHitPoints;
-  }
+  } else notes.push('no bucket');
   if (h.hp <= 0) {
     if (h.lastStand) h.hp = 1;
     else {
@@ -1106,7 +1060,18 @@ function summon(g: Game, n: number, frames: Frame[], who: string) {
 function enemyTurn(g: Game, inPlay: Set<Cls>, defense: Defense, frames: Frame[]) {
   const off = new Set(defenders(g, inPlay));
   g.blocked = false;
-  // Ward and Strip the Ball happen first.
+  // Protect, Close Out, Ward and Strip the Ball happen first.
+  if (off.has('warrior') && defense.protect && defense.protect !== 'gate') {
+    g.heroes[defense.protect].armor += Math.round(4 * tm(g.heroes.warrior.defTier));
+    g.stats.heroes.warrior.stops += 1;
+  }
+  if (off.has('ranger') && defense.closeOut) {
+    const e = onField(g).find((x) => x.id === defense.closeOut);
+    if (e) {
+      e.slowed = true;
+      g.stats.heroes.ranger.stops += 1;
+    }
+  }
   if (off.has('wizard') && defense.ward) {
     const a = Math.round(4 * tm(g.heroes.wizard.defTier));
     g.heroes[defense.ward].armor += a;
@@ -1244,7 +1209,7 @@ function enemyTurn(g: Game, inPlay: Set<Cls>, defense: Defense, frames: Frame[])
     }
   }
 
-  // Triage, then poison.
+  // Triage.
   if (off.has('cleric')) {
     const t = activeHeroes(g).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
     if (t && t.hp < t.maxHp) {
@@ -1253,25 +1218,19 @@ function enemyTurn(g: Game, inPlay: Set<Cls>, defense: Defense, frames: Frame[])
       frames.push({ game: clone(g), text: `Cleric · Triage: heals the ${CLASS_INFO[t.cls].name} ${healed}.`, side: 'party', actor: 'cleric', target: t.cls });
     }
   }
-  for (const e of onField(g))
-    if (e.poison > 0) {
-      const d = Math.min(e.hp, e.poison);
-      e.hp -= d;
-      e.poison = 0;
-      frames.push({ game: clone(g), text: `Poison: ${d} to the ${e.name}.`, side: 'party', actor: 'rogue', target: e.id });
-      sweep(g, 'rogue', frames, true);
-    }
 }
 
 function endPossession(g: Game, frames: Frame[]) {
   for (const e of g.enemies) {
     e.taunted = false;
     e.disabled = false;
-    e.pinned = false;
     e.stripped = false;
-    e.frost = false;
+    e.slowed = false;
+    e.quickUsed = false;
     e.summonedThisTurn = false;
   }
+  g.blockUsed = false;
+  g.starBlockUsed = false;
   for (const c of CLASSES) {
     const h = g.heroes[c];
     h.armor = 0;
@@ -1313,7 +1272,7 @@ export function halftimeAdjustment(g: Game, playbook: Play[]): Adjustment {
     return {
       id: 'lead',
       name: 'Protect the lead',
-      text: `Free goblins crowd harder: Champions are contested with ${Math.max(1, g.tuning.crowd - 1)} goblin around${mild ? ' in the third quarter' : ''}.`,
+      text: `Every Champion gains Armor +1${mild ? ' in the third quarter' : ''}.`,
     };
   if (!g.gate.breached && g.gate.hp > g.gate.max / 2)
     return { id: 'allHands', name: 'All hands on the ram', text: `The second half's goblins push harder: the ram hits for +${mild ? 1 : 2}.` };
@@ -1327,14 +1286,14 @@ export function halftimeAdjustment(g: Game, playbook: Play[]): Adjustment {
       id: 'double',
       name: 'Double the star',
       star: star.c,
-      text: `They double the ${CLASS_INFO[star.c].name}: its finishers are contested unless a move or status opens the target${mild ? ', in the third quarter' : ''}.`,
+      text: `They double the ${CLASS_INFO[star.c].name}: its first hit each possession is smothered unless it's Sure${mild ? ', in the third quarter' : ''}.`,
     };
   if (!playbook.length)
     return {
       id: 'double',
       name: 'Double the star',
       star: star.c,
-      text: `They double the ${CLASS_INFO[star.c].name}: its finishers are contested unless a move or status opens the target${mild ? ', in the third quarter' : ''}.`,
+      text: `They double the ${CLASS_INFO[star.c].name}: its first hit each possession is smothered unless it's Sure${mild ? ', in the third quarter' : ''}.`,
     };
   const top = Object.entries(g.stats.plays).sort((a, b) => b[1].pts - a[1].pts)[0];
   const p = playbook.find((x) => x.id === top?.[0]) ?? playbook[0];
@@ -1392,7 +1351,7 @@ export function project(g: Game, play: Play, targetId: string): Projection {
   const open = game.stats.party.shots > g.stats.party.shots;
   if (!g.gate.breached) {
     const pushNow = pushing(g).length;
-    const pushAfter = pushing(game).filter((e) => !e.pinned).length;
+    const pushAfter = pushing(game).length;
     if (pushNow >= 4 && pushAfter < 4) crewBroken = 1;
   }
   const points = game.score.party - g.score.party;

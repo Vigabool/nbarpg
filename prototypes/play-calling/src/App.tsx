@@ -27,7 +27,10 @@ import {
   liveOptions,
   liveStep,
   previewLive,
-  contestedBase,
+  armorOf,
+  blockUp,
+  hasQuick,
+  taunter,
   crew,
   defenders,
   freeGoblins,
@@ -1014,7 +1017,7 @@ function PlanScreen(props: {
                 </div>
               )}
               {open === 'wagon' && (
-                <div className="panel detail small">Arrives in Q2 with 15 HP. Breaking it scores 3 and 5 gold. It's contested while the Cutthroat stands.</div>
+                <div className="panel detail small">Arrives in Q2 with 15 HP. Armor 2. Breaking it scores 3 and 5 gold, but hitting it makes no bucket.</div>
               )}
             </section>
 
@@ -1192,8 +1195,7 @@ function PlaySlot(props: { play: Play; open: boolean; onToggle: () => void; onCh
               </span>
               {isFinisher(m) ? (
                 <span>
-                  <b>Finisher:</b> ends the play. Scores {m.three ? 3 : 2}{' '}
-                  {m.ignoresContest ? 'whether or not the target is open' : 'on an open target (nothing when contested)'}, plus takedown points.
+                  <b>Finisher:</b> ends the play. Scores 2 if it damages a Champion or the boss after their defenses, plus takedown points.
                 </span>
               ) : (
                 <span>
@@ -1331,15 +1333,18 @@ function CallBanner(props: { game: Game }) {
 
 function statusChips(g: Game, e: Enemy) {
   const out: { t: string; c: string }[] = [];
-  const cont = contestedBase(g, e);
-  if (e.kind !== 'goblin') out.push(cont ? { t: '🛡 contested', c: 'cont' } : { t: '✓ open', c: 'open' });
+  // The defenses in the way, then the statuses heroes have put on it.
+  if (e.taunts && !e.disabled) out.push({ t: '🛡 Taunt', c: 'cont' });
+  const armor = armorOf(g, e);
+  if (armor > 0) out.push({ t: `Armor ${armor}`, c: 'cont' });
+  if (hasQuick(e)) out.push({ t: '💨 Quick', c: 'cont' });
+  if (e.barrier > 0 && !e.disabled) out.push({ t: `✨ Barrier +${e.barrier}`, c: 'cont' });
+  if (e.block && blockUp(g)) out.push({ t: '✋ Block', c: 'cont' });
   if (e.taunted) out.push({ t: 'Taunted', c: 'ball' });
   if (e.disabled) out.push({ t: 'Disabled', c: 'ball' });
   if (e.exposed > 1) out.push({ t: 'Marked', c: 'ball' });
   else if (e.exposed > 0) out.push({ t: 'Exposed', c: 'ball' });
-  if (e.poison) out.push({ t: 'Poisoned', c: 'ball' });
-  if (e.frost) out.push({ t: 'Frosted', c: 'ball' });
-  if (e.pinned) out.push({ t: 'Pinned', c: 'ball' });
+  if (e.slowed) out.push({ t: 'Slowed', c: 'ball' });
   return out;
 }
 
@@ -1374,7 +1379,6 @@ function Board(props: {
       aria-label={`Goblin, ${e.hp} HP${e.onRam ? ', on the ram' : ''}`}
     >
       👺 <span className="num">{e.hp}</span>
-      {e.pinned && <span className="chip ball">Pinned</span>}
       {e.stripped && <span className="chip ball">Stripped</span>}
       {e.exposed > 0 && <span className="chip ball">Exp</span>}
       {props.picking && <span className="proj">+{props.projections.get(e.id)?.points ?? 0}</span>}
@@ -1428,14 +1432,20 @@ function Board(props: {
         )}
         <div className="gob-row">
           <span className="small" style={{ minWidth: 70 }}>
-            {g.gate.breached ? 'Pillaging' : 'Crowding'}
+            {g.gate.breached ? 'Pillaging' : 'Off the ram'}
           </span>
           {free.length ? free.map(gob) : <span className="small muted">none</span>}
         </div>
         <span className="small muted">
-          {free.length >= g.tuning.crowd || (g.adjustment?.id === 'lead' && free.length >= 1)
-            ? `${free.length} free goblins crowd the Champions: they're contested unless your play opens them.`
-            : `Fewer than ${g.tuning.crowd} goblins crowding: Champions are open.`}
+          {(() => {
+            const t = taunter(g);
+            const b = blockUp(g);
+            const bits = [
+              t ? `The ${t.name.replace('Goblin ', '')} Taunts: single-target hits go to it.` : '',
+              b ? 'The Chieftain’s Block cancels the first hit this possession.' : '',
+            ].filter(Boolean);
+            return bits.length ? bits.join(' ') : 'Finishers score 2 when they damage a Champion or the boss.';
+          })()}
         </span>
       </div>
     </div>
@@ -1593,7 +1603,7 @@ function ConfirmSheet(props: {
         <span className="small">{chainText(props.play)}</span>
         {t && props.projection ? (
           <p>
-            On the <strong>{t.name}</strong>: {props.projection.open ? '✓ open look' : '🛡 contested: no shot points'} · {props.projection.damage} damage
+            On the <strong>{t.name}</strong>: {props.projection.open ? '✓ bucket (+2)' : 'no bucket'} · {props.projection.damage} damage
             {props.projection.kills ? ` · ${props.projection.kills} takedown${props.projection.kills > 1 ? 's' : ''}` : ''} ·{' '}
             <strong>+{props.projection.points}</strong>
           </p>
@@ -2220,7 +2230,7 @@ function Designer(props: { tuning: Tuning; difficulty: Difficulty; initial?: Pla
         (m.kind !== 'legendary' || heroLines[c].tripleDouble),
     );
 
-  // Preview against one enemy, once with the crowd and once without.
+  // Preview against one enemy, with the whole horde on the floor (so Taunt, Barrier and Block are up).
   const preview = useMemo(() => {
     if (errors.length) return null;
     const play: Play = { id: 'preview', name, steps, tags: [] };
@@ -2229,14 +2239,10 @@ function Designer(props: { tuning: Tuning; difficulty: Difficulty; initial?: Pla
       e.arrived = e.kind !== 'wagon';
       e.onRam = false;
     }
+    base.enemies.filter((e) => e.kind === 'goblin').forEach((gb, i) => (gb.onRam = i < 4));
     const target = base.enemies.find((e) => e.kind === vs) ?? base.enemies[0];
-    const goblins = base.enemies.filter((e) => e.kind === 'goblin');
-    goblins.forEach((gb, i) => (gb.onRam = i < 4));
     const open = project(base, play, target.id);
-    const crowded = structuredClone(base);
-    crowded.enemies.filter((e) => e.kind === 'goblin').forEach((gb, i) => (gb.onRam = i < 2));
-    const crowd = project(crowded, play, target.id);
-    return { target, open, crowd };
+    return { target, open };
   }, [steps, vs, errors.length, name, props.tuning, props.difficulty]);
 
   return (
@@ -2279,7 +2285,7 @@ function Designer(props: { tuning: Tuning; difficulty: Difficulty; initial?: Pla
               <div className="movechoice">
                 {movesFor(s.cls).map((mv) => (
                   <button key={mv.id} className="mv" aria-pressed={s.move === mv.id} onClick={() => setStep(i, { cls: s.cls, move: mv.id })}>
-                    <span className="k">{mv.kind === 'move' ? 'move' : mv.kind}</span> <strong>{mv.name}</strong>
+                    <span className="k">{mv.kind}</span> <strong>{mv.name}</strong>
                     <br />
                     <span className="small">Action: {mv.action}</span>
                     {mv.enablerText && (
@@ -2309,7 +2315,7 @@ function Designer(props: { tuning: Tuning; difficulty: Difficulty; initial?: Pla
               const last = x[x.length - 1];
               const prevCls = x[x.length - 2].cls;
               const cls: Cls = CLASSES.find((c) => c !== last.cls && c !== prevCls)!;
-              const filler = MOVES.find((mv) => mv.cls === cls && mv.kind === 'move')!;
+              const filler = MOVES.find((mv) => mv.cls === cls && mv.kind === 'enabler')!;
               return [...x.slice(0, -1), { cls, move: filler.id }, last];
             })
           }
@@ -2339,13 +2345,13 @@ function Designer(props: { tuning: Tuning; difficulty: Difficulty; initial?: Pla
               With this week’s numbers: {preview.open.damage} damage
               {preview.open.kills ? `, ${preview.open.kills} takedown${preview.open.kills > 1 ? 's' : ''}` : ''}, +{preview.open.points} points.
             </p>
-            {preview.target.kind !== 'goblin' && (
-              <p className="small">
-                {preview.crowd.open
-                  ? '✓ Opens the target even when goblins crowd it.'
-                  : '🛡 Against a crowded target this play is contested: half damage on the finisher, no shot points.'}
-              </p>
-            )}
+            <p className="small">
+              {preview.open.open
+                ? '✓ The finisher gets through and scores a bucket.'
+                : preview.target.kind === 'goblin'
+                  ? 'Goblins make no bucket: only their takedowns score.'
+                  : 'No bucket: the defenses stop the finisher. With the whole horde up, the Ogre’s Taunt and the Chieftain’s Block are in play.'}
+            </p>
           </>
         ) : (
           <p className="small muted">Fix the play to see a preview.</p>
@@ -2396,8 +2402,7 @@ function Menu(props: {
     { k: 'championPoints', label: 'Champion takedown points', step: 1 },
     { k: 'bossPoints', label: 'Chieftain takedown points', step: 1 },
     { k: 'bountyPoints', label: 'Shaman bounty points', step: 1 },
-    { k: 'hordeHitPoints', label: 'Horde open-hit points', step: 1 },
-    { k: 'crowd', label: 'Free goblins to contest', step: 1 },
+    { k: 'hordeHitPoints', label: 'Horde bucket points', step: 1 },
     { k: 'usagePerTouch', label: 'True usage per touch', step: 0.1 },
   ];
   return (
@@ -2470,9 +2475,14 @@ function Guide(props: { onClose: () => void }) {
     ['A possession', 'See the horde’s call, call one of your plays, tap a target, then Run it. Each step uses one touch from that hero.'],
     ['Moves and passes', 'Every move has an action and a pass (enabler) that boosts the next hero in the play. Finishers end the play.'],
     [
-      'Open or contested',
-      'A finisher on an open target scores 2 (Wizard finishers 3) and deals full damage. Contested: half damage, no shot points. Two or more free goblins crowd every Champion; Provoke, Strip, Read the Defense, Gravity and Drive open a target.',
+      'Scoring',
+      'Only finishers score: 2 if the finisher damages a Champion or the boss after their defenses (goblins make no bucket). Takedowns add each enemy’s value (🏀). Enablers break defenses and set up takedowns.',
     ],
+    [
+      'Defenses',
+      'Taunt (the Ogre): single-target hits must go to it. Armor: each hit deals less. Quick: the first hit on it each possession misses. Barrier (the Shaman): Armor on every other enemy while it stands. Block (the Chieftain): the first hit on any enemy each possession is cancelled.',
+    ],
+    ['Passes', 'Armor (protects the next hero), Sure (can’t be evaded or Blocked), Crit (+50% damage), Pierce (ignores Armor and Barrier), Split (+1 target).'],
     ['Takedowns', 'Each enemy shows its point value (🏀). Taking it down scores it, and stops it scoring.'],
     [
       'Touches',
@@ -2480,15 +2490,15 @@ function Guide(props: { onClose: () => void }) {
     ],
     [
       'Defense',
-      'Heroes not in the play defend: the Warrior Protects, the Ranger Closes Out, the Wizard Wards, the Cleric heals (Triage), and the Rogue Strips the Ball off the ram. Contested horde hits deal half and score nothing.',
+      'Heroes not in the play defend: the Warrior Protects, the Ranger Closes Out, the Wizard Wards, the Cleric heals (Triage), and the Rogue Strips the Ball off the ram. Protect and Ward add Armor; Close Out Slows an enemy (half damage).',
     ],
     [
       'The horde',
-      'Its goblins push the ram automatically when 4 are on it. Its Champions run one called play each turn and score 3 for an open hit and 4 for a hero they take down.',
+      'Its goblins push the ram automatically when 4 are on it. Its Champions run one called play each turn and score 2 for a finisher that damages a hero and 4 for a hero they take down.',
     ],
     [
       'Statuses',
-      'Taunted: open, and attacks the Warrior. Exposed: +3 from every hit this possession (Marked: through the next one too). Disabled: open, and out of the horde’s next play. Pinned: off the ram for the enemy turn.',
+      'Taunted: attacks the Warrior. Exposed: +3 from every hit this possession (Marked: through the next one too). Disabled: out of the horde’s next play, and loses its Taunt or Quick. Slowed: loses Quick, and its next hit deals half.',
     ],
     ['Scouted', 'Calling the same play twice in a row: its passes count for half.'],
     ['Timeouts', 'Two per game. A timeout takes back your last possession.'],
