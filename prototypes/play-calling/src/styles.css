@@ -1356,3 +1356,19 @@ th {
   font-size: 1.6rem;
   color: var(--horde);
 }
+
+/* Order badges on picked targets */
+.pickno {
+  background: var(--ball);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 0 6px;
+  line-height: 1.5;
+}
+.pickno.corner {
+  position: absolute;
+  top: -7px;
+  left: -5px;
+}

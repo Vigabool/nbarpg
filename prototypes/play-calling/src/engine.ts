@@ -595,7 +595,8 @@ interface StepCtx {
 }
 
 /** One hero's step: receive the pass, act, score, then pass on. */
-function doStep(ctx: StepCtx, step: PlayStep, i: number, primaryId: string) {
+/** `picks`: the targets the player chose, in order (live moves). Without picks, the move fills its own targets. */
+function doStep(ctx: StepCtx, step: PlayStep, i: number, primaryId: string, picks?: string[]) {
   const { g, frames, rec, scouted } = ctx;
   const snap = () => (rec ? clone(g) : g);
   const carry = ctx.carry;
@@ -691,12 +692,21 @@ function doStep(ctx: StepCtx, step: PlayStep, i: number, primaryId: string) {
       parts.push(`the ${short(t)} Taunts: the hit goes to it`);
     }
     let targets: Enemy[] = [];
+    const picked = (picks ?? []).map((id) => g.enemies.find((e) => e.id === id && e.hp > 0 && e.arrived)).filter((e): e is Enemy => !!e);
+    const n = maxPicks(m, carry);
     if (m.targets === 'all') targets = onField(g);
-    else if (m.targets === 'multi') {
-      const n = (m.count ?? 1) + extra;
+    else if (picked.length && n > 1) {
+      // The player's own picks; a Taunting big must be one of them.
+      targets = picked.slice(0, n);
+      if (t && !targets.some((x) => x.id === t.id)) {
+        targets = [t, ...targets].slice(0, n);
+        parts.push(`the ${short(t)} Taunts: it takes one of the picks`);
+      }
+      primary = targets[0];
+    } else if (m.targets === 'multi') {
       targets = pickTargets(g, chosen, n);
       if (t && !targets.some((x) => x.id === t.id)) targets = [t, ...targets].slice(0, n);
-    } else if (m.targets === 'primary') targets = extra ? pickTargets(g, primary, 2) : [primary];
+    } else if (m.targets === 'primary') targets = extra && !m.hits ? pickTargets(g, primary, 2) : [primary];
 
     let champDamaged = false;
     const notes: string[] = [];
@@ -752,8 +762,8 @@ function doStep(ctx: StepCtx, step: PlayStep, i: number, primaryId: string) {
       for (let k = 0; k < total; k++) {
         const alive = targets.filter((x) => x.hp > 0);
         let e: Enemy | undefined;
-        if (m.spread) e = targets[Math.min(idx, targets.length - 1)];
-        else e = k >= m.hits && targets[1] ? targets[1] : targets[0];
+        if (m.spread) e = targets[idx % Math.max(1, targets.length)];
+        else e = targets[Math.min(k, targets.length - 1)];
         if (!e || e.hp <= 0) e = alive[0] ?? onField(g).find((x) => x.kind !== 'wagon');
         if (!e) break;
         const r = hit(e, m.damage!);
@@ -891,19 +901,28 @@ export function beginLive(g0: Game): Live {
   return { ctx: { g, frames: [], rec: true, carry: emptyCarry(), scouted: false, playId: 'live' }, steps: [], startScore: g.score.party };
 }
 
-export function liveStep(l0: Live, step: PlayStep, targetId?: string): Live {
+/** How many targets the player picks for this move: several for multi-target moves and multi-hit finishers, one more with Split. */
+export function maxPicks(m: Move, carry: Carry): number {
+  const extra = carry.split ? 1 : 0;
+  if (m.targets === 'multi') return (m.count ?? 1) + extra;
+  if (m.targets === 'primary' && m.hits) return m.hits + extra;
+  if (m.targets === 'primary') return 1 + extra;
+  return 0;
+}
+
+export function liveStep(l0: Live, step: PlayStep, targetId?: string, picks?: string[]): Live {
   const l = structuredClone(l0);
-  doStep(l.ctx, step, l.steps.length, targetId ?? onField(l.ctx.g)[0]?.id ?? '');
+  doStep(l.ctx, step, l.steps.length, targetId ?? picks?.[0] ?? onField(l.ctx.g)[0]?.id ?? '', picks);
   l.steps.push(step);
   return l;
 }
 
 /** What a step would do, without recording it. */
-export function previewLive(l: Live, step: PlayStep, targetId?: string): { damage: number; kills: number; points: number; open: boolean } {
+export function previewLive(l: Live, step: PlayStep, targetId?: string, picks?: string[]): { damage: number; kills: number; points: number; open: boolean } {
   const ctx: StepCtx = { ...l.ctx, g: clone(l.ctx.g), frames: [], rec: false, carry: { ...l.ctx.carry } };
   const before = new Map(ctx.g.enemies.map((e) => [e.id, e.hp]));
   const shots = ctx.g.stats.party.shots;
-  doStep(ctx, step, l.steps.length, targetId ?? onField(ctx.g)[0]?.id ?? '');
+  doStep(ctx, step, l.steps.length, targetId ?? picks?.[0] ?? onField(ctx.g)[0]?.id ?? '', picks);
   let damage = 0;
   let kills = 0;
   for (const e of ctx.g.enemies) {

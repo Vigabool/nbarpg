@@ -26,6 +26,7 @@ import {
   finishLive,
   liveOptions,
   liveStep,
+  maxPicks,
   previewLive,
   armorOf,
   blockUp,
@@ -145,6 +146,8 @@ export function App() {
   const [live, setLive] = useState<Live | null>(null);
   const [liveHero, setLiveHero] = useState<Cls | null>(null);
   const [liveMove, setLiveMove] = useState<string | null>(null);
+  /** Targets picked so far for a multi-target move, in order. */
+  const [livePicks, setLivePicks] = useState<string[]>([]);
   const [liveDefending, setLiveDefending] = useState(false);
   const [tuning, setTuning] = useState<Tuning>({ ...DEFAULT_TUNING, ...(saved.tuning ?? {}) });
   const [custom, setCustom] = useState<Play[]>(saved.custom ?? []);
@@ -234,6 +237,7 @@ export function App() {
     setLiveHero(null);
     setLiveMove(null);
     setLiveDefending(false);
+    setLivePicks([]);
   }
 
   const isoPlays = useMemo(() => CLASSES.map(isoPlay), []);
@@ -286,9 +290,25 @@ export function App() {
     if (!liveBase || !liveHero || !liveMove || !liveTargeting) return new Map<string, Proj>();
     return new Map(onField(liveBase.ctx.g).map((e) => [e.id, previewLive(liveBase, { cls: liveHero, move: liveMove }, e.id)]));
   }, [liveBase, liveHero, liveMove, liveTargeting]);
-  function liveDo(targetId?: string) {
+  // Multi-target moves: tap enemies to pick them, the way the main game does, then Strike.
+  const livePickMax = liveBase && liveMoveObj && !liveBase.ctx.g.barrierUp ? maxPicks(liveMoveObj, liveBase.ctx.carry) : 0;
+  const liveMulti = livePickMax > 1;
+  const liveTaunter = liveBase && liveMoveObj && (liveMoveObj.damage ?? 0) > 0 ? taunter(liveBase.ctx.g) : undefined;
+  function chooseLiveMove(id: string) {
+    setLiveMove(id);
+    const mv = MOVE[id];
+    const t = liveBase && (mv.damage ?? 0) > 0 ? taunter(liveBase.ctx.g) : undefined;
+    const many = liveBase && !liveBase.ctx.g.barrierUp && maxPicks(mv, liveBase.ctx.carry) > 1;
+    setLivePicks(many && t ? [t.id] : []);
+  }
+  function togglePick(id: string) {
+    if (liveTaunter?.id === id) return; // A Taunting big stays picked.
+    setLivePicks((ps) => (ps.includes(id) ? ps.filter((x) => x !== id) : ps.length < livePickMax ? [...ps, id] : ps));
+  }
+  function liveDo(targetId?: string, picks?: string[]) {
     if (!liveBase || !liveHero || !liveMove) return;
-    const next = liveStep(liveBase, { cls: liveHero, move: liveMove }, targetId);
+    const next = liveStep(liveBase, { cls: liveHero, move: liveMove }, targetId, picks);
+    setLivePicks([]);
     setLive(next);
     setLiveHero(null);
     setLiveMove(null);
@@ -385,8 +405,11 @@ export function App() {
               projections={isLive ? liveProjections : projections}
               picking={isLive ? liveTargeting : !!selPlay && !frames}
               target={tgt}
+              picks={isLive && liveMulti ? livePicks : undefined}
               frame={curFrame ?? liveFrame}
-              onPick={(id) => (isLive && liveTargeting ? liveDo(id) : selPlay && !frames ? setTgt(id) : setModal({ kind: 'enemy', id }))}
+              onPick={(id) =>
+                isLive && liveTargeting ? (liveMulti ? togglePick(id) : liveDo(id)) : selPlay && !frames ? setTgt(id) : setModal({ kind: 'enemy', id })
+              }
             />
             <HeroRow
               game={shown}
@@ -428,8 +451,16 @@ export function App() {
                 setLiveHero(c);
                 setLiveMove(null);
               }}
-              onMove={setLiveMove}
-              onBack={() => (liveMove ? setLiveMove(null) : setLiveHero(null))}
+              onMove={chooseLiveMove}
+              onBack={() => {
+                setLivePicks([]);
+                if (liveMove) setLiveMove(null);
+                else setLiveHero(null);
+              }}
+              picks={livePicks}
+              pickMax={livePickMax}
+              lockedPick={liveMulti ? liveTaunter?.id : undefined}
+              onStrike={() => liveDo(undefined, livePicks)}
               onGo={() => liveDo()}
               onTarget={(id) => liveDo(id)}
               onHold={hold}
@@ -697,6 +728,10 @@ function LivePanel(props: {
   onHold: () => void;
   onEndNoShot: () => void;
   onDefend: () => void;
+  picks: string[];
+  pickMax: number;
+  lockedPick?: string;
+  onStrike: () => void;
 }) {
   const l = props.live;
   const g = l.ctx.g;
@@ -805,6 +840,35 @@ function LivePanel(props: {
               </button>
             )}
           </>
+        ) : compact && m && props.pickMax > 1 ? (
+          (() => {
+            const named = (id: string) => g.enemies.find((e) => e.id === id)?.name.replace('Goblin ', '') ?? '';
+            const pv = props.picks.length ? previewLive(l, { cls: hero!.cls, move: m.id }, undefined, props.picks) : null;
+            const spell = hero!.cls === 'wizard' || hero!.cls === 'cleric';
+            return (
+              <div className="stack">
+                <div className="row" style={{ justifyContent: 'space-between' }}>
+                  <span>
+                    <strong>{m.name}</strong>: pick up to {props.pickMax} target{props.pickMax > 1 ? 's' : ''} ({props.picks.length} picked)
+                    {m.hits ? ' · hits go to your picks in order' : ''}
+                  </span>
+                  <button className="btn quiet small" onClick={props.onBack}>
+                    Back
+                  </button>
+                </div>
+                {props.lockedPick && <span className="small warn">The {named(props.lockedPick)} Taunts: it has to be one of the targets.</span>}
+                {props.picks.length > 0 && (
+                  <span className="small">
+                    {props.picks.map((id, k) => `${k + 1}. ${named(id)}`).join(' · ')}
+                    {pv ? ` → ${pv.damage} damage${pv.kills ? `, ${pv.kills} KO` : ''}, +${pv.points}` : ''}
+                  </span>
+                )}
+                <button className="btn primary" disabled={props.picks.length === 0} onClick={props.onStrike}>
+                  {spell ? 'Cast on' : 'Strike'} {props.picks.length}
+                </button>
+              </div>
+            );
+          })()
         ) : compact && m ? (
           <div className="row" style={{ justifyContent: 'space-between' }}>
             <span>
@@ -1364,10 +1428,14 @@ function Board(props: {
   projections: Map<string, Proj>;
   picking: boolean;
   target: string | null;
+  /** Targets picked for a multi-target move, in order. */
+  picks?: string[];
   frame: Frame | null;
   onPick: (id: string) => void;
 }) {
   const g = props.game;
+  const pickNo = (id: string) => (props.picks ? props.picks.indexOf(id) + 1 : 0);
+  const isPicked = (id: string) => props.target === id || pickNo(id) > 0;
   const field = onField(g);
   const big = field.filter((e) => e.kind !== 'goblin');
   const ram = field.filter((e) => e.kind === 'goblin' && e.onRam);
@@ -1377,14 +1445,15 @@ function Board(props: {
   const gob = (e: Enemy) => (
     <button
       key={e.id}
-      className={`gob ${e.onRam ? 'ram' : ''} ${props.picking ? 'target' : ''} ${props.target === e.id ? 'picked' : ''} ${hit(e.id) ? 'hit' : ''}`}
+      className={`gob ${e.onRam ? 'ram' : ''} ${props.picking ? 'target' : ''} ${isPicked(e.id) ? 'picked' : ''} ${hit(e.id) ? 'hit' : ''}`}
       onClick={() => props.onPick(e.id)}
       aria-label={`Goblin, ${e.hp} HP${e.onRam ? ', on the ram' : ''}`}
     >
+      {pickNo(e.id) > 0 && <span className="pickno">{pickNo(e.id)}</span>}
       👺 <span className="num">{e.hp}</span>
       {e.stripped && <span className="chip ball">Stripped</span>}
       {e.exposed > 0 && <span className="chip ball">Exp</span>}
-      {props.picking && <span className="proj">+{props.projections.get(e.id)?.points ?? 0}</span>}
+      {props.picking && !props.picks && <span className="proj">+{props.projections.get(e.id)?.points ?? 0}</span>}
     </button>
   );
   const caster = field.find((e) => e.barrier);
@@ -1400,7 +1469,7 @@ function Board(props: {
           <span className="small">
             The Shaman’s wall stands in front of the whole horde. Nothing behind it can be targeted: the first damaging move breaks it.
           </span>
-          {props.picking && <span className="proj">Tap to hit the Barrier</span>}
+          {props.picking && !props.picks && <span className="proj">Tap to hit the Barrier</span>}
         </button>
       )}
       <div className="enemies">
@@ -1409,9 +1478,11 @@ function Board(props: {
           return (
             <button
               key={e.id}
-              className={`ecard ${props.picking ? 'target' : ''} ${props.target === e.id ? 'picked' : ''} ${ci >= 0 ? 'inCall' : ''} ${hit(e.id) ? 'hit' : ''}`}
+              className={`ecard ${props.picking ? 'target' : ''} ${isPicked(e.id) ? 'picked' : ''} ${ci >= 0 ? 'inCall' : ''} ${hit(e.id) ? 'hit' : ''}`}
               onClick={() => props.onPick(e.id)}
+              aria-pressed={props.picks ? pickNo(e.id) > 0 : undefined}
             >
+              {pickNo(e.id) > 0 && <span className="pickno corner">{pickNo(e.id)}</span>}
               {ci >= 0 && <span className="callstep">{ci + 1}</span>}
               <span className="nm">
                 {ENEMY_INFO[e.kind].icon} {e.name.replace('Goblin ', '')}
@@ -1433,7 +1504,7 @@ function Board(props: {
                   </span>
                 ))}
               </div>
-              {props.picking && <span className="proj">{projText(props.projections.get(e.id))}</span>}
+              {props.picking && !props.picks && <span className="proj">{projText(props.projections.get(e.id))}</span>}
             </button>
           );
         })}
