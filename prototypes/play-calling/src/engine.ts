@@ -35,7 +35,7 @@ export interface Tuning {
   hordeHitPoints: number;
 }
 export const DEFAULT_TUNING: Tuning = {
-  gateHp: 50,
+  gateHp: 70,
   goblinHp: 9,
   shotPoints: 2,
   championPoints: 4,
@@ -94,11 +94,12 @@ export interface Enemy {
   stripped: boolean;
   /** Loses Quick, and its next hit deals half. */
   slowed: boolean;
-  /** Defenses: Taunt, Quick, a Barrier it casts on its allies, and Block. */
+  /** Defenses: Taunt, Quick, casting the horde's Barrier, and Block. */
   taunts: boolean;
   quick: boolean;
   quickUsed: boolean;
-  barrier: number;
+  /** Raises the Barrier at the start of each party possession (the Shaman). */
+  barrier: boolean;
   block: boolean;
   summonedThisTurn: boolean;
   /** Taken down and already scored. */
@@ -169,6 +170,8 @@ export interface Game {
   blockUsed: boolean;
   /** The double-team has smothered the star's first hit this possession. */
   starBlockUsed: boolean;
+  /** The Shaman's Barrier stands in front of the whole horde until a hit breaks it. */
+  barrierUp: boolean;
 }
 
 export interface Frame {
@@ -271,7 +274,7 @@ export function newGame(tuning: Tuning = DEFAULT_TUNING, difficulty: Difficulty 
       taunts: kind === 'ogre',
       quick: kind === 'cutthroat' || kind === 'sharpshooter',
       quickUsed: false,
-      barrier: kind === 'shaman' ? 2 : 0,
+      barrier: kind === 'shaman',
       block: kind === 'chieftain',
       summonedThisTurn: false,
       down: false,
@@ -331,9 +334,11 @@ export function newGame(tuning: Tuning = DEFAULT_TUNING, difficulty: Difficulty 
     blocked: false,
     blockUsed: false,
     starBlockUsed: false,
+    barrierUp: false,
   };
   arrive(g);
   g.call = chooseCall(g);
+  raiseBarrier(g);
   return g;
 }
 
@@ -359,7 +364,7 @@ function goblin(id: string, tuning: Tuning, quarter: number): Enemy {
     taunts: false,
     quick: false,
     quickUsed: false,
-    barrier: 0,
+    barrier: false,
     block: false,
     summonedThisTurn: false,
     down: false,
@@ -395,20 +400,14 @@ const adjusting = (g: Game, id: Adjustment['id']) => g.adjustment?.id === id && 
 export const taunter = (g: Game) => onField(g).find((e) => e.taunts && !e.disabled);
 /** Whether this enemy will evade the next hit. */
 export const hasQuick = (e: Enemy) => e.quick && !e.quickUsed && !e.slowed && !e.disabled;
-/** Armor a Champion or the boss gets from an ally's Barrier (goblins and the wagon get none). */
-export const barrierFor = (g: Game, e: Enemy) =>
-  !isChampion(e)
-    ? 0
-    : Math.max(
-        0,
-        ...onField(g)
-          .filter((x) => x.barrier > 0 && x.id !== e.id)
-          .map((x) => x.barrier),
-      );
+/** At the start of each party possession the Shaman raises the Barrier in front of the whole horde. */
+export function raiseBarrier(g: Game) {
+  g.barrierUp = onField(g).some((e) => e.barrier);
+}
 /** Whether the horde's Block is still up this possession. */
 export const blockUp = (g: Game) => !g.blockUsed && onField(g).some((e) => e.block);
 /** Everything that reduces a hit on this enemy. */
-export const armorOf = (g: Game, e: Enemy) => e.armor + barrierFor(g, e) + (adjusting(g, 'lead') && isChampion(e) ? 1 : 0);
+export const armorOf = (g: Game, e: Enemy) => e.armor + (adjusting(g, 'lead') && isChampion(e) ? 1 : 0);
 
 function starDoubled(g: Game, cls: Cls) {
   return adjusting(g, 'double') && g.adjustment?.star === cls;
@@ -660,7 +659,24 @@ function doStep(ctx: StepCtx, step: PlayStep, i: number, primaryId: string) {
       break;
   }
 
-  if (chosen) {
+  if (chosen && g.barrierUp && (m.targets ?? 'none') !== 'none') {
+    // The Barrier stands in front of everyone: the first damaging move breaks it, and nothing behind it can be targeted.
+    const deals = (m.damage ?? 0) > 0;
+    if (deals) {
+      g.barrierUp = false;
+      parts.push('the Barrier absorbs it and breaks');
+    } else parts.push('the Barrier stops it: nothing behind it can be targeted');
+    if (fin) parts.push('no bucket');
+    frames.push({
+      game: snap(),
+      text: `${CLASS_INFO[h.cls].name} · ${m.name}: ${parts.join(', ')}`,
+      side: 'party',
+      actor: h.cls,
+      target: 'barrier',
+      kind: 'step',
+      result: parts.join(', '),
+    });
+  } else if (chosen) {
     const sure = !!m.sure || carry.sure;
     const pierce = !!m.pierce || carry.pierce;
     const deals = (m.damage ?? 0) > 0;
@@ -1256,6 +1272,7 @@ function endPossession(g: Game, frames: Frame[]) {
   else {
     arrive(g);
     g.call = chooseCall(g);
+    raiseBarrier(g);
   }
   frames.push({
     game: clone(g),
@@ -1321,6 +1338,7 @@ export function startSecondHalf(g0: Game, adjustment: Adjustment): Game {
   g.phase = 'party';
   arrive(g);
   g.call = chooseCall(g);
+  raiseBarrier(g);
   return g;
 }
 

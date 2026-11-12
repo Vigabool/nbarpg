@@ -1324,3 +1324,35 @@ th {
 .lmove-btn:disabled {
   opacity: 0.45;
 }
+
+/* The Shaman's Barrier: a card over the whole horde until a hit breaks it */
+.boardwrap {
+  position: relative;
+}
+.barrier {
+  position: absolute;
+  inset: -4px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 16px;
+  text-align: center;
+  border: 2px solid var(--horde);
+  border-radius: var(--r);
+  background: color-mix(in srgb, var(--horde-soft) 88%, transparent);
+  backdrop-filter: blur(2px);
+  color: var(--ink);
+}
+.barrier.target {
+  border-color: var(--ball);
+  box-shadow: 0 0 0 3px var(--ball-soft);
+}
+.barrier-title {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.6rem;
+  color: var(--horde);
+}

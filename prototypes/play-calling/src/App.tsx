@@ -833,7 +833,8 @@ function LivePanel(props: {
               {moves.map((mv) => {
                 const fin = isFinisher(mv);
                 const used = hero.usedSpecial.includes(mv.id);
-                const blocked = (opts.finishersOnly && !fin) || used;
+                const walled = g.barrierUp && (mv.targets ?? 'none') !== 'none' && !(mv.damage ?? 0);
+                const blocked = (opts.finishersOnly && !fin) || used || walled;
                 const usesBall = prev ? passHelps(prev, mv) : false;
                 const chosen = props.move === mv.id;
                 const preview = chosen && !needsTarget(mv) ? previewLive(l, { cls: hero.cls, move: mv.id }) : null;
@@ -850,6 +851,8 @@ function LivePanel(props: {
                       <span className="small">{mv.action}</span>
                       {mv.enablerText && !fin && <span className="small muted">Pass: {mv.enablerText}</span>}
                       {used && <span className="small err">used this game</span>}
+                      {walled && <span className="small err">the Barrier is up: break it with a damaging move first</span>}
+                      {g.barrierUp && !walled && (mv.damage ?? 0) > 0 && <span className="small warn">hits the Barrier{fin ? ' (no bucket)' : ''}</span>}
                     </button>
                     {preview && (
                       <div className="row" style={{ justifyContent: 'space-between' }}>
@@ -1338,7 +1341,7 @@ function statusChips(g: Game, e: Enemy) {
   const armor = armorOf(g, e);
   if (armor > 0) out.push({ t: `Armor ${armor}`, c: 'cont' });
   if (hasQuick(e)) out.push({ t: '💨 Quick', c: 'cont' });
-  if (e.barrier > 0 && !e.disabled) out.push({ t: `✨ Barrier +${e.barrier}`, c: 'cont' });
+  if (e.barrier) out.push({ t: '✨ casts the Barrier', c: 'cont' });
   if (e.block && blockUp(g)) out.push({ t: '✋ Block', c: 'cont' });
   if (e.taunted) out.push({ t: 'Taunted', c: 'ball' });
   if (e.disabled) out.push({ t: 'Disabled', c: 'ball' });
@@ -1384,8 +1387,22 @@ function Board(props: {
       {props.picking && <span className="proj">+{props.projections.get(e.id)?.points ?? 0}</span>}
     </button>
   );
+  const caster = field.find((e) => e.barrier);
   return (
-    <div className="stack">
+    <div className="stack boardwrap">
+      {g.barrierUp && (
+        <button
+          className={`barrier ${props.picking ? 'target' : ''} ${props.frame?.target === 'barrier' ? 'hit' : ''}`}
+          onClick={() => props.onPick(caster?.id ?? field[0]?.id ?? '')}
+          aria-label="The Barrier: the first damaging hit breaks it"
+        >
+          <span className="barrier-title">✨ Barrier</span>
+          <span className="small">
+            The Shaman’s wall stands in front of the whole horde. Nothing behind it can be targeted: the first damaging move breaks it.
+          </span>
+          {props.picking && <span className="proj">Tap to hit the Barrier</span>}
+        </button>
+      )}
       <div className="enemies">
         {big.map((e) => {
           const ci = callIdx(e.id);
@@ -2230,7 +2247,7 @@ function Designer(props: { tuning: Tuning; difficulty: Difficulty; initial?: Pla
         (m.kind !== 'legendary' || heroLines[c].tripleDouble),
     );
 
-  // Preview against one enemy, with the whole horde on the floor (so Taunt, Barrier and Block are up).
+  // Preview against one enemy, with the whole horde on the floor (so Taunt and Block are up; the Barrier is left down).
   const preview = useMemo(() => {
     if (errors.length) return null;
     const play: Play = { id: 'preview', name, steps, tags: [] };
@@ -2480,9 +2497,9 @@ function Guide(props: { onClose: () => void }) {
     ],
     [
       'Defenses',
-      'Taunt (the Ogre): single-target hits must go to it. Armor: each hit deals less. Quick: the first hit on it each possession misses. Barrier (the Shaman): Armor on every other enemy while it stands. Block (the Chieftain): the first hit on any enemy each possession is cancelled.',
+      'Taunt (the Ogre): single-target hits must go to it. Armor: each hit deals less. Quick: the first hit on it each possession misses. Barrier (the Shaman): raised at the start of each of your possessions, a wall in front of the whole horde; the first damaging move breaks it, and nothing behind it can be targeted until then. Block (the Chieftain): the first hit on any enemy each possession is cancelled.',
     ],
-    ['Passes', 'Armor (protects the next hero), Sure (can’t be evaded or Blocked), Crit (+50% damage), Pierce (ignores Armor and Barrier), Split (+1 target).'],
+    ['Passes', 'Armor (protects the next hero), Sure (can’t be evaded or Blocked), Crit (+50% damage), Pierce (ignores Armor), Split (+1 target).'],
     ['Takedowns', 'Each enemy shows its point value (🏀). Taking it down scores it, and stops it scoring.'],
     [
       'Touches',

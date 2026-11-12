@@ -59,7 +59,7 @@ export interface Move {
   spread?: boolean;
   effect?: Effect;
   amount?: number;
-  /** Ignores Armor and Barrier. */
+  /** Ignores Armor. */
   pierce?: boolean;
   /** Can't be evaded by Quick or cancelled by Block. */
   sure?: boolean;
@@ -164,7 +164,7 @@ export const MOVES: Move[] = [
     effect: 'expose',
     enabler: { kind: 'pierce' },
     action: 'the target is Exposed (+3 from every hit this possession)',
-    enablerText: 'Pierce (ignores Armor and Barrier)',
+    enablerText: 'Pierce (ignores Armor)',
   }),
   M({
     id: 'smite',
@@ -301,7 +301,7 @@ export const MOVES: Move[] = [
     effect: 'slow',
     enabler: { kind: 'pierce' },
     action: '4 damage, and the target is Slowed (loses Quick; its next hit deals half)',
-    enablerText: 'Pierce (ignores Armor and Barrier)',
+    enablerText: 'Pierce (ignores Armor)',
   }),
   M({
     id: 'fireball',
@@ -409,7 +409,7 @@ export const TEMPLATES: Play[] = [
       { cls: 'rogue', move: 'backstab' },
     ],
     tags: ['vs a big'],
-    blurb: 'Provoke Taunts the target and shields the Cleric; Empower’s Crit lands on a doubled Backstab.',
+    blurb: 'Provoke Taunts the target and shields the Cleric; Empower’s Crit lands on a doubled Backstab. With the Barrier up, Provoke only breaks it.',
   },
   {
     id: 'kick-out',
@@ -419,7 +419,17 @@ export const TEMPLATES: Play[] = [
       { cls: 'wizard', move: 'fireball' },
     ],
     tags: ['vs a swarm', 'stop the ram'],
-    blurb: 'Hobble’s Split sends the Fireball onto a fourth enemy: clears the ram crew.',
+    blurb: 'Hobble breaks the Barrier or Splits the Fireball onto a fourth enemy: clears the ram crew.',
+  },
+  {
+    id: 'frost-bolt',
+    name: 'Frost Bolt',
+    steps: [
+      { cls: 'wizard', move: 'frost' },
+      { cls: 'ranger', move: 'aimed' },
+    ],
+    tags: ['vs the Barrier', 'vs Armor'],
+    blurb: 'Frost breaks the Barrier (or Slows the target and passes Pierce), and the Aimed Shot Pierces Armor.',
   },
   {
     id: 'shut-it-down',
@@ -439,7 +449,7 @@ export const TEMPLATES: Play[] = [
       { cls: 'ranger', move: 'aimed' },
     ],
     tags: ['vs Armor', 'protect the lead'],
-    blurb: 'Screen braces the party and makes the Aimed Shot Sure; the shot Pierces Armor and Barrier.',
+    blurb: 'Screen braces the party and makes the Aimed Shot Sure; the shot Pierces Armor.',
   },
   {
     id: 'crack-the-shell',
@@ -469,7 +479,7 @@ export const TEMPLATES: Play[] = [
       { cls: 'rogue', move: 'flurry' },
     ],
     tags: ['vs Quick or Block', 'vs a swarm'],
-    blurb: 'Spacing uses up the Block and every Quick, then a four-hit Flurry lands everywhere.',
+    blurb: 'Spacing breaks the Barrier or uses up the Block and every Quick, then the Flurry lands.',
   },
   {
     id: 'regroup',
@@ -482,7 +492,7 @@ export const TEMPLATES: Play[] = [
     blurb: 'Armor for everyone, then a Sure finisher that heals the whole party.',
   },
 ];
-export const DEFAULT_PLAYBOOK = ['critical-taunt', 'kick-out', 'shut-it-down', 'pick-and-pop'];
+export const DEFAULT_PLAYBOOK = ['critical-taunt', 'kick-out', 'frost-bolt', 'spread-the-floor'];
 
 /** The Goblin Horde's playbook, in priority order. */
 export type EnemyKind = 'goblin' | 'shaman' | 'hexer' | 'sharpshooter' | 'cutthroat' | 'ogre' | 'chieftain' | 'wagon';
@@ -496,7 +506,7 @@ export const ENEMY_INFO: Record<EnemyKind, { name: string; icon: string; mirrors
     name: 'Goblin Shaman',
     icon: '🥁',
     mirrors: 'assists leader',
-    job: 'Playmaker: Call the Pack (goblins to the ram) and War Drum (boosts the ram). Barrier: every other Champion and the boss have Armor +2 while it stands.',
+    job: 'Playmaker: Call the Pack (goblins to the ram) and War Drum (boosts the ram). Barrier: at the start of each of your possessions it raises a wall in front of the whole horde; the first damaging hit breaks it, and nothing behind it can be targeted until then.',
   },
   hexer: { name: 'Goblin Hexer', icon: '🔮', mirrors: 'top scorer', job: 'Setup: Hex Exposes a hero for the finisher after it.' },
   sharpshooter: {
