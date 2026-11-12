@@ -1372,3 +1372,13 @@ th {
   top: -7px;
   left: -5px;
 }
+
+/* Looking at a hero before passing */
+.lhero.on {
+  border-color: var(--ball);
+  background: var(--ball-soft);
+}
+.lmove-btn.preview:disabled {
+  opacity: 1;
+  cursor: default;
+}

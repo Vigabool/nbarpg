@@ -148,6 +148,8 @@ export function App() {
   const [liveMove, setLiveMove] = useState<string | null>(null);
   /** Targets picked so far for a multi-target move, in order. */
   const [livePicks, setLivePicks] = useState<string[]>([]);
+  /** The ball has been passed to liveHero (until then the player is only looking at their moves). */
+  const [livePassed, setLivePassed] = useState(false);
   const [liveDefending, setLiveDefending] = useState(false);
   const [tuning, setTuning] = useState<Tuning>({ ...DEFAULT_TUNING, ...(saved.tuning ?? {}) });
   const [custom, setCustom] = useState<Play[]>(saved.custom ?? []);
@@ -238,6 +240,7 @@ export function App() {
     setLiveMove(null);
     setLiveDefending(false);
     setLivePicks([]);
+    setLivePassed(false);
   }
 
   const isoPlays = useMemo(() => CLASSES.map(isoPlay), []);
@@ -309,6 +312,7 @@ export function App() {
     if (!liveBase || !liveHero || !liveMove) return;
     const next = liveStep(liveBase, { cls: liveHero, move: liveMove }, targetId, picks);
     setLivePicks([]);
+    setLivePassed(false);
     setLive(next);
     setLiveHero(null);
     setLiveMove(null);
@@ -419,6 +423,7 @@ export function App() {
               onTap={(cls) => {
                 if (isLive && liveBase && !liveDefending && !liveOptions(liveBase).done && liveOptions(liveBase).heroes.includes(cls)) {
                   setLiveHero(cls);
+                  setLivePassed(false);
                   setLiveMove(null);
                 } else setModal({ kind: 'hero', cls });
               }}
@@ -449,12 +454,16 @@ export function App() {
               setOverride={setOverride}
               onHero={(c) => {
                 setLiveHero(c);
+                setLivePassed(false);
                 setLiveMove(null);
               }}
+              passed={livePassed}
+              onPass={() => setLivePassed(true)}
               onMove={chooseLiveMove}
               onBack={() => {
                 setLivePicks([]);
                 if (liveMove) setLiveMove(null);
+                else if (livePassed) setLivePassed(false);
                 else setLiveHero(null);
               }}
               picks={livePicks}
@@ -732,6 +741,8 @@ function LivePanel(props: {
   pickMax: number;
   lockedPick?: string;
   onStrike: () => void;
+  passed: boolean;
+  onPass: () => void;
 }) {
   const l = props.live;
   const g = l.ctx.g;
@@ -753,6 +764,50 @@ function LivePanel(props: {
   const hero = props.hero ? g.heroes[props.hero] : null;
   const moves = hero ? MOVES.filter((mv) => mv.cls === hero.cls && (mv.kind !== 'signature' || hero.dd) && (mv.kind !== 'legendary' || hero.td)) : [];
   const compact = !!m && needsTarget(m);
+  /** The hero's moves: read-only while the player is still deciding who to pass to. */
+  const movesList = (interactive: boolean) =>
+    hero && (
+      <div className="livemoves">
+        {moves.map((mv) => {
+          const fin = isFinisher(mv);
+          const used = hero.usedSpecial.includes(mv.id);
+          const walled = g.barrierUp && (mv.targets ?? 'none') !== 'none' && !(mv.damage ?? 0);
+          const blocked = (opts.finishersOnly && !fin) || used || walled;
+          const usesBall = prev ? passHelps(prev, mv) : false;
+          const chosen = props.move === mv.id;
+          const preview = interactive && chosen && !needsTarget(mv) ? previewLive(l, { cls: hero.cls, move: mv.id }) : null;
+          return (
+            <div key={mv.id} className={`lmove ${chosen ? 'on' : ''} ${fin ? 'fin' : ''}`}>
+              <button className={`lmove-btn ${interactive ? '' : 'preview'}`} disabled={blocked || !interactive} onClick={() => props.onMove(mv.id)}>
+                <span className="row" style={{ justifyContent: 'space-between' }}>
+                  <strong>{mv.name}</strong>
+                  <span className="chips">
+                    {usesBall && <span className="chip open">uses the ball ✓</span>}
+                    {fin && <span className="chip ball">finisher</span>}
+                  </span>
+                </span>
+                <span className="small">{mv.action}</span>
+                {mv.enablerText && !fin && <span className="small muted">Pass: {mv.enablerText}</span>}
+                {used && <span className="small err">used this game</span>}
+                {walled && <span className="small err">the Barrier is up: break it with a damaging move first</span>}
+                {g.barrierUp && !walled && (mv.damage ?? 0) > 0 && <span className="small warn">hits the Barrier{fin ? ' (no bucket)' : ''}</span>}
+              </button>
+              {preview && (
+                <div className="row" style={{ justifyContent: 'space-between' }}>
+                  <span className="small">
+                    {preview.damage ? `${preview.damage} damage · ` : ''}
+                    {preview.kills ? `${preview.kills} KO · ` : ''}+{preview.points}
+                  </span>
+                  <button className="btn primary small" onClick={props.onGo}>
+                    Go
+                  </button>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
   return (
     <div className={`sheet livepanel ${compact ? 'compact' : ''}`}>
       <div className="sheet-inner">
@@ -814,14 +869,22 @@ function LivePanel(props: {
               Defend
             </button>
           </>
-        ) : !hero ? (
+        ) : !props.passed ? (
           <>
-            <span className="small">{l.steps.length ? 'Pass to: who takes the next action?' : 'Who has the ball? Pick a hero to act.'}</span>
+            <span className="small">
+              {l.steps.length ? 'Who do you pass to? Tap a hero to see their moves, then pass.' : 'Who starts with the ball? Tap a hero to see their moves.'}
+            </span>
             <div className="livepick">
               {CLASSES.map((c) => {
                 const w = why(c);
                 return (
-                  <button key={c} className="lhero" disabled={!!w} onClick={() => props.onHero(c)}>
+                  <button
+                    key={c}
+                    className={`lhero ${hero?.cls === c ? 'on' : ''}`}
+                    disabled={!!w}
+                    aria-pressed={hero?.cls === c}
+                    onClick={() => props.onHero(c)}
+                  >
                     <span>{CLASS_INFO[c].icon}</span>
                     <strong>{CLASS_INFO[c].name}</strong>
                     <span className="small muted">{w || `${g.heroes[c].touches} touches`}</span>
@@ -829,6 +892,14 @@ function LivePanel(props: {
                 );
               })}
             </div>
+            {hero && (
+              <>
+                <button className="btn primary big" onClick={props.onPass}>
+                  {l.steps.length ? 'Pass to' : 'Start with'} the {CLASS_INFO[hero.cls].name} ▸
+                </button>
+                {movesList(false)}
+              </>
+            )}
             {opts.heroes.length === 0 && l.steps.length === 0 && (
               <button className="btn primary" onClick={props.onHold}>
                 Hold the ball (no touches left)
@@ -883,58 +954,19 @@ function LivePanel(props: {
               Back
             </button>
           </div>
-        ) : (
+        ) : hero ? (
           <>
             <div className="row" style={{ justifyContent: 'space-between' }}>
               <span>
-                {CLASS_INFO[hero.cls].icon} <strong>{CLASS_INFO[hero.cls].name}</strong> · {lastName(hero.player)} · {hero.touches} touches
+                🏀 {CLASS_INFO[hero.cls].icon} <strong>{CLASS_INFO[hero.cls].name}</strong> has the ball · {lastName(hero.player)} · {hero.touches} touches
               </span>
               <button className="btn quiet small" onClick={props.onBack}>
                 Back
               </button>
             </div>
-            <div className="livemoves">
-              {moves.map((mv) => {
-                const fin = isFinisher(mv);
-                const used = hero.usedSpecial.includes(mv.id);
-                const walled = g.barrierUp && (mv.targets ?? 'none') !== 'none' && !(mv.damage ?? 0);
-                const blocked = (opts.finishersOnly && !fin) || used || walled;
-                const usesBall = prev ? passHelps(prev, mv) : false;
-                const chosen = props.move === mv.id;
-                const preview = chosen && !needsTarget(mv) ? previewLive(l, { cls: hero.cls, move: mv.id }) : null;
-                return (
-                  <div key={mv.id} className={`lmove ${chosen ? 'on' : ''} ${fin ? 'fin' : ''}`}>
-                    <button className="lmove-btn" disabled={blocked} onClick={() => props.onMove(mv.id)}>
-                      <span className="row" style={{ justifyContent: 'space-between' }}>
-                        <strong>{mv.name}</strong>
-                        <span className="chips">
-                          {usesBall && <span className="chip open">uses the ball ✓</span>}
-                          {fin && <span className="chip ball">finisher</span>}
-                        </span>
-                      </span>
-                      <span className="small">{mv.action}</span>
-                      {mv.enablerText && !fin && <span className="small muted">Pass: {mv.enablerText}</span>}
-                      {used && <span className="small err">used this game</span>}
-                      {walled && <span className="small err">the Barrier is up: break it with a damaging move first</span>}
-                      {g.barrierUp && !walled && (mv.damage ?? 0) > 0 && <span className="small warn">hits the Barrier{fin ? ' (no bucket)' : ''}</span>}
-                    </button>
-                    {preview && (
-                      <div className="row" style={{ justifyContent: 'space-between' }}>
-                        <span className="small">
-                          {preview.damage ? `${preview.damage} damage · ` : ''}
-                          {preview.kills ? `${preview.kills} KO · ` : ''}+{preview.points}
-                        </span>
-                        <button className="btn primary small" onClick={props.onGo}>
-                          Go
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+            {movesList(true)}
           </>
-        )}
+        ) : null}
       </div>
     </div>
   );
