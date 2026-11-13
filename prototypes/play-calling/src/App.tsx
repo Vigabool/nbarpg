@@ -845,9 +845,28 @@ function LivePanel(props: {
             : '';
       const usesBall = prev ? passHelps(prev, mv) : false;
       const hitsBarrier = g.barrierUp && !walled && (mv.damage ?? 0) > 0;
-      const status = used ? 'used' : walled ? 'blocked' : finishOnly ? 'not now' : hitsBarrier ? 'hits the Barrier' : usesBall ? 'uses the ball ✓' : '';
-      const statusClass = used || walled || finishOnly ? 'err' : hitsBarrier ? 'warn' : 'ok';
-      return { fin, used, walled, blockedWhy, usesBall, hitsBarrier, status, statusClass };
+      // The Chieftain's Block cancels the first hit this possession unless the move or the pass is Sure.
+      const blockFirst = !g.barrierUp && blockUp(g) && (mv.damage ?? 0) > 0 && !mv.sure && !l.ctx.carry.sure;
+      const severalHits = (mv.hits ?? 1) > 1 || mv.targets === 'multi' || mv.targets === 'all';
+      const status = used
+        ? 'used'
+        : walled
+          ? 'blocked'
+          : finishOnly
+            ? 'not now'
+            : hitsBarrier
+              ? 'hits the Barrier'
+              : blockFirst
+                ? !fin
+                  ? 'uses up the Block'
+                  : severalHits
+                    ? 'first hit Blocked'
+                    : 'Blocked'
+                : usesBall
+                  ? 'uses the ball ✓'
+                  : '';
+      const statusClass = used || walled || finishOnly ? 'err' : hitsBarrier || (blockFirst && fin) ? 'warn' : 'ok';
+      return { fin, used, walled, blockedWhy, usesBall, hitsBarrier, blockFirst, severalHits, status, statusClass };
     };
     const kindLabel = (mv: Move) =>
       mv.kind === 'signature' ? '★ DD special' : mv.kind === 'legendary' ? '★★ TD special' : isFinisher(mv) ? 'Finisher' : 'Enabler';
@@ -904,6 +923,14 @@ function LivePanel(props: {
             )}
             {open.note && <span className="small muted">{open.note}</span>}
             {oi.hitsBarrier && <span className="small warn">The Barrier is up: this hits the Barrier{oi.fin ? ' and scores no bucket' : ''}.</span>}
+            {oi.blockFirst && (
+              <span className="small warn">
+                ✋ The Chieftain’s Block is up:{' '}
+                {!oi.fin
+                  ? 'this hit is cancelled, which uses up the Block and clears the way for the next hero.'
+                  : `${oi.severalHits ? 'the first hit of this move is cancelled; the rest land.' : 'this hit is cancelled, so no bucket.'} Use a cheap hit first, or a Sure move or pass (Feint, Screen, Lightning Bolt).`}
+              </span>
+            )}
             {oi.blockedWhy && <span className="small err">{oi.blockedWhy}</span>}
             {!interactive ? (
               <span className="small muted">
@@ -1634,8 +1661,15 @@ function Board(props: {
     </button>
   );
   const caster = field.find((e) => e.barrier);
+  const blocker = blockUp(g) ? field.find((e) => e.block) : undefined;
   return (
     <div className="stack boardwrap">
+      {blocker && !g.barrierUp && (
+        <div className="blockbanner" role="note">
+          <strong>✋ Block</strong>
+          <span className="small">The {blocker.name.replace('Goblin ', '')} cancels the first hit on any enemy this possession. Sure moves get through.</span>
+        </div>
+      )}
       {g.barrierUp && (
         <button
           className={`barrier ${props.picking ? 'target' : ''} ${props.frame?.target === 'barrier' ? 'hit' : ''}`}

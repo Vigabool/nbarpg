@@ -734,7 +734,8 @@ function doStep(ctx: StepCtx, step: PlayStep, i: number, primaryId: string, pick
         }
         if (blockUp(g)) {
           g.blockUsed = true;
-          note(`Blocked on the ${short(e)}`);
+          const blocker = onField(g).find((x) => x.block);
+          note(`Blocked by the ${blocker ? short(blocker) : 'horde'}${blocker && blocker.id !== e.id ? ` (aimed at the ${short(e)})` : ''}`);
           return -1;
         }
         if (hasQuick(e)) {
@@ -790,8 +791,10 @@ function doStep(ctx: StepCtx, step: PlayStep, i: number, primaryId: string, pick
       connected = res.some((r) => r.x.id === primary.id && r.d >= 0);
       const landed = res.filter((r) => r.d >= 0);
       const dmg = landed.reduce((s, r) => s + r.d, 0);
-      if (res.length === 1) parts.push(landed.length ? `${dmg} to the ${short(res[0].x)}` : `misses the ${short(res[0].x)}`);
-      else parts.push(`${dmg} across ${landed.length} of ${res.length} enemies`);
+      // A hit that's Blocked or evaded is explained by its note, so it isn't also called a miss.
+      if (res.length === 1) {
+        if (landed.length) parts.push(`${dmg} to the ${short(res[0].x)}`);
+      } else parts.push(`${dmg} across ${landed.length} of ${res.length} enemies`);
     }
     for (const n of notes) parts.push(n);
 

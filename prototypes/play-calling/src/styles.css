@@ -1476,3 +1476,18 @@ th {
   padding-top: 4px;
   margin-top: 2px;
 }
+
+/* The horde's Block, shown while it's up */
+.blockbanner {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  border: 1.5px dashed var(--horde);
+  background: var(--horde-soft);
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+.blockbanner strong {
+  color: var(--horde);
+  white-space: nowrap;
+}
