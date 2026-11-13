@@ -46,6 +46,8 @@ import {
   playAvailable,
   project,
   pushing,
+  shamanCast,
+  warDrum,
   quarterOf,
   runPossession,
   startSecondHalf,
@@ -1524,7 +1526,7 @@ function Objectives(props: { game: Game }) {
             ))}
           </div>
           <span className="small">
-            {p.length >= 4 ? `hits for ${g.ramBase + (p.length - 4) + g.ramBonus}` : 'stalled'} ·{' '}
+            {p.length >= 4 ? `hits for ${g.ramBase + (p.length - 4) + g.ramBonus + warDrum(g)}${warDrum(g) ? ' (War Drum +2)' : ''}` : 'stalled'} ·{' '}
             {c.length - p.length > 0 ? `${c.length - p.length} pinned · ` : ''}
             {p.length}/4 pushing
           </span>
@@ -1545,7 +1547,22 @@ function Objectives(props: { game: Game }) {
 function CallBanner(props: { game: Game }) {
   const g = props.game;
   if (g.phase !== 'party') return null;
-  if (!g.call) return <div className="call small">The horde has no play to run this turn{g.gate.breached ? '; its goblins keep pillaging.' : '.'}</div>;
+  const cast = shamanCast(g);
+  const shamanLine = cast && (
+    <span className="small shamanline">
+      {cast === 'pack'
+        ? '🥁 Shaman will Call the Pack: fewer than 4 goblins are on the ram.'
+        : '🥁 Shaman will raise the Barrier for your next possession. If your play leaves fewer than 4 goblins on the ram, it Calls the Pack instead.'}{' '}
+      Disable or take it down to stop it.
+    </span>
+  );
+  if (!g.call)
+    return (
+      <div className="call small">
+        The horde has no play to run this turn{g.gate.breached ? '; its goblins keep pillaging.' : '.'}
+        {shamanLine}
+      </div>
+    );
   return (
     <div className="call" aria-live="polite">
       <span className="eyebrow" style={{ color: 'var(--horde)' }}>
@@ -1553,6 +1570,7 @@ function CallBanner(props: { game: Game }) {
       </span>
       <strong>{g.call.name}</strong>
       <span className="small">{g.call.text}</span>
+      {shamanLine}
     </div>
   );
 }
@@ -1564,7 +1582,7 @@ function statusChips(g: Game, e: Enemy) {
   const armor = armorOf(g, e);
   if (armor > 0) out.push({ t: `Armor ${armor}`, c: 'cont' });
   if (hasQuick(e)) out.push({ t: '💨 Quick', c: 'cont' });
-  if (e.barrier) out.push({ t: '✨ casts the Barrier', c: 'cont' });
+  if (e.barrier && !e.disabled) out.push({ t: '🥁 War Drum', c: 'cont' }, { t: '✨ Barrier or Pack', c: 'cont' });
   if (e.block && blockUp(g)) out.push({ t: '✋ Block', c: 'cont' });
   if (e.taunted) out.push({ t: 'Taunted', c: 'ball' });
   if (e.disabled) out.push({ t: 'Disabled', c: 'ball' });
@@ -2727,7 +2745,7 @@ function Guide(props: { onClose: () => void }) {
     ],
     [
       'Defenses',
-      'Taunt (the Ogre): single-target hits must go to it. Armor: each hit deals less. Quick: the first hit on it each possession misses. Barrier (the Shaman): raised at the start of each of your possessions, a wall in front of the whole horde; the first damaging move breaks it, and nothing behind it can be targeted until then. Block (the Chieftain): the first hit on any enemy each possession is cancelled.',
+      'Taunt (the Ogre): single-target hits must go to it. Armor: each hit deals less. Quick: the first hit on it each possession misses. Barrier (the Shaman’s cast on the horde’s turn, when the ram has its 4 goblins): a wall in front of the whole horde for your next possession; the first damaging move breaks it, and nothing behind it can be targeted until then. War Drum (automatic): the ram hits +2 while the Shaman stands. Block (the Chieftain): the first hit on any enemy each possession is cancelled.',
     ],
     ['Passes', 'Armor (protects the next hero), Sure (can’t be evaded or Blocked), Crit (+50% damage), Pierce (ignores Armor), Split (+1 target).'],
     ['Takedowns', 'Each enemy shows its point value (🏀). Taking it down scores it, and stops it scoring.'],

@@ -1470,3 +1470,9 @@ th {
 .mdetail.special {
   border-color: var(--gold);
 }
+
+.shamanline {
+  border-top: 1px dashed var(--horde);
+  padding-top: 4px;
+  margin-top: 2px;
+}

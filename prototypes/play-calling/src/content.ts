@@ -506,7 +506,7 @@ export const ENEMY_INFO: Record<EnemyKind, { name: string; icon: string; mirrors
     name: 'Goblin Shaman',
     icon: '🥁',
     mirrors: 'assists leader',
-    job: 'Playmaker: Call the Pack (goblins to the ram) and War Drum (boosts the ram). Barrier: at the start of each of your possessions it raises a wall in front of the whole horde; the first damaging hit breaks it, and nothing behind it can be targeted until then.',
+    job: 'War Drum (automatic): the ram hits +2 while it stands. Each enemy turn it casts one: Call the Pack (goblins to the ram) when fewer than 4 are on the ram, otherwise the Barrier, a wall in front of the whole horde for your next possession until a damaging hit breaks it.',
   },
   hexer: { name: 'Goblin Hexer', icon: '🔮', mirrors: 'top scorer', job: 'Setup: Hex Exposes a hero for the finisher after it.' },
   sharpshooter: {
@@ -539,6 +539,8 @@ export const ENEMY_INFO: Record<EnemyKind, { name: string; icon: string; mirrors
 export interface HordeStep {
   actors: EnemyKind[];
   kind: 'callPack' | 'warDrum' | 'command' | 'hex' | 'hit' | 'toss';
+  /** A pass the play can do without: with no one to make it, the finisher acts alone. */
+  optional?: boolean;
 }
 export interface HordePlay {
   id: string;
@@ -550,17 +552,6 @@ export interface HordePlay {
   steps: HordeStep[];
 }
 export const HORDE_PLAYS: HordePlay[] = [
-  {
-    id: 'reinforce',
-    short: 'crew under 4',
-    name: 'Reinforce',
-    when: 'the ram has fewer than 4 crew',
-    target: 'disruptor',
-    steps: [
-      { actors: ['shaman', 'chieftain'], kind: 'callPack' },
-      { actors: ['sharpshooter', 'hexer', 'cutthroat'], kind: 'hit' },
-    ],
-  },
   {
     id: 'hunt',
     short: 'you clear 2+ crew',
@@ -590,7 +581,7 @@ export const HORDE_PLAYS: HordePlay[] = [
     when: 'a hero is below a third of their HP',
     target: 'wounded',
     steps: [
-      { actors: ['shaman', 'chieftain'], kind: 'warDrum' },
+      { actors: ['chieftain', 'hexer'], kind: 'command', optional: true },
       { actors: ['ogre'], kind: 'toss' },
     ],
   },
@@ -601,7 +592,7 @@ export const HORDE_PLAYS: HordePlay[] = [
     when: 'otherwise',
     target: 'lowest',
     steps: [
-      { actors: ['chieftain', 'shaman'], kind: 'command' },
+      { actors: ['chieftain'], kind: 'command', optional: true },
       { actors: ['ogre', 'cutthroat', 'sharpshooter', 'hexer', 'chieftain'], kind: 'hit' },
     ],
   },

@@ -338,7 +338,6 @@ export function newGame(tuning: Tuning = DEFAULT_TUNING, difficulty: Difficulty 
   };
   arrive(g);
   g.call = chooseCall(g);
-  raiseBarrier(g);
   return g;
 }
 
@@ -400,9 +399,16 @@ const adjusting = (g: Game, id: Adjustment['id']) => g.adjustment?.id === id && 
 export const taunter = (g: Game) => onField(g).find((e) => e.taunts && !e.disabled);
 /** Whether this enemy will evade the next hit. */
 export const hasQuick = (e: Enemy) => e.quick && !e.quickUsed && !e.slowed && !e.disabled;
-/** At the start of each party possession the Shaman raises the Barrier in front of the whole horde. */
-export function raiseBarrier(g: Game) {
-  g.barrierUp = onField(g).some((e) => e.barrier);
+/** War Drum: the ram hits +2 while the Shaman stands and isn't Disabled. */
+export const warDrum = (g: Game) => (onField(g).some((e) => e.barrier && !e.disabled) ? 2 : 0);
+
+/** What the Shaman will cast on the enemy turn: Call the Pack when fewer than 4 goblins are on the ram, otherwise the Barrier (if it isn't already up). */
+export function shamanCast(g: Game): 'pack' | 'barrier' | null {
+  const shaman = onField(g).find((e) => e.barrier);
+  if (!shaman || shaman.disabled) return null;
+  // Goblins knocked loose or Pinned still count as crew, so defense doesn't trigger reinforcements.
+  if (!g.gate.breached && crew(g).length < 4) return 'pack';
+  return g.barrierUp ? 'pack' : 'barrier';
 }
 /** Whether the horde's Block is still up this possession. */
 export const blockUp = (g: Game) => !g.blockUsed && onField(g).some((e) => e.block);
@@ -460,8 +466,9 @@ export function passHelps(from: Move, to: Move | undefined): boolean {
 
 // ---------- The horde's call ----------
 
-function actorFor(g: Game, kinds: EnemyKind[]): Enemy | undefined {
-  const field = onField(g);
+/** The first enemy on the floor of the kinds listed (in order of preference) who isn't already in the play. */
+function actorFor(g: Game, kinds: EnemyKind[], taken: Set<string>): Enemy | undefined {
+  const field = onField(g).filter((x) => !taken.has(x.id));
   for (const k of kinds) {
     const e = field.find((x) => x.kind === k);
     if (e) return e;
@@ -485,8 +492,6 @@ function heroTarget(g: Game, rule: HordePlay['target']): Cls | null {
 
 function triggered(g: Game, p: HordePlay): boolean {
   switch (p.id) {
-    case 'reinforce':
-      return !g.gate.breached && crew(g).length < 4;
     case 'hunt':
       return Object.values(g.last.crewDowns).some((n) => (n ?? 0) >= 2);
     case 'healer':
@@ -501,14 +506,19 @@ function triggered(g: Game, p: HordePlay): boolean {
 export function chooseCall(g: Game): HordeCall | null {
   for (const p of HORDE_PLAYS) {
     if (!triggered(g, p)) continue;
-    const actors = p.steps.map((s) => actorFor(g, s.actors) ?? null);
-    // Every horde play needs its pass and its finisher.
-    if (actors.some((a) => !a)) continue;
-    if (new Set(actors.map((a) => a!.id)).size < actors.length) continue;
+    // Each step takes the first actor on the floor who isn't already in the play.
+    const taken = new Set<string>();
+    const actors = p.steps.map((s) => {
+      const a = actorFor(g, s.actors, taken);
+      if (a) taken.add(a.id);
+      return a ?? null;
+    });
+    // A play needs its finisher; a missing optional pass is skipped.
+    if (p.steps.some((s, i) => !actors[i] && !s.optional)) continue;
     const target = heroTarget(g, p.target);
     if (!target) return null;
-    const names = actors.map((a) => a!.name.replace('Goblin ', ''));
-    return { playId: p.id, name: p.name, actors: actors.map((a) => a!.id), target, text: `${names.join(' → ')} → ${CLASS_INFO[target].name}` };
+    const names = actors.filter((a): a is Enemy => !!a).map((a) => a.name.replace('Goblin ', ''));
+    return { playId: p.id, name: p.name, actors: actors.map((a) => a?.id ?? null), target, text: `${names.join(' → ')} → ${CLASS_INFO[target].name}` };
   }
   return null;
 }
@@ -1133,10 +1143,27 @@ function enemyTurn(g: Game, inPlay: Set<Cls>, defense: Defense, frames: Frame[])
     }
   }
 
+  // The Shaman casts: Call the Pack when the ram is short of crew, otherwise the Barrier.
+  const shaman = onField(g).find((e) => e.barrier);
+  if (shaman && !shaman.disabled) {
+    const cast = shamanCast(g);
+    if (cast === 'pack') summon(g, tierIndex(shaman.tier ?? 'average') >= tierIndex('great') ? 3 : 2, frames, shaman.name);
+    else if (cast === 'barrier') {
+      g.barrierUp = true;
+      frames.push({
+        game: clone(g),
+        text: `${shaman.name} raises the Barrier: it stands in front of the horde for your next possession.`,
+        side: 'horde',
+        actor: shaman.id,
+      });
+    }
+  } else if (shaman?.disabled)
+    frames.push({ game: clone(g), text: `${shaman.name} is Disabled: no cast and no War Drum this turn.`, side: 'party', actor: shaman.id });
+
   // The called play, or a new one if its actors are gone.
   let call = g.call;
   const alive = (id: string | null) => !!id && g.enemies.some((e) => e.id === id && e.hp > 0 && e.arrived);
-  if (!call || call.actors.some((a) => !alive(a))) {
+  if (!call || call.actors.some((a) => a !== null && !alive(a))) {
     const fresh = chooseCall(g);
     if (fresh && call) frames.push({ game: clone(g), text: `The horde switches to ${fresh.name}.`, side: 'horde' });
     call = fresh;
@@ -1218,7 +1245,7 @@ function enemyTurn(g: Game, inPlay: Set<Cls>, defense: Defense, frames: Frame[])
   if (!g.gate.breached) {
     const p = pushing(g);
     if (p.length >= 4) {
-      let d = g.ramBase + (p.length - 4) + ramBoost + g.ramBonus;
+      let d = g.ramBase + (p.length - 4) + ramBoost + g.ramBonus + warDrum(g);
       const guarded = off.has('warrior') && defense.protect === 'gate';
       if (guarded) {
         d = Math.ceil(d / 2);
@@ -1298,7 +1325,6 @@ function endPossession(g: Game, frames: Frame[]) {
   else {
     arrive(g);
     g.call = chooseCall(g);
-    raiseBarrier(g);
   }
   frames.push({
     game: clone(g),
@@ -1364,7 +1390,6 @@ export function startSecondHalf(g0: Game, adjustment: Adjustment): Game {
   g.phase = 'party';
   arrive(g);
   g.call = chooseCall(g);
-  raiseBarrier(g);
   return g;
 }
 
