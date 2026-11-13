@@ -355,9 +355,9 @@ export function App() {
     if (liveTaunter?.id === id) return; // A Taunting big stays picked.
     setLivePicks((ps) => (ps.includes(id) ? ps.filter((x) => x !== id) : ps.length < livePickMax ? [...ps, id] : ps));
   }
-  function liveDo(targetId?: string, picks?: string[]) {
-    if (!liveBase || !liveHero || !liveMove) return;
-    const next = liveStep(liveBase, { cls: liveHero, move: liveMove }, targetId, picks);
+  function liveDo(targetId?: string, picks?: string[], moveId: string | null = liveMove) {
+    if (!liveBase || !liveHero || !moveId) return;
+    const next = liveStep(liveBase, { cls: liveHero, move: moveId }, targetId, picks);
     setLivePicks([]);
     setLivePassed(false);
     setLive(next);
@@ -523,6 +523,7 @@ export function App() {
               lockedPick={liveMulti ? liveTaunter?.id : undefined}
               onStrike={() => liveDo(undefined, livePicks)}
               onGo={() => liveDo()}
+              onGoMove={(id) => liveDo(undefined, undefined, id)}
               onTarget={(id) => liveDo(id)}
               onHold={hold}
               onEndNoShot={() => live && endLive(live)}
@@ -785,6 +786,8 @@ function LivePanel(props: {
   onMove: (id: string) => void;
   onBack: () => void;
   onGo: () => void;
+  /** Pick a move that needs no target and run it at once. */
+  onGoMove: (id: string) => void;
   onTarget: (id: string) => void;
   onHold: () => void;
   onEndNoShot: () => void;
@@ -818,56 +821,111 @@ function LivePanel(props: {
   const hero = props.hero ? g.heroes[props.hero] : null;
   const moves = hero ? MOVES.filter((mv) => mv.cls === hero.cls && (mv.kind !== 'signature' || hero.dd) && (mv.kind !== 'legendary' || hero.td)) : [];
   const compact = !!m && needsTarget(m);
-  /** The hero's moves: read-only while the player is still deciding who to pass to. */
-  const movesList = (interactive: boolean) =>
-    hero && (
-      <div className="livemoves">
-        {moves.map((mv) => {
-          const fin = isFinisher(mv);
-          const used = hero.usedSpecial.includes(mv.id);
-          const walled = g.barrierUp && (mv.targets ?? 'none') !== 'none' && !(mv.damage ?? 0);
-          const blocked = (opts.finishersOnly && !fin) || used || walled;
-          const usesBall = prev ? passHelps(prev, mv) : false;
-          const chosen = props.move === mv.id;
-          const preview = interactive && chosen && !needsTarget(mv) ? previewLive(l, { cls: hero.cls, move: mv.id }) : null;
-          return (
-            <div key={mv.id} className={`lmove ${chosen ? 'on' : ''} ${fin ? 'fin' : ''} ${isSpecial(mv) ? 'special' : ''}`}>
-              <button className={`lmove-btn ${interactive ? '' : 'preview'}`} disabled={blocked || !interactive} onClick={() => props.onMove(mv.id)}>
-                <span className="row" style={{ justifyContent: 'space-between' }}>
-                  <strong>{mv.name}</strong>
-                  <span className="chips">
-                    {usesBall && <span className="chip open">uses the ball ✓</span>}
-                    {fin && <span className="chip ball">finisher</span>}
-                  </span>
-                </span>
-                {isSpecial(mv) && (
-                  <span className="specialrow">
-                    <SpecialChip m={mv} /> <span className="small muted">{bigNight(hero.line)} · once per game</span>
-                  </span>
-                )}
-                <span className="small">{mv.action}</span>
-                {mv.enablerText && !fin && <span className="small muted">Pass: {mv.enablerText}</span>}
-                {used && <span className="small err">used this game</span>}
-                {walled && <span className="small err">the Barrier is up: break it with a damaging move first</span>}
-                {g.barrierUp && !walled && (mv.damage ?? 0) > 0 && <span className="small warn">hits the Barrier{fin ? ' (no bucket)' : ''}</span>}
+  /** Which small card is open: a move id, 'offball', or none. */
+  const [openMove, setOpenMove] = useState<string | null>(null);
+  useEffect(() => {
+    setOpenMove(null);
+  }, [props.hero]);
+  /** The hero's moves as small cards; tapping one opens its details. Read-only until the ball is passed. */
+  const movesList = (interactive: boolean) => {
+    if (!hero) return null;
+    const info = (mv: Move) => {
+      const fin = isFinisher(mv);
+      const used = hero.usedSpecial.includes(mv.id);
+      const walled = g.barrierUp && (mv.targets ?? 'none') !== 'none' && !(mv.damage ?? 0);
+      const finishOnly = opts.finishersOnly && !fin;
+      const blockedWhy = used
+        ? 'used this game'
+        : walled
+          ? 'the Barrier is up: break it with a damaging move first'
+          : finishOnly
+            ? 'last action: only finishers'
+            : '';
+      const usesBall = prev ? passHelps(prev, mv) : false;
+      const hitsBarrier = g.barrierUp && !walled && (mv.damage ?? 0) > 0;
+      const status = used ? 'used' : walled ? 'blocked' : finishOnly ? 'not now' : hitsBarrier ? 'hits the Barrier' : usesBall ? 'uses the ball ✓' : '';
+      const statusClass = used || walled || finishOnly ? 'err' : hitsBarrier ? 'warn' : 'ok';
+      return { fin, used, walled, blockedWhy, usesBall, hitsBarrier, status, statusClass };
+    };
+    const kindLabel = (mv: Move) =>
+      mv.kind === 'signature' ? '★ DD special' : mv.kind === 'legendary' ? '★★ TD special' : isFinisher(mv) ? 'Finisher' : 'Enabler';
+    const open = moves.find((mv) => mv.id === openMove);
+    const oi = open ? info(open) : null;
+    const preview = interactive && open && oi && !oi.blockedWhy && !needsTarget(open) ? previewLive(l, { cls: hero.cls, move: open.id }) : null;
+    return (
+      <div className="stack">
+        <div className="movegrid">
+          {moves.map((mv) => {
+            const x = info(mv);
+            return (
+              <button
+                key={mv.id}
+                className={`mcard ${openMove === mv.id ? 'on' : ''} ${x.fin ? 'fin' : ''} ${isSpecial(mv) ? 'special' : ''} ${x.blockedWhy ? 'dim' : ''}`}
+                aria-expanded={openMove === mv.id}
+                onClick={() => setOpenMove(openMove === mv.id ? null : mv.id)}
+              >
+                <strong>{mv.name}</strong>
+                <span className={`mkind ${isSpecial(mv) ? 'special' : x.fin ? 'fin' : ''}`}>{kindLabel(mv)}</span>
+                {x.status && <span className={`small ${x.statusClass}`}>{x.status}</span>}
               </button>
-              {preview && (
-                <div className="row" style={{ justifyContent: 'space-between' }}>
-                  <span className="small">
-                    {preview.damage ? `${preview.damage} damage · ` : ''}
-                    {preview.kills ? `${preview.kills} KO · ` : ''}+{preview.points}
-                  </span>
-                  <button className="btn primary small" onClick={props.onGo}>
-                    Go
-                  </button>
-                </div>
-              )}
-            </div>
-          );
-        })}
-        <OffBallCard cls={hero.cls} defTier={hero.defTier} line={hero.line} />
+            );
+          })}
+          <button
+            className={`mcard offball-card ${openMove === 'offball' ? 'on' : ''}`}
+            aria-expanded={openMove === 'offball'}
+            onClick={() => setOpenMove(openMove === 'offball' ? null : 'offball')}
+          >
+            <strong>{CLASS_INFO[hero.cls].defense}</strong>
+            <span className="mkind">Off the ball</span>
+            <span className="small muted">Defense {tierLabel(hero.defTier)}</span>
+          </button>
+        </div>
+        {openMove === 'offball' && <OffBallCard cls={hero.cls} defTier={hero.defTier} line={hero.line} />}
+        {open && oi && (
+          <div className={`panel detail mdetail ${isSpecial(open) ? 'special' : ''}`}>
+            <span className="row" style={{ justifyContent: 'space-between' }}>
+              <strong>{open.name}</strong>
+              <span className="chips">
+                {oi.usesBall && <span className="chip open">uses the ball ✓</span>}
+                {oi.fin && !isSpecial(open) && <span className="chip ball">finisher</span>}
+                <SpecialChip m={open} />
+              </span>
+            </span>
+            {isSpecial(open) && <span className="small muted">{bigNight(hero.line)} · once per game</span>}
+            <span className="small">
+              <b>Action:</b> {open.action}
+            </span>
+            {open.enablerText && !oi.fin && (
+              <span className="small">
+                <b>Pass:</b> {open.enablerText}
+              </span>
+            )}
+            {open.note && <span className="small muted">{open.note}</span>}
+            {oi.hitsBarrier && <span className="small warn">The Barrier is up: this hits the Barrier{oi.fin ? ' and scores no bucket' : ''}.</span>}
+            {oi.blockedWhy && <span className="small err">{oi.blockedWhy}</span>}
+            {!interactive ? (
+              <span className="small muted">
+                {l.steps.length ? 'Pass to' : 'Start with'} the {CLASS_INFO[hero.cls].name} to use this move.
+              </span>
+            ) : oi.blockedWhy ? null : needsTarget(open) ? (
+              <button className="btn primary" onClick={() => props.onMove(open.id)}>
+                Use {open.name}: pick {maxPicks(open, l.ctx.carry) > 1 && !g.barrierUp ? 'targets' : 'a target'}
+              </button>
+            ) : (
+              <div className="row" style={{ justifyContent: 'space-between' }}>
+                <span className="small">
+                  {preview ? `${preview.damage ? `${preview.damage} damage · ` : ''}${preview.kills ? `${preview.kills} KO · ` : ''}+${preview.points}` : ''}
+                </span>
+                <button className="btn primary" onClick={() => props.onGoMove(open.id)}>
+                  Go: {open.name}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     );
+  };
   return (
     <div className={`sheet livepanel ${compact ? 'compact' : ''}`}>
       <div className="sheet-inner">

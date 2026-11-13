@@ -1410,3 +1410,63 @@ th {
   flex-direction: column;
   gap: 3px;
 }
+
+/* The hero's moves as small cards (like the Horde tab) */
+.movegrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+.mcard {
+  background: var(--bg);
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  padding: 7px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+  min-width: 0;
+}
+.mcard strong {
+  font-size: 0.88rem;
+  line-height: 1.15;
+}
+.mcard .small {
+  font-size: 0.7rem;
+}
+.mcard.fin {
+  border-style: dashed;
+}
+.mcard.special {
+  border-color: var(--gold);
+}
+.mcard.dim {
+  opacity: 0.6;
+}
+.mcard.on {
+  border-color: var(--ball);
+  border-style: solid;
+  background: var(--ball-soft);
+  opacity: 1;
+}
+.mcard.offball-card {
+  border-color: var(--party);
+  background: var(--party-soft);
+}
+.mkind {
+  font-size: 0.66rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+.mkind.fin {
+  color: var(--ball);
+}
+.mkind.special {
+  color: var(--gold);
+}
+.mdetail.special {
+  border-color: var(--gold);
+}
