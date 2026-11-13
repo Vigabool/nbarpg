@@ -917,6 +917,13 @@ export function liveStep(l0: Live, step: PlayStep, targetId?: string, picks?: st
   return l;
 }
 
+/** A step without the replay frames, for searching many possessions quickly. */
+export function liveStepFast(l: Live, step: PlayStep, targetId?: string, picks?: string[]): Live {
+  const ctx: StepCtx = { ...l.ctx, g: clone(l.ctx.g), frames: [], rec: false, carry: { ...l.ctx.carry } };
+  doStep(ctx, step, l.steps.length, targetId ?? picks?.[0] ?? onField(ctx.g)[0]?.id ?? '', picks);
+  return { ctx, steps: [...l.steps, step], startScore: l.startScore };
+}
+
 /** What a step would do, without recording it. */
 export function previewLive(l: Live, step: PlayStep, targetId?: string, picks?: string[]): { damage: number; kills: number; points: number; open: boolean } {
   const ctx: StepCtx = { ...l.ctx, g: clone(l.ctx.g), frames: [], rec: false, carry: { ...l.ctx.carry } };
