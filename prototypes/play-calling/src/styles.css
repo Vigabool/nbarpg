@@ -1693,3 +1693,21 @@ th {
 .hline.info {
   color: var(--muted);
 }
+
+/* The horde's next-turn points, beside its score */
+.hordechip {
+  align-self: center;
+  background: var(--horde);
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: 3px 9px;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1rem;
+  line-height: 1.2;
+}
+.hordechip::after {
+  content: ' ▸';
+  font-size: 0.7rem;
+}

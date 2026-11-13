@@ -69,7 +69,8 @@ type Modal =
   | { kind: 'guide' }
   | { kind: 'enemy'; id: string }
   | { kind: 'hero'; cls: Cls }
-  | { kind: 'recap' };
+  | { kind: 'recap' }
+  | { kind: 'horde' };
 
 /** Step: wait for Next at every beat. Auto and Fast advance on a timer. */
 type Speed = 'step' | 'auto' | 'fast';
@@ -422,6 +423,8 @@ export function App() {
             canTimeout={!!history.length && game.timeouts > 0 && !frames}
             onMenu={() => setModal({ kind: 'menu' })}
             onLast={lastReplay && !frames ? () => setModal({ kind: 'recap' }) : undefined}
+            hordeNext={!replay && game.phase === 'party' ? sim.horde?.points : undefined}
+            onHorde={() => setModal({ kind: 'horde' })}
           />
           <div className="wrap">
             <Objectives game={shown} />
@@ -645,6 +648,38 @@ export function App() {
         />
       )}
       {modal?.kind === 'guide' && <Guide onClose={() => setModal(null)} />}
+      {modal?.kind === 'horde' && sim.horde && (
+        <ModalShell title={`The horde’s next turn: +${sim.horde.points}`} onClose={() => setModal(null)}>
+          <p className="small muted">
+            What the horde will do after the play you’re building, with{' '}
+            {defenders(game, inPlay).length
+              ? defenders(game, inPlay)
+                  .map((c) => CLASS_INFO[c].name)
+                  .join(', ')
+              : 'nobody'}{' '}
+            on defense (the heroes not in your play). Change the play and this updates.
+          </p>
+          <div className="hordepanel">
+            {sim.horde.lines.map((ln, k) => (
+              <span key={k} className={`small hline ${ln.side}`}>
+                {ln.t}
+              </span>
+            ))}
+            {!sim.horde.lines.length && <span className="small muted">The horde has nothing to do.</span>}
+          </div>
+          <div className="panel small">
+            <strong>How the horde scores</strong>
+            <span>2 when its finisher damages a hero (a hit fully stopped by Armor, a Block or a Slow scores nothing).</span>
+            <span>4 for a hero it takes down.</span>
+            <span>1 for every 2 damage the ram does to the gate, and 10 when the gate falls.</span>
+            <span>After the gate falls, 1 for every goblin on the field each turn.</span>
+            <span className="muted">
+              Heroes who aren’t in your play defend: the Warrior Protects, the Ranger Closes Out, the Wizard Wards, the Cleric heals and the Rogue Strips the
+              Ball off the ram.
+            </span>
+          </div>
+        </ModalShell>
+      )}
       {modal?.kind === 'recap' && lastReplay && (
         <ModalShell title={`Possession ${lastReplay.possession + 1}`} onClose={() => setModal(null)}>
           <ReplayBody replay={lastReplay} beats={beatsOf(lastReplay.frames)} beat={Infinity} />
@@ -1119,26 +1154,6 @@ function BuilderSheet(props: {
             </div>
           )}
         </div>
-        {sim.horde && (
-          <div className="hordepanel">
-            <div className="row" style={{ justifyContent: 'space-between' }}>
-              <span className="eyebrow" style={{ color: 'var(--horde)' }}>
-                Then the horde’s turn
-              </span>
-              <span className="num hordepts">+{sim.horde.points}</span>
-            </div>
-            {sim.horde.lines.map((ln, k) => (
-              <span key={k} className={`small hline ${ln.side}`}>
-                {ln.t}
-              </span>
-            ))}
-            {!sim.horde.lines.length && <span className="small muted">The horde has nothing to do.</span>}
-            <span className="small muted">
-              The horde scores 2 when its finisher damages a hero, 4 for a hero it takes down, 1 per 2 gate damage, and 10 when the gate falls (then 1 a goblin
-              each turn).
-            </span>
-          </div>
-        )}
         <div className="row defline">
           <span className="small">
             <strong>Defending:</strong> {off.length ? off.map((c) => `${CLASS_INFO[c].icon} ${roleText(c)}`).join(' · ') : 'nobody'}
@@ -1549,7 +1564,16 @@ function PlaySlot(props: { play: Play; open: boolean; onToggle: () => void; onCh
 
 // ---------- Game screen ----------
 
-function Scoreboard(props: { game: Game; onTimeout: () => void; canTimeout: boolean; onMenu: () => void; onLast?: () => void }) {
+function Scoreboard(props: {
+  game: Game;
+  onTimeout: () => void;
+  canTimeout: boolean;
+  onMenu: () => void;
+  onLast?: () => void;
+  /** What the horde will score on its next turn, if the current plan runs. */
+  hordeNext?: number;
+  onHorde?: () => void;
+}) {
   const g = props.game;
   const q = quarterOf(Math.min(11, g.possession));
   const inQ = Math.min(11, g.possession) % 3;
@@ -1569,6 +1593,11 @@ function Scoreboard(props: { game: Game; onTimeout: () => void; canTimeout: bool
           </span>
         </div>
         <div className="side right">
+          {props.hordeNext !== undefined && (
+            <button className="hordechip" onClick={props.onHorde} aria-label={`The horde will score ${props.hordeNext} on its next turn. Details`}>
+              +{props.hordeNext}
+            </button>
+          )}
           <span className="pts">{g.score.horde}</span>
           <span className="team">Goblins</span>
         </div>

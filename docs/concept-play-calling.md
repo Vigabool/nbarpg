@@ -511,3 +511,4 @@ Separate from Play Calling, and usable in either version of the game: a **Hoops 
 - **The Glossary** gives both explanations.
 
 Buttons, numbers and rules stay the same in both. It's stored per browser, like coach tips, so saves don't change.
+- **Horde score button (Nov 13):** the scoreboard shows what the horde will score on its next turn ("+2 ▸") next to the goblins' score, always visible and updated as you build the play. Tapping it opens a popup with the horde's turn line by line and how the horde scores.
