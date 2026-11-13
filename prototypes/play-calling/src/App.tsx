@@ -277,7 +277,7 @@ export function App() {
     return manual ? { ...auto, ...override } : auto;
   }, [game, inPlay, manual, override]);
   /** Play the built steps on a copy of the game (no frames) to project the shot. */
-  const sim = useMemo(() => simulateBuild(game, slots), [game, slots]);
+  const sim = useMemo(() => simulateBuild(game, slots, defense), [game, slots, defense]);
   const aimMove = aimSlot !== null && slots[aimSlot] ? MOVE[slots[aimSlot]!.move] : null;
   // The finisher can pick several targets unless the Barrier will still be up when it fires.
   const barrierOnFinisher = (ss: (BuildStep | null)[]) =>
@@ -430,6 +430,7 @@ export function App() {
               game={shown}
               projections={aimProjections}
               picking={aimSlot !== null && !frames}
+              barrierHidden={aimSlot !== null && barrierBrokenBefore(slots, aimSlot)}
               target={aimSlot !== null ? (slots[aimSlot]?.target ?? null) : null}
               picks={aimSlot === 3 && aimMax > 1 ? (finisher?.picks ?? (aimTaunter ? [aimTaunter.id] : [])) : undefined}
               frame={curFrame}
@@ -751,11 +752,20 @@ interface Sim {
   bucket: boolean;
   notes: { t: string; ok: boolean }[];
   ready: boolean;
+  /** Every enemy the whole play damages: HP before and after. */
+  hits: { id: string; name: string; before: number; after: number; max: number; ko: boolean }[];
+  /** The Barrier soaks the play's first damaging move. */
+  barrierBroken: boolean;
+  /** The horde's turn that would follow this play (with the current defenders). */
+  horde?: { points: number; lines: { t: string; pts?: number; side: string }[] };
 }
+/** Whether a move earlier than slot i breaks the Barrier, so slot i can aim past it. */
+const barrierBrokenBefore = (slots: (BuildStep | null)[], i: number) =>
+  slots.slice(0, i).some((st) => st && (MOVE[st.move].damage ?? 0) > 0 && (MOVE[st.move].targets ?? 'none') !== 'none');
 const SLOT_ROLE = ['Start', 'Support', 'Support', 'Finish'];
 
 /** Play the built slots on a copy of the game, without frames, to show what the shot will do. */
-function simulateBuild(g: Game, slots: (BuildStep | null)[]): Sim {
+function simulateBuild(g: Game, slots: (BuildStep | null)[], defense?: Defense): Sim {
   const fin = slots[3];
   const primary = fin?.picks?.[0] ?? fin?.target;
   const finMove = fin ? MOVE[fin.move] : null;
@@ -774,6 +784,14 @@ function simulateBuild(g: Game, slots: (BuildStep | null)[]): Sim {
     if (b0 > 0 && e.hp <= 0) kills += 1;
   }
   void before;
+  const hits = g.enemies
+    .filter((e) => e.arrived && e.hp > 0)
+    .map((e) => {
+      const after = Math.max(0, l.ctx.g.enemies.find((x) => x.id === e.id)?.hp ?? e.hp);
+      return { id: e.id, name: e.name.replace('Goblin ', ''), before: e.hp, after, max: e.maxHp, ko: after <= 0 };
+    })
+    .filter((x) => x.after < x.before);
+  const barrierBroken = g.barrierUp && !l.ctx.g.barrierUp;
   const points = l.ctx.g.score.party - g.score.party;
   const bucket = l.ctx.g.stats.party.shots > shotsBefore;
 
@@ -809,7 +827,16 @@ function simulateBuild(g: Game, slots: (BuildStep | null)[]): Sim {
       ok: false,
     });
   }
-  return { buffs, shot: { damage, kills, points }, bucket, notes, ready };
+  // Play out the horde's turn that would follow.
+  let horde: Sim['horde'];
+  if (defense) {
+    const res = finishLive(l, defense);
+    const lines = res.frames
+      .filter((f) => f.phase === 'horde' && !/^Possession|^Halftime|^Final/.test(f.text))
+      .map((f) => ({ t: f.text, pts: f.side === 'horde' ? f.pts : undefined, side: f.side }));
+    horde = { points: res.game.score.horde - g.score.horde, lines };
+  }
+  return { buffs, shot: { damage, kills, points }, bucket, notes, ready, hits, barrierBroken, horde };
 }
 
 function BuilderSheet(props: {
@@ -1069,7 +1096,49 @@ function BuilderSheet(props: {
               {n.ok ? '✓' : '⚠'} {n.t}
             </span>
           ))}
+          {(sim.hits.length > 0 || sim.barrierBroken) && (
+            <div className="dmglist" aria-label="Damage by target">
+              <span className="eyebrow">Damage by target</span>
+              {sim.barrierBroken && (
+                <span className="dmgrow">
+                  <span>✨ Barrier</span>
+                  <span className="ok">broken</span>
+                </span>
+              )}
+              {sim.hits.map((h) => (
+                <span key={h.id} className="dmgrow">
+                  <span>{h.name}</span>
+                  <span className="bar horde dmgbar" aria-hidden="true">
+                    <i style={{ width: `${(h.after / h.max) * 100}%` }} />
+                  </span>
+                  <span className="num">
+                    −{h.before - h.after} · {h.ko ? <strong className="ok">KO</strong> : `${h.after} left`}
+                  </span>
+                </span>
+              ))}
+            </div>
+          )}
         </div>
+        {sim.horde && (
+          <div className="hordepanel">
+            <div className="row" style={{ justifyContent: 'space-between' }}>
+              <span className="eyebrow" style={{ color: 'var(--horde)' }}>
+                Then the horde’s turn
+              </span>
+              <span className="num hordepts">+{sim.horde.points}</span>
+            </div>
+            {sim.horde.lines.map((ln, k) => (
+              <span key={k} className={`small hline ${ln.side}`}>
+                {ln.t}
+              </span>
+            ))}
+            {!sim.horde.lines.length && <span className="small muted">The horde has nothing to do.</span>}
+            <span className="small muted">
+              The horde scores 2 when its finisher damages a hero, 4 for a hero it takes down, 1 per 2 gate damage, and 10 when the gate falls (then 1 a goblin
+              each turn).
+            </span>
+          </div>
+        )}
         <div className="row defline">
           <span className="small">
             <strong>Defending:</strong> {off.length ? off.map((c) => `${CLASS_INFO[c].icon} ${roleText(c)}`).join(' · ') : 'nobody'}
@@ -1620,6 +1689,8 @@ function Board(props: {
   projections: Map<string, Proj>;
   picking: boolean;
   target: string | null;
+  /** An earlier move in the play breaks the Barrier, so the board shows the enemies behind it. */
+  barrierHidden?: boolean;
   /** Targets picked for a multi-target move, in order. */
   picks?: string[];
   frame: Frame | null;
@@ -1658,7 +1729,7 @@ function Board(props: {
           <span className="small">The {blocker.name.replace('Goblin ', '')} cancels the first hit on any enemy this possession. Sure moves get through.</span>
         </div>
       )}
-      {g.barrierUp && (
+      {g.barrierUp && !props.barrierHidden && (
         <button
           className={`barrier ${props.picking ? 'target' : ''} ${props.frame?.target === 'barrier' ? 'hit' : ''}`}
           onClick={() => props.onPick(caster?.id ?? field[0]?.id ?? '')}
