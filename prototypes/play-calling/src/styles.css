@@ -1747,3 +1747,53 @@ th {
     opacity: 0;
   }
 }
+
+/* Game terms: tap for the definition */
+.term {
+  color: inherit;
+  font-weight: 600;
+  text-decoration: underline dotted;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 2px;
+  cursor: help;
+  border-radius: 3px;
+}
+.term:hover,
+.term:focus-visible {
+  background: rgba(127, 127, 127, 0.18);
+  outline: none;
+}
+.termback {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.25);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 16px;
+}
+.termpop {
+  width: 100%;
+  max-width: 420px;
+  background: var(--surface);
+  color: var(--ink);
+  border: 1.5px solid var(--line);
+  border-radius: 14px;
+  padding: 12px 14px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+  margin-bottom: env(safe-area-inset-bottom);
+  animation: wavein 0.2s ease-out;
+}
+.termhead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.termhead strong {
+  font-size: 18px;
+}
+.termpop p {
+  margin: 6px 0 0;
+}

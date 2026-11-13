@@ -60,6 +60,7 @@ import {
   type Carry,
   type Tuning,
 } from './engine';
+import { Rich, TermLayer } from './terms';
 import week from './week.json';
 
 type Screen = 'intro' | 'plan' | 'game' | 'halftime' | 'final';
@@ -398,6 +399,7 @@ export function App() {
 
   return (
     <>
+      <TermLayer />
       {screen === 'intro' && (
         <Intro
           difficulty={difficulty}
@@ -670,7 +672,7 @@ export function App() {
           <div className="hordepanel">
             {sim.horde.lines.map((ln, k) => (
               <span key={k} className={`small hline ${ln.side}`}>
-                {ln.t}
+                <Rich>{ln.t}</Rich>
               </span>
             ))}
             {!sim.horde.lines.length && <span className="small muted">The horde has nothing to do.</span>}
@@ -1056,9 +1058,19 @@ function BuilderSheet(props: {
                   >
                     <strong>{m.name}</strong>
                     <span className={`mkind ${isSpecial(m) ? 'special' : isFinisher(m) ? 'fin' : ''}`}>
-                      {m.kind === 'signature' ? '★ DD special' : m.kind === 'legendary' ? '★★ TD special' : isFinisher(m) ? 'Finisher' : `Buff: ${buffText(m)}`}
+                      {m.kind === 'signature' ? (
+                        '★ DD special'
+                      ) : m.kind === 'legendary' ? (
+                        '★★ TD special'
+                      ) : isFinisher(m) ? (
+                        'Finisher'
+                      ) : (
+                        <Rich>{`Buff: ${buffText(m)}`}</Rich>
+                      )}
                     </span>
-                    <span className="small">{m.action}</span>
+                    <span className="small">
+                      <Rich>{m.action}</Rich>
+                    </span>
                     {used && <span className="small err">used this game</span>}
                   </button>
                 );
@@ -1131,16 +1143,18 @@ function BuilderSheet(props: {
           <div className="chips">
             {describeCarry(sim.buffs).map((b) => (
               <span key={b} className="chip ball">
-                {b}
+                <Rich>{b}</Rich>
               </span>
             ))}
             {!describeCarry(sim.buffs).length && (
-              <span className="small muted">Helpers add buffs to the finisher: Crit, Pierce, Sure, Split, Guided, Armor.</span>
+              <span className="small muted">
+                <Rich>Helpers add buffs to the finisher: Crit, Pierce, Sure, Split, Guided, Armor.</Rich>
+              </span>
             )}
           </div>
           {sim.notes.map((n) => (
             <span key={n.t} className={`small ${n.ok ? 'ok' : 'warn'}`}>
-              {n.ok ? '✓' : '⚠'} {n.t}
+              {n.ok ? '✓' : '⚠'} <Rich>{n.t}</Rich>
             </span>
           ))}
           {(sim.hits.length > 0 || sim.barrierBroken) && (
@@ -1306,7 +1320,9 @@ function PlanScreen(props: {
                   <span className="small num">
                     {openChamp.maxHp} HP · hits for {openChamp.damage} · worth 🏀 {openChamp.points}
                   </span>
-                  <span className="small">{ENEMY_INFO[openChamp.kind].job}</span>
+                  <span className="small">
+                    <Rich>{ENEMY_INFO[openChamp.kind].job}</Rich>
+                  </span>
                 </div>
               )}
               {open === 'goblins' && (
@@ -1317,7 +1333,9 @@ function PlanScreen(props: {
                     {goblins.filter((x) => x.quarter === 2).length}, Q3 {goblins.filter((x) => x.quarter === 3).length}.
                   </span>
                   <span className="small num">{g.tuning.goblinHp} HP · worth 🏀 1</span>
-                  <span className="small">{ENEMY_INFO.goblin.job}</span>
+                  <span className="small">
+                    <Rich>{ENEMY_INFO.goblin.job}</Rich>
+                  </span>
                 </div>
               )}
             </section>
@@ -1530,7 +1548,7 @@ function PlaySlot(props: { play: Play; open: boolean; onToggle: () => void; onCh
                 Step {step! + 1} · {CLASS_INFO[s.cls].name} ({lastName(hero.player)}) · {m.name}
               </strong>
               <span>
-                <b>Action:</b> {m.action}.
+                <b>Action:</b> <Rich>{m.action}</Rich>.
               </span>
               {isFinisher(m) ? (
                 <span>
@@ -1538,11 +1556,15 @@ function PlaySlot(props: { play: Play; open: boolean; onToggle: () => void; onCh
                 </span>
               ) : (
                 <span>
-                  <b>Pass to the {CLASS_INFO[next!.cls].name}:</b> {m.enablerText}.{' '}
+                  <b>Pass to the {CLASS_INFO[next!.cls].name}:</b> <Rich>{m.enablerText}</Rich>.{' '}
                   {passHelps(m, nextMove) ? <span className="ok">✓ boosts {nextMove?.name}</span> : <span className="err">– wasted on {nextMove?.name}</span>}
                 </span>
               )}
-              {m.note && <span className="muted">{m.note}</span>}
+              {m.note && (
+                <span className="muted">
+                  <Rich>{m.note}</Rich>
+                </span>
+              )}
               <span className="muted">
                 {lastName(hero.player)} is {hero.tier === 'average' ? 'Average' : tierLabel(hero.tier as Tier)} this week, so numbers are ×
                 {TIER_MULT[hero.tier as Tier]}.
@@ -1830,7 +1852,7 @@ function Board(props: {
               <div className="chips">
                 {statusChips(g, e).map((c) => (
                   <span key={c.t} className={`chip ${c.c}`}>
-                    {c.t}
+                    <Rich>{c.t}</Rich>
                   </span>
                 ))}
               </div>
@@ -1862,7 +1884,7 @@ function Board(props: {
               t ? `The ${t.name.replace('Goblin ', '')} Taunts: single-target hits go to it.` : '',
               b ? 'The Chieftain’s Block cancels the first hit this possession.' : '',
             ].filter(Boolean);
-            return bits.length ? bits.join(' ') : 'Finishers score 2 when they damage a Champion or the boss.';
+            return <Rich>{bits.length ? bits.join(' ') : 'Finishers score 2 when they damage a Champion or the boss.'}</Rich>;
           })()}
         </span>
       </div>
@@ -1986,7 +2008,7 @@ function ReplayBody(props: { replay: Replay; beats: Beat[]; beat: number }) {
       </div>
       {info.map((x) => (
         <span key={x.i} className="small muted">
-          {x.f.text}
+          <Rich>{x.f.text}</Rich>
         </span>
       ))}
       {play && (
@@ -2009,11 +2031,17 @@ function ReplayBody(props: { replay: Replay; beats: Beat[]; beat: number }) {
                 <strong>{mv.name}</strong>
                 {main ? (
                   <>
-                    <span className="sc-res">{main.f.result}</span>
-                    {put && <span className="sc-res">{put.f.result}</span>}
+                    <span className="sc-res">
+                      <Rich>{main.f.result}</Rich>
+                    </span>
+                    {put && (
+                      <span className="sc-res">
+                        <Rich>{put.f.result}</Rich>
+                      </span>
+                    )}
                     {next && mv.enablerText && (
                       <span className="sc-pass">
-                        → {mv.enablerText} to the {CLASS_INFO[next.cls].name}
+                        → <Rich>{mv.enablerText}</Rich> to the {CLASS_INFO[next.cls].name}
                       </span>
                     )}
                     {(kos > 0 || pts > 0) && (
@@ -2043,7 +2071,9 @@ function ReplayBody(props: { replay: Replay; beats: Beat[]; beat: number }) {
           <div className="hordelist">
             {hordeFrames.map((x) => (
               <div key={x.i} className={`hrow ${x.f.side} ${x.i === lastShown ? 'on' : ''}`}>
-                <span>{x.f.text}</span>
+                <span>
+                  <Rich>{x.f.text}</Rich>
+                </span>
                 {x.f.pts ? <span className="num hpts">+{x.f.pts}</span> : null}
               </div>
             ))}
@@ -2563,11 +2593,15 @@ function Designer(props: { tuning: Tuning; difficulty: Difficulty; initial?: Pla
                   <button key={mv.id} className="mv" aria-pressed={s.move === mv.id} onClick={() => setStep(i, { cls: s.cls, move: mv.id })}>
                     <span className="k">{mv.kind}</span> <strong>{mv.name}</strong>
                     <br />
-                    <span className="small">Action: {mv.action}</span>
+                    <span className="small">
+                      Action: <Rich>{mv.action}</Rich>
+                    </span>
                     {mv.enablerText && (
                       <>
                         <br />
-                        <span className="small">Pass: {mv.enablerText}</span>
+                        <span className="small">
+                          Pass: <Rich>{mv.enablerText}</Rich>
+                        </span>
                       </>
                     )}
                   </button>
@@ -2789,7 +2823,9 @@ function Guide(props: { onClose: () => void }) {
         {rows.map(([k, v]) => (
           <div className="li" key={k} style={{ gridTemplateColumns: '1fr' }}>
             <strong>{k}</strong>
-            <span className="small">{v}</span>
+            <span className="small">
+              <Rich>{v}</Rich>
+            </span>
           </div>
         ))}
       </div>
@@ -2802,7 +2838,9 @@ function EnemyDetail(props: { game: Game; id: string; onClose: () => void }) {
   if (!e) return null;
   return (
     <ModalShell title={e.name} onClose={props.onClose}>
-      <p>{ENEMY_INFO[e.kind].job}</p>
+      <p>
+        <Rich>{ENEMY_INFO[e.kind].job}</Rich>
+      </p>
       {e.player && (
         <p className="small muted">
           {e.player} ({e.team}) · {tierLabel(e.tier!)} · mirrors your {ENEMY_INFO[e.kind].mirrors}
@@ -2845,8 +2883,15 @@ function HeroDetail(props: { game: Game; cls: Cls; onClose: () => void }) {
               </span>
             )}
             <span className="small">
-              {m.action}
-              {m.enablerText ? ` · pass: ${m.enablerText}` : ''}
+              <Rich>{m.action}</Rich>
+              {m.enablerText ? (
+                <>
+                  {' '}
+                  · pass: <Rich>{m.enablerText}</Rich>
+                </>
+              ) : (
+                ''
+              )}
             </span>
           </div>
         ))}
