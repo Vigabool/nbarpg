@@ -1614,3 +1614,27 @@ th {
 .small.ok {
   color: var(--party);
 }
+
+/* The closed builder: a bar with PLAN (and Run once the play is ready) */
+.planbar .sheet-inner {
+  gap: 6px;
+}
+.planline {
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.planbtn {
+  flex: 1;
+  width: auto;
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  letter-spacing: 0.12em;
+}
+.runbtn {
+  flex: 1;
+  width: auto;
+  border-color: var(--ball);
+  color: var(--ball);
+}

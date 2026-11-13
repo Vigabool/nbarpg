@@ -188,6 +188,8 @@ export function App() {
   const [editSlot, setEditSlot] = useState<number | null>(null);
   const [aimSlot, setAimSlot] = useState<number | null>(null);
   const [presetName, setPresetName] = useState<string | null>(null);
+  /** The builder is open; each possession starts with it closed so the board is in full view. */
+  const [planOpen, setPlanOpen] = useState(false);
   const [tuning, setTuning] = useState<Tuning>({ ...DEFAULT_TUNING, ...(saved.tuning ?? {}) });
   const [custom, setCustom] = useState<Play[]>(saved.custom ?? []);
   const library = useMemo(() => [...TEMPLATES, ...custom], [custom]);
@@ -259,6 +261,7 @@ export function App() {
     setLog([]);
     setSecs([]);
     clearBuild();
+    setPlanOpen(false);
     setAdjustment(null);
     setScreen('plan');
   }
@@ -359,6 +362,7 @@ export function App() {
     setReplay({ frames: fr, play, before: game, after: g, possession: game.possession });
     setBeat(speed === 'step' ? 1 : 0);
     clearBuild();
+    setPlanOpen(false);
     setSecs((x) => [...x, s]);
     setLog((l) => [...l, head, ...fr.map((f) => `   ${f.text}`), `   Score ${g.score.party}–${g.score.horde}`]);
   }
@@ -369,6 +373,7 @@ export function App() {
     setHistory((h) => h.slice(0, -1));
     setGame(prev);
     clearBuild();
+    setPlanOpen(false);
     setLog((l) => [...l, `Timeout: possession ${prev.possession + 1} taken back.`]);
   }
 
@@ -432,7 +437,7 @@ export function App() {
               frame={curFrame}
               onTap={(cls) => setModal({ kind: 'hero', cls })}
             />
-            <div className="spacer" style={{ height: '62vh' }} />
+            <div className="spacer" style={{ height: replay || planOpen ? '62vh' : '120px' }} />
           </div>
           {replay ? (
             <ReplaySheet
@@ -445,9 +450,40 @@ export function App() {
               onSpeed={() => setSpeed((x) => (x === 'step' ? 'auto' : x === 'auto' ? 'fast' : 'step'))}
               onDone={finishPlayback}
             />
+          ) : game.phase === 'party' && !planOpen ? (
+            <div className="sheet planbar">
+              <div className="sheet-inner">
+                <span className="small planline">
+                  {finisher
+                    ? `${filled.map(({ s: st }) => MOVE[st.move].name).join(' → ')}${primaryId ? ` · ${game.enemies.find((e) => e.id === primaryId)?.name.replace('Goblin ', '')}` : ''}${sim.ready ? ` · +${sim.shot.points}` : ''}`
+                    : filled.length
+                      ? `${filled.map(({ s: st }) => MOVE[st.move].name).join(' → ')} · no finisher yet`
+                      : 'Read the board, then tap PLAN to build your possession.'}
+                </span>
+                <div className="row" style={{ flexWrap: 'nowrap' }}>
+                  {!anyTouches ? (
+                    <button className="btn primary big" onClick={hold}>
+                      Hold the ball
+                    </button>
+                  ) : (
+                    <>
+                      <button className="btn primary big planbtn" onClick={() => setPlanOpen(true)}>
+                        PLAN
+                      </button>
+                      {sim.ready && (
+                        <button className="btn big runbtn" onClick={runBuild}>
+                          Run ▸
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
           ) : game.phase === 'party' ? (
             <BuilderSheet
               game={game}
+              onCollapse={() => setPlanOpen(false)}
               slots={slots}
               sim={sim}
               presetName={presetName}
@@ -777,6 +813,7 @@ function BuilderSheet(props: {
   onClearAll: () => void;
   onRun: () => void;
   onHold: () => void;
+  onCollapse: () => void;
 }) {
   const g = props.game;
   const { slots, sim } = props;
@@ -932,6 +969,12 @@ function BuilderSheet(props: {
   return (
     <div className="sheet builder">
       <div className="sheet-inner">
+        <div className="row" style={{ justifyContent: 'space-between' }}>
+          <span className="eyebrow">Possession builder</span>
+          <button className="btn quiet small" onClick={props.onCollapse} aria-label="Close the possession builder">
+            ✕ Close
+          </button>
+        </div>
         <div className="presetrow" aria-label="Saved plays">
           <button className="chipbtn suggest" onClick={props.onSuggest}>
             ✨ Suggest
