@@ -56,6 +56,7 @@ import {
   type Enemy,
   type Frame,
   type Game,
+  type Wave,
   type Carry,
   type Tuning,
 } from './engine';
@@ -193,11 +194,15 @@ export function App() {
   const [planOpen, setPlanOpen] = useState(false);
   /** A note shown while aiming, such as Split asking for one more target. */
   const [aimPrompt, setAimPrompt] = useState<string | null>(null);
+  /** The possession whose wave banner the player closed. */
+  const [waveClosed, setWaveClosed] = useState(-1);
   const [tuning, setTuning] = useState<Tuning>({ ...DEFAULT_TUNING, ...(saved.tuning ?? {}) });
-  const [custom, setCustom] = useState<Play[]>(saved.custom ?? []);
+  const [custom, setCustom] = useState<Play[]>((saved.custom ?? []).filter((p) => p.steps.every((s) => MOVE[s.move])));
   const library = useMemo(() => [...TEMPLATES, ...custom], [custom]);
   const [active, setActive] = useState<string[]>(() => {
-    const a = (saved.active ?? DEFAULT_PLAYBOOK).filter((id) => [...TEMPLATES, ...(saved.custom ?? [])].some((p) => p.id === id));
+    const a = (saved.active ?? DEFAULT_PLAYBOOK).filter((id) =>
+      [...TEMPLATES, ...(saved.custom ?? []).filter((p) => p.steps.every((s) => MOVE[s.move]))].some((p) => p.id === id),
+    );
     return a.length === 4 ? a : DEFAULT_PLAYBOOK;
   });
   const playbook = useMemo(() => active.map((id) => library.find((p) => p.id === id)!).filter(Boolean), [active, library]);
@@ -284,7 +289,7 @@ export function App() {
   const barrierOnFinisher = (ss: (BuildStep | null)[]) =>
     game.barrierUp && !ss.slice(0, 3).some((st) => st && (MOVE[st.move].damage ?? 0) > 0 && (MOVE[st.move].targets ?? 'none') !== 'none');
   const aimMax = aimSlot === 3 && aimMove && !barrierOnFinisher(slots) ? maxPicks(aimMove, sim.buffs) : 1;
-  const aimTaunter = aimSlot === 3 && aimMove && (aimMove.damage ?? 0) > 0 ? taunter(game) : undefined;
+  const aimTaunter = aimSlot === 3 && aimMove && (aimMove.damage ?? 0) > 0 && !sim.buffs.guided ? taunter(game) : undefined;
   // While aiming the finisher at one target, each enemy shows what the shot would do to it.
   const aimProjections = useMemo(() => {
     if (aimSlot !== 3 || !finisher || aimMax > 1) return new Map<string, Proj>();
@@ -427,6 +432,9 @@ export function App() {
             onHorde={() => setModal({ kind: 'horde' })}
           />
           <div className="wrap">
+            {!replay && game.phase === 'party' && game.wave && waveClosed !== game.possession && (
+              <WaveBanner wave={game.wave} onClose={() => setWaveClosed(game.possession)} />
+            )}
             <Objectives game={shown} />
             <CallBanner game={shown} />
             <Board
@@ -853,7 +861,9 @@ function simulateBuild(g: Game, slots: (BuildStep | null)[], defense?: Defense):
     } else if (first) notes.push({ t: `${first.m.name} takes the Block.`, ok: true });
   }
   const t = taunter(g);
-  if (t && fin && finMove?.targets === 'primary' && primary && primary !== t.id && (finMove.damage ?? 0) > 0)
+  if (t && fin && buffs.guided && (finMove?.damage ?? 0) > 0)
+    notes.push({ t: `Guided: your finisher goes past the ${t.name.replace('Goblin ', '')}’s Taunt.`, ok: true });
+  else if (t && fin && finMove?.targets === 'primary' && primary && primary !== t.id && (finMove.damage ?? 0) > 0)
     notes.push({ t: `The ${t.name.replace('Goblin ', '')} Taunts: your finisher will hit it instead.`, ok: false });
   if (fin && ready && !bucket) {
     const target = g.enemies.find((e) => e.id === primary);
@@ -1124,7 +1134,9 @@ function BuilderSheet(props: {
                 {b}
               </span>
             ))}
-            {!describeCarry(sim.buffs).length && <span className="small muted">Helpers add buffs to the finisher: Crit, Pierce, Sure, Split, Armor.</span>}
+            {!describeCarry(sim.buffs).length && (
+              <span className="small muted">Helpers add buffs to the finisher: Crit, Pierce, Sure, Split, Guided, Armor.</span>
+            )}
           </div>
           {sim.notes.map((n) => (
             <span key={n.t} className={`small ${n.ok ? 'ok' : 'warn'}`}>
@@ -1711,6 +1723,25 @@ function projText(p: Proj | undefined) {
   if (p.kills) bits.push(`${p.kills} KO`);
   bits.push(p.points ? `+${p.points}` : '+0');
   return bits.join(' · ');
+}
+
+/** The quarter's new arrivals, shown on the possession they land until closed. */
+function WaveBanner({ wave, onClose }: { wave: Wave; onClose: () => void }) {
+  const parts = [
+    wave.goblins ? `${wave.goblins} goblin${wave.goblins > 1 ? 's' : ''}${wave.onRam ? ` (${wave.onRam} to the ram)` : ''}` : '',
+    ...wave.others,
+  ].filter(Boolean);
+  return (
+    <div className="wavebanner" role="status">
+      <div>
+        <strong>👺 Q{wave.quarter} wave: the horde reinforces</strong>
+        <span className="small">{parts.join(', ')} just took the floor.</span>
+      </div>
+      <button className="x" onClick={onClose} aria-label="Close the wave banner">
+        ✕
+      </button>
+    </div>
+  );
 }
 
 function Board(props: {
@@ -2720,7 +2751,7 @@ function Guide(props: { onClose: () => void }) {
     ],
     [
       'Buffs',
-      'Every helper adds its buff to the finisher, wherever it sits in the play: Crit, Pierce, Sure, Split, or Armor for the finisher. Each buff counts once. Helpers aim at the finisher’s target unless you aim them elsewhere.',
+      'Every helper adds its buff to the finisher, wherever it sits in the play: Crit, Pierce, Sure, Split, Guided, or Armor for the finisher. Each buff counts once. Helpers aim at the finisher’s target unless you aim them elsewhere.',
     ],
     ['Start', 'The Start slot hits first, so it takes the Barrier or the Block. The Shot panel shows what each defense will do to your play.'],
     [
@@ -2729,9 +2760,12 @@ function Guide(props: { onClose: () => void }) {
     ],
     [
       'Defenses',
-      'Taunt (the Ogre): single-target hits must go to it. Armor: each hit deals less. Quick: the first hit on it each possession misses. Barrier (the Shaman’s cast on the horde’s turn, when the ram has its 4 goblins): a wall in front of the whole horde for your next possession; the first damaging move breaks it, and nothing behind it can be targeted until then. War Drum (automatic): the ram hits +2 while the Shaman stands. Block (the Chieftain): the first hit on any enemy each possession is cancelled.',
+      'Taunt (the Ogre): single-target hits must go to it, unless the Cleric’s Guiding Light guides the finisher past it. Armor: each hit deals less. Quick: the first hit on it each possession misses. Barrier (the Shaman’s cast on the horde’s turn, when the ram has its 4 goblins): a wall in front of the whole horde for your next possession; the first damaging move breaks it, and nothing behind it can be targeted until then. War Drum (automatic): the ram hits +2 while the Shaman stands. Block (the Chieftain): the first hit on any enemy each possession is cancelled.',
     ],
-    ['Passes', 'Armor (protects the next hero), Sure (can’t be evaded or Blocked), Crit (+50% damage), Pierce (ignores Armor), Split (+1 target).'],
+    [
+      'Passes',
+      'Armor (protects the next hero), Sure (can’t be evaded or Blocked), Crit (+50% damage), Pierce (ignores Armor), Split (+1 target; on Smite, a second hero healed too), Guided (the finisher ignores Taunt).',
+    ],
     ['Takedowns', 'Each enemy shows its point value (🏀). Taking it down scores it, and stops it scoring.'],
     ['Touches', 'From each player’s true usage this week (shots, free throws, turnovers and assists). Out of touches, a hero can’t be in a play.'],
     [

@@ -37,7 +37,7 @@ export const CLASS_INFO: Record<Cls, { name: string; role: string; icon: string;
 };
 
 /** What a move passes to the next hero. */
-export type Enabler = { kind: 'armor'; amount: number } | { kind: 'sure' } | { kind: 'crit' } | { kind: 'pierce' } | { kind: 'split' };
+export type Enabler = { kind: 'armor'; amount: number } | { kind: 'sure' } | { kind: 'crit' } | { kind: 'pierce' } | { kind: 'split' } | { kind: 'guided' };
 
 export type Effect =
   'taunt' | 'expose' | 'mark' | 'strip' | 'slow' | 'partyArmor' | 'healAlly' | 'healParty' | 'tauntAll' | 'lastStand' | 'shadow' | 'revive' | 'assassinate';
@@ -167,6 +167,17 @@ export const MOVES: Move[] = [
     enablerText: 'Pierce (ignores Armor)',
   }),
   M({
+    id: 'guide',
+    cls: 'cleric',
+    name: 'Guiding Light',
+    kind: 'enabler',
+    targets: 'none',
+    enabler: { kind: 'guided' },
+    action: 'lights a lane through the defense',
+    enablerText: 'Guided (ignores Taunt)',
+    note: 'The answer to a Taunting big: the finisher hits whoever you aim at.',
+  }),
+  M({
     id: 'smite',
     cls: 'cleric',
     name: 'Smite',
@@ -174,20 +185,10 @@ export const MOVES: Move[] = [
     damage: 9,
     targets: 'primary',
     pierce: true,
-    effect: 'healParty',
-    amount: 3,
-    action: '9 damage that Pierces, and every hero heals 3',
-  }),
-  M({
-    id: 'benediction',
-    cls: 'cleric',
-    name: 'Benediction',
-    kind: 'finisher',
-    damage: 5,
-    targets: 'primary',
-    effect: 'healParty',
-    amount: 8,
-    action: '5 damage, and every hero heals 8',
+    effect: 'healAlly',
+    amount: 5,
+    action: '9 damage that Pierces, and heals the most injured hero 5',
+    note: 'With Split it hits a second enemy and heals a second hero.',
   }),
   M({
     id: 'sanctuary',
@@ -486,10 +487,10 @@ export const TEMPLATES: Play[] = [
     name: 'Regroup',
     steps: [
       { cls: 'warrior', move: 'screen' },
-      { cls: 'cleric', move: 'benediction' },
+      { cls: 'cleric', move: 'smite' },
     ],
     tags: ['protect the lead'],
-    blurb: 'Armor for everyone, then a Sure finisher that heals the whole party.',
+    blurb: 'Armor for everyone, then a Sure Smite that heals the most injured hero.',
   },
 ];
 export const DEFAULT_PLAYBOOK = ['critical-taunt', 'kick-out', 'frost-bolt', 'spread-the-floor'];

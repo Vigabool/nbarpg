@@ -128,7 +128,8 @@ Each class has a basic move (always available), three moves, two finishers, a si
 - **Empower.** Action: heals an ally 6. Enabler: the next hero's hit +50%. *The core assist.*
 - **Read the Defense.** Action: Exposes an enemy. Enabler: open. *Sets up the shot two ways at once.*
 - **Bless.** Action: heals every hero 3. Enabler: doubles the next hero's enabler (+2 becomes +4, armor +3 becomes +6; open and split stay the same). *The hockey assist: it rewards longer plays.*
-- **Smite** (finisher). 9 holy damage to one enemy, and every hero heals 3.
+- **Guiding Light.** Enabler: Guided, the finisher ignores Taunt. *The Cleric's answer to an enemy big.*
+- **Smite** (finisher, the Cleric's only one). 9 damage that Pierces, and the most injured hero heals 5. With Split it hits a second enemy and heals a second hero.
 - **Sanctuary** (signature). 6 damage, and every hero heals 15.
 - **Divine Intervention** (legendary). 8 damage, and fallen heroes return at full HP.
 
@@ -512,3 +513,4 @@ Separate from Play Calling, and usable in either version of the game: a **Hoops 
 
 Buttons, numbers and rules stay the same in both. It's stored per browser, like coach tips, so saves don't change.
 - **Horde score button (Nov 13):** the scoreboard shows what the horde will score on its next turn ("+2 ▸") next to the goblins' score, always visible and updated as you build the play. Tapping it opens a popup with the horde's turn line by line and how the horde scores.
+- **Cleric rework and goblin waves (Nov 13):** the Cleric now has three enablers (Empower, Read the Defense, and the new Guiding Light, whose Guided buff lets the finisher ignore Taunt) and one finisher, Smite: 9 Pierce damage and 5 healing for the most injured hero, with Split adding a second enemy and a second hero. Benediction is gone, and Regroup now ends with Smite. The quarter waves (Q2 and Q3) now show a banner on the possession they land, listing the goblins (and how many went to the ram) and the Champions that arrived.

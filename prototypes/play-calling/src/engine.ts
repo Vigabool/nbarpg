@@ -142,7 +142,17 @@ export interface LogLine {
   pts?: number;
 }
 
+/** The quarter's scheduled arrivals, shown as a banner on the possession they land. */
+export interface Wave {
+  quarter: number;
+  goblins: number;
+  onRam: number;
+  others: string[];
+}
+
 export interface Game {
+  /** Arrivals that just landed this possession (Q2 and Q3 waves). */
+  wave?: Wave | null;
   tuning: Tuning;
   difficulty: Difficulty;
   possession: number;
@@ -373,14 +383,24 @@ function goblin(id: string, tuning: Tuning, quarter: number): Enemy {
 /** Bring in this quarter's arrivals; goblins fill the ram to 4 first. */
 function arrive(g: Game) {
   const q = quarterOf(g.possession);
-  let any = false;
+  const came: Enemy[] = [];
   for (const e of g.enemies)
     if (!e.arrived && e.quarter <= q && e.hp > 0) {
       e.arrived = true;
-      any = true;
+      came.push(e);
       if (e.kind === 'goblin' && !g.gate.breached && crew(g).length < 4) e.onRam = true;
     }
-  if (any && g.possession > 0) g.log.push({ t: `Quarter ${q}: new arrivals take the floor.`, side: 'info' });
+  g.wave = null;
+  if (came.length && g.possession > 0) {
+    g.log.push({ t: `Quarter ${q}: new arrivals take the floor.`, side: 'info' });
+    const gobs = came.filter((e) => e.kind === 'goblin');
+    g.wave = {
+      quarter: q,
+      goblins: gobs.length,
+      onRam: gobs.filter((e) => e.onRam).length,
+      others: came.filter((e) => e.kind !== 'goblin').map((e) => (e.player ? `${e.name} (${e.player})` : e.name)),
+    };
+  }
 }
 
 // ---------- Queries ----------
@@ -460,6 +480,7 @@ export function passHelps(from: Move, to: Move | undefined): boolean {
   const deals = (to.damage ?? 0) > 0;
   if (e.kind === 'armor') return true;
   if (e.kind === 'split') return deals && to.targets !== 'all';
+  if (e.kind === 'guided') return deals && to.targets !== 'all';
   return deals;
 }
 
@@ -531,10 +552,12 @@ export interface Carry {
   crit: boolean;
   pierce: boolean;
   split: boolean;
+  /** Guided: the finisher ignores Taunt. */
+  guided: boolean;
   /** Heroes whose buffs are in the shot (credited with assists if it scores). */
   helpers: Cls[];
 }
-export const emptyCarry = (): Carry => ({ armor: 0, sure: false, crit: false, pierce: false, split: false, helpers: [] });
+export const emptyCarry = (): Carry => ({ armor: 0, sure: false, crit: false, pierce: false, split: false, guided: false, helpers: [] });
 
 /** Add a helper's buff to the shot. Buffs don't stack: a second Crit adds nothing. */
 function addBuff(c0: Carry, e: Enabler | undefined, mult: number, from: Cls): Carry {
@@ -635,13 +658,16 @@ function doStep(ctx: StepCtx, step: PlayStep, i: number, primaryId: string, pick
       break;
     }
     case 'healAlly': {
-      const t = [...activeHeroes(g)].sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
-      if (t) {
+      // The most injured heroes; a Split finisher heals a second one.
+      const ts = [...activeHeroes(g)].sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp).slice(0, buff.split ? 2 : 1);
+      const healedText: string[] = [];
+      for (const t of ts) {
         const healed = Math.min(t.maxHp - t.hp, Math.round((m.amount ?? 0) * mult));
         t.hp += healed;
         g.last.clericHealed += healed;
-        parts.push(healed ? `heals the ${CLASS_INFO[t.cls].name} ${healed}` : 'no one needs healing');
+        if (healed) healedText.push(`the ${CLASS_INFO[t.cls].name} ${healed}`);
       }
+      if (ts.length) parts.push(healedText.length ? `heals ${healedText.join(' and ')}` : 'no one needs healing');
       break;
     }
     case 'healParty': {
@@ -672,6 +698,8 @@ function doStep(ctx: StepCtx, step: PlayStep, i: number, primaryId: string, pick
       break;
   }
 
+  if (m.enabler?.kind === 'guided') parts.push('lights a lane: the finisher ignores Taunt');
+
   if (chosen && g.barrierUp && (m.targets ?? 'none') !== 'none') {
     // The Barrier stands in front of everyone: the first damaging move breaks it, and nothing behind it can be targeted.
     const deals = (m.damage ?? 0) > 0;
@@ -697,7 +725,8 @@ function doStep(ctx: StepCtx, step: PlayStep, i: number, primaryId: string, pick
     const short = (e: Enemy) => e.name.replace('Goblin ', '');
 
     // Taunt: a single-target hit must go to the taunter; a wider one must include it.
-    const t = deals ? taunter(g) : undefined;
+    const t = deals && !buff.guided ? taunter(g) : undefined;
+    if (deals && buff.guided && taunter(g)) parts.push('Guided: past the Taunt');
     let primary = chosen;
     if (t && m.targets === 'primary' && t.id !== chosen.id) {
       primary = t;
@@ -975,6 +1004,7 @@ export function describeCarry(c: Carry): string[] {
   if (c.crit) out.push('Crit (+50%)');
   if (c.pierce) out.push('Pierce');
   if (c.split) out.push('Split (+1 target)');
+  if (c.guided) out.push('Guided (ignores Taunt)');
   return out;
 }
 
