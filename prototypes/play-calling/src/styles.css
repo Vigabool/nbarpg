@@ -1638,3 +1638,15 @@ th {
   border-color: var(--ball);
   color: var(--ball);
 }
+
+/* HP on the builder's hero chips */
+.lhero .hpbar {
+  display: block;
+  width: 100%;
+  height: 5px;
+}
+.lhero .small {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

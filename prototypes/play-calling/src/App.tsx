@@ -435,13 +435,16 @@ export function App() {
               frame={curFrame}
               onPick={(id) => (aimSlot !== null && !frames ? aimAt(id) : setModal({ kind: 'enemy', id }))}
             />
-            <HeroRow
-              game={shown}
-              inPlay={replay ? new Set() : inPlay}
-              defense={replay ? null : defense}
-              frame={curFrame}
-              onTap={(cls) => setModal({ kind: 'hero', cls })}
-            />
+            {/* While the builder is open its own hero chips are the ones to tap, so the board's row steps aside. */}
+            {(replay || !planOpen || game.phase !== 'party') && (
+              <HeroRow
+                game={shown}
+                inPlay={replay ? new Set() : inPlay}
+                defense={replay ? null : defense}
+                frame={curFrame}
+                onTap={(cls) => setModal({ kind: 'hero', cls })}
+              />
+            )}
             <div className="spacer" style={{ height: replay || planOpen ? '62vh' : '120px' }} />
           </div>
           {replay ? (
@@ -947,6 +950,13 @@ function BuilderSheet(props: {
                 <button key={c} className={`lhero ${pickHero === c ? 'on' : ''}`} disabled={!!w} aria-pressed={pickHero === c} onClick={() => setPickHero(c)}>
                   <span>{CLASS_INFO[c].icon}</span>
                   <strong>{CLASS_INFO[c].name}</strong>
+                  <span className="small muted">{lastName(g.heroes[c].player)}</span>
+                  <span className="bar hpbar" aria-hidden="true">
+                    <i style={{ width: `${(Math.max(0, g.heroes[c].hp) / g.heroes[c].maxHp) * 100}%` }} />
+                  </span>
+                  <span className="small num">
+                    {Math.max(0, g.heroes[c].hp)}/{g.heroes[c].maxHp} HP
+                  </span>
                   <span className="small muted">{w || `${g.heroes[c].touches} touches`}</span>
                 </button>
               );
