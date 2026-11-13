@@ -12,6 +12,7 @@ import {
   isFinisher,
   tierIndex,
   type Cls,
+  type Move,
   type Play,
   type PlayStep,
   type Tier,
@@ -124,6 +125,52 @@ function store(s: Saved) {
   } catch {
     // Storage can be unavailable; the prototype still works for this visit.
   }
+}
+
+type StatLine = (typeof week.heroes)[number]['line'];
+/** The 10+ stats behind a double-double or triple-double, e.g. "21 pts · 13 reb · 10 ast". */
+const bigNight = (l: StatLine) =>
+  (
+    [
+      ['pts', l.pts],
+      ['reb', l.reb],
+      ['ast', l.ast],
+      ['stl', l.stl],
+      ['blk', l.blk],
+    ] as const
+  )
+    .filter(([, v]) => v >= 10)
+    .map(([k, v]) => `${v} ${k}`)
+    .join(' · ');
+const isSpecial = (m: Move) => m.kind === 'signature' || m.kind === 'legendary';
+/** A chip saying which big night unlocked this move. */
+function SpecialChip(props: { m: Move }) {
+  if (!isSpecial(props.m)) return null;
+  const td = props.m.kind === 'legendary';
+  return <span className={`chip special ${td ? 'td' : ''}`}>{td ? '★★ Triple-double special' : '★ Double-double special'}</span>;
+}
+/** The extra effect a top defensive tier adds. */
+const ELITE_DEFENSE: Partial<Record<Cls, string>> = {
+  warrior: 'At Elite, Protect blocks the first hit on that ally outright.',
+  rogue: 'At Elite, two goblins are knocked off the ram.',
+};
+/** What a hero does on the horde's turn when they don't touch the ball. */
+function OffBallCard(props: { cls: Cls; defTier: Tier; line: StatLine }) {
+  const c = CLASS_INFO[props.cls];
+  const elite = ELITE_DEFENSE[props.cls];
+  return (
+    <div className="offball">
+      <span className="row" style={{ justifyContent: 'space-between' }}>
+        <strong>Off the ball: {c.defense}</strong>
+        <span className={`tier ${props.defTier}`}>Defense {tierLabel(props.defTier)}</span>
+      </span>
+      <span className="small">{c.defenseText}</span>
+      <span className="small muted">
+        Automatic when this hero doesn’t touch the ball this possession. Defense rating from {props.line.stl} stl, {props.line.blk} blk, {props.line.dreb} dreb.
+        {elite && props.defTier === 'elite' ? ` ${elite}` : ''}
+      </span>
+    </div>
+  );
 }
 
 const chainText = (p: Play) => p.steps.map((s) => `${CLASS_INFO[s.cls].icon} ${MOVE[s.move].name}`).join(' → ');
@@ -784,7 +831,7 @@ function LivePanel(props: {
           const chosen = props.move === mv.id;
           const preview = interactive && chosen && !needsTarget(mv) ? previewLive(l, { cls: hero.cls, move: mv.id }) : null;
           return (
-            <div key={mv.id} className={`lmove ${chosen ? 'on' : ''} ${fin ? 'fin' : ''}`}>
+            <div key={mv.id} className={`lmove ${chosen ? 'on' : ''} ${fin ? 'fin' : ''} ${isSpecial(mv) ? 'special' : ''}`}>
               <button className={`lmove-btn ${interactive ? '' : 'preview'}`} disabled={blocked || !interactive} onClick={() => props.onMove(mv.id)}>
                 <span className="row" style={{ justifyContent: 'space-between' }}>
                   <strong>{mv.name}</strong>
@@ -793,6 +840,11 @@ function LivePanel(props: {
                     {fin && <span className="chip ball">finisher</span>}
                   </span>
                 </span>
+                {isSpecial(mv) && (
+                  <span className="specialrow">
+                    <SpecialChip m={mv} /> <span className="small muted">{bigNight(hero.line)} · once per game</span>
+                  </span>
+                )}
                 <span className="small">{mv.action}</span>
                 {mv.enablerText && !fin && <span className="small muted">Pass: {mv.enablerText}</span>}
                 {used && <span className="small err">used this game</span>}
@@ -813,6 +865,7 @@ function LivePanel(props: {
             </div>
           );
         })}
+        <OffBallCard cls={hero.cls} defTier={hero.defTier} line={hero.line} />
       </div>
     );
   return (
@@ -1205,8 +1258,9 @@ function PlanScreen(props: {
                       </span>
                       <span className="chips">
                         {MOVES.filter((m) => m.cls === openHero && (m.kind !== 'signature' || h.dd) && (m.kind !== 'legendary' || h.td)).map((m) => (
-                          <span key={m.id} className={`chip ${isFinisher(m) ? 'ball' : ''}`}>
+                          <span key={m.id} className={`chip ${isSpecial(m) ? `special ${m.kind === 'legendary' ? 'td' : ''}` : isFinisher(m) ? 'ball' : ''}`}>
                             {m.name}
+                            {m.kind === 'signature' ? ' ★ DD' : m.kind === 'legendary' ? ' ★★ TD' : ''}
                           </span>
                         ))}
                       </span>
@@ -2675,6 +2729,7 @@ function EnemyDetail(props: { game: Game; id: string; onClose: () => void }) {
 function HeroDetail(props: { game: Game; cls: Cls; onClose: () => void }) {
   const h = props.game.heroes[props.cls];
   const l = h.line;
+  const locked = (m: Move) => (m.kind === 'signature' && !h.dd) || (m.kind === 'legendary' && !h.td);
   return (
     <ModalShell title={`${CLASS_INFO[props.cls].name} · ${h.player}`} onClose={props.onClose}>
       <p className="small muted num">
@@ -2683,15 +2738,22 @@ function HeroDetail(props: { game: Game; cls: Cls; onClose: () => void }) {
       <p>
         Offense {tierLabel(h.tier)} · Defense {tierLabel(h.defTier)} · {h.touches} of {h.touchesMax} touches left
       </p>
-      <p className="small">
-        On defense: {CLASS_INFO[props.cls].defense}. {CLASS_INFO[props.cls].defenseText}
-      </p>
       <div className="list">
         {MOVES.filter((m) => m.cls === props.cls).map((m) => (
-          <div className="li" key={m.id} style={{ gridTemplateColumns: '1fr' }}>
+          <div className="li" key={m.id} style={{ gridTemplateColumns: '1fr', opacity: locked(m) ? 0.55 : 1 }}>
             <strong>
-              {m.name} <span className="muted small">({m.kind})</span>
+              {m.name} <span className="muted small">({isSpecial(m) ? 'finisher' : m.kind})</span>
             </strong>
+            {isSpecial(m) && (
+              <span className="specialrow">
+                <SpecialChip m={m} />{' '}
+                <span className="small muted">
+                  {locked(m)
+                    ? `needs a ${m.kind === 'legendary' ? 'triple-double' : 'double-double'}: not this week`
+                    : `${bigNight(l)} · once per game${h.usedSpecial.includes(m.id) ? ' · used' : ''}`}
+                </span>
+              </span>
+            )}
             <span className="small">
               {m.action}
               {m.enablerText ? ` · pass: ${m.enablerText}` : ''}
@@ -2699,6 +2761,7 @@ function HeroDetail(props: { game: Game; cls: Cls; onClose: () => void }) {
           </div>
         ))}
       </div>
+      <OffBallCard cls={props.cls} defTier={h.defTier} line={l} />
     </ModalShell>
   );
 }

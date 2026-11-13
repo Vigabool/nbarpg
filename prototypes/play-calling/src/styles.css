@@ -1382,3 +1382,31 @@ th {
   opacity: 1;
   cursor: default;
 }
+
+/* Big-night specials and the off-ball card */
+.chip.special {
+  background: var(--gold);
+  color: var(--bg);
+}
+.chip.special.td {
+  background: linear-gradient(90deg, var(--gold), var(--ball));
+  color: #fff;
+}
+.specialrow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.lmove.special {
+  border-color: var(--gold);
+}
+.offball {
+  border: 1.5px solid var(--party);
+  background: var(--party-soft);
+  border-radius: 8px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
