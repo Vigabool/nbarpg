@@ -458,6 +458,11 @@ export function App() {
                 setLiveMove(null);
               }}
               passed={livePassed}
+              onClose={() => {
+                setLiveHero(null);
+                setLiveMove(null);
+                setLivePicks([]);
+              }}
               onPass={() => setLivePassed(true)}
               onMove={chooseLiveMove}
               onBack={() => {
@@ -743,6 +748,8 @@ function LivePanel(props: {
   onStrike: () => void;
   passed: boolean;
   onPass: () => void;
+  /** Close the hero's move list without passing. */
+  onClose: () => void;
 }) {
   const l = props.live;
   const g = l.ctx.g;
@@ -894,6 +901,14 @@ function LivePanel(props: {
             </div>
             {hero && (
               <>
+                <div className="row" style={{ justifyContent: 'space-between' }}>
+                  <span className="small">
+                    {CLASS_INFO[hero.cls].icon} <strong>{CLASS_INFO[hero.cls].name}</strong>’s moves
+                  </span>
+                  <button className="btn quiet small" onClick={props.onClose} aria-label={`Close the ${CLASS_INFO[hero.cls].name}'s moves`}>
+                    ✕ Close
+                  </button>
+                </div>
                 <button className="btn primary big" onClick={props.onPass}>
                   {l.steps.length ? 'Pass to' : 'Start with'} the {CLASS_INFO[hero.cls].name} ▸
                 </button>
