@@ -190,6 +190,8 @@ export function App() {
   const [presetName, setPresetName] = useState<string | null>(null);
   /** The builder is open; each possession starts with it closed so the board is in full view. */
   const [planOpen, setPlanOpen] = useState(false);
+  /** A note shown while aiming, such as Split asking for one more target. */
+  const [aimPrompt, setAimPrompt] = useState<string | null>(null);
   const [tuning, setTuning] = useState<Tuning>({ ...DEFAULT_TUNING, ...(saved.tuning ?? {}) });
   const [custom, setCustom] = useState<Play[]>(saved.custom ?? []);
   const library = useMemo(() => [...TEMPLATES, ...custom], [custom]);
@@ -277,7 +279,10 @@ export function App() {
   /** Play the built steps on a copy of the game (no frames) to project the shot. */
   const sim = useMemo(() => simulateBuild(game, slots), [game, slots]);
   const aimMove = aimSlot !== null && slots[aimSlot] ? MOVE[slots[aimSlot]!.move] : null;
-  const aimMax = aimSlot === 3 && aimMove && !game.barrierUp ? maxPicks(aimMove, sim.buffs) : 1;
+  // The finisher can pick several targets unless the Barrier will still be up when it fires.
+  const barrierOnFinisher = (ss: (BuildStep | null)[]) =>
+    game.barrierUp && !ss.slice(0, 3).some((st) => st && (MOVE[st.move].damage ?? 0) > 0 && (MOVE[st.move].targets ?? 'none') !== 'none');
+  const aimMax = aimSlot === 3 && aimMove && !barrierOnFinisher(slots) ? maxPicks(aimMove, sim.buffs) : 1;
   const aimTaunter = aimSlot === 3 && aimMove && (aimMove.damage ?? 0) > 0 ? taunter(game) : undefined;
   // While aiming the finisher at one target, each enemy shows what the shot would do to it.
   const aimProjections = useMemo(() => {
@@ -491,6 +496,7 @@ export function App() {
               editSlot={editSlot}
               aimSlot={aimSlot}
               aimMax={aimMax}
+              aimPrompt={aimPrompt}
               defense={defense}
               manual={manual}
               anyTouches={anyTouches}
@@ -503,8 +509,20 @@ export function App() {
               onChoose={(i, step) => {
                 setSlotStep(i, step);
                 setEditSlot(null);
+                setAimPrompt(null);
                 // A finisher that needs a target goes straight to aiming.
                 if (i === 3 && needsTarget(MOVE[step.move]) && !slots[3]?.target) setAimSlot(3);
+                // A helper passing Split gives an aimed finisher one more target: ask for it.
+                const fin = slots[3];
+                if (i < 3 && MOVE[step.move].enabler?.kind === 'split' && fin && needsTarget(MOVE[fin.move])) {
+                  const next = slots.map((x, j) => (j === i ? step : x));
+                  if (!barrierOnFinisher(next)) {
+                    const have = fin.picks ?? (fin.target ? [fin.target] : []);
+                    setSlots((ss) => ss.map((x, j) => (j === i ? step : j === 3 ? { ...fin, picks: have, target: have[0] } : x)));
+                    setAimPrompt(`${MOVE[step.move].name} adds Split: pick one more target for ${MOVE[fin.move].name}.`);
+                    setAimSlot(3);
+                  }
+                }
               }}
               onClear={(i) => {
                 setSlotStep(i, null);
@@ -519,7 +537,10 @@ export function App() {
                 if (cur) setSlotStep(i, { ...cur, target: undefined });
                 setEditSlot(null);
               }}
-              onAimDone={() => setAimSlot(null)}
+              onAimDone={() => {
+                setAimSlot(null);
+                setAimPrompt(null);
+              }}
               onPreset={(p) => loadPreset(p)}
               onSuggest={suggest}
               onClearAll={clearBuild}
@@ -797,6 +818,7 @@ function BuilderSheet(props: {
   editSlot: number | null;
   aimSlot: number | null;
   aimMax: number;
+  aimPrompt: string | null;
   defense: Defense;
   manual: boolean;
   anyTouches: boolean;
@@ -859,6 +881,7 @@ function BuilderSheet(props: {
               {multi ? 'Done' : 'Cancel'}
             </button>
           </div>
+          {props.aimPrompt && <span className="small ok">✂️ {props.aimPrompt}</span>}
         </div>
       </div>
     );
