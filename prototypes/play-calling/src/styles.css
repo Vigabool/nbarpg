@@ -1491,3 +1491,126 @@ th {
   color: var(--horde);
   white-space: nowrap;
 }
+
+/* Possession builder: saved plays, four slots, the shot, defense and Run */
+.sheet.builder {
+  max-height: 62vh;
+  overflow-y: auto;
+}
+.presetrow {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+.chipbtn {
+  flex: 0 0 auto;
+  border: 1.5px solid var(--line);
+  background: var(--surface);
+  border-radius: 999px;
+  padding: 5px 11px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.chipbtn.suggest {
+  border-color: var(--party);
+  color: var(--party);
+}
+.chipbtn.on {
+  border-color: var(--ball);
+  background: var(--ball-soft);
+}
+.chipbtn:disabled {
+  opacity: 0.45;
+}
+.slotstrip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+.slot2 {
+  position: relative;
+  min-height: 86px;
+  border: 1.5px dashed var(--line);
+  background: var(--bg);
+  border-radius: 10px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+  min-width: 0;
+}
+.slot2.filled {
+  border-style: solid;
+  background: var(--surface);
+}
+.slot2.finish {
+  border-color: var(--ball);
+}
+.slot2.finish.filled {
+  background: var(--ball-soft);
+}
+.slot2:not(:last-child)::after {
+  content: '→';
+  position: absolute;
+  right: -10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+.slotlabel {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+.slot2.finish .slotlabel {
+  color: var(--ball);
+}
+.slotmove {
+  font-weight: 700;
+  font-size: 0.8rem;
+  line-height: 1.15;
+}
+.slotbuff {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--party);
+}
+.slottarget {
+  font-size: 0.66rem;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.slottarget.err {
+  color: var(--horde);
+  font-weight: 700;
+}
+.slotempty {
+  margin: auto 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-weight: 700;
+}
+.shotpanel {
+  border: 1.5px solid var(--ball);
+  border-radius: 10px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--surface);
+}
+.defline {
+  justify-content: space-between;
+  flex-wrap: nowrap;
+}
+.small.ok {
+  color: var(--party);
+}

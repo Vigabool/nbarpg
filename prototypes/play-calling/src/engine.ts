@@ -442,7 +442,6 @@ export function validatePlay(steps: { cls: Cls; move: string }[]): string[] {
   if (steps.length < 2 || steps.length > 4) out.push('A play has 2 to 4 steps.');
   steps.forEach((s, i) => {
     if (MOVE[s.move]?.cls !== s.cls) out.push(`Step ${i + 1}: pick a move for this hero.`);
-    if (i > 0 && steps[i - 1].cls === s.cls) out.push(`Step ${i + 1}: a hero can't act twice in a row.`);
     const m = MOVE[s.move];
     if (m && isFinisher(m) && i !== steps.length - 1) out.push(`Step ${i + 1}: finishers go last.`);
   });
@@ -450,7 +449,7 @@ export function validatePlay(steps: { cls: Cls; move: string }[]): string[] {
   if (last && MOVE[last.move] && !isFinisher(MOVE[last.move])) out.push('The last step must be a finisher.');
   const counts: Record<string, number> = {};
   for (const s of steps) counts[s.cls] = (counts[s.cls] ?? 0) + 1;
-  for (const [c, n] of Object.entries(counts)) if (n > 2) out.push(`${CLASS_INFO[c as Cls].name} appears more than twice.`);
+  for (const [c, n] of Object.entries(counts)) if (n > 1) out.push(`${CLASS_INFO[c as Cls].name} can only take part once.`);
   return out;
 }
 
@@ -525,23 +524,25 @@ export function chooseCall(g: Game): HordeCall | null {
 
 // ---------- The party's possession ----------
 
+/** The buffs the possession's helpers have built up for the finisher. Each counts once; Armor keeps the biggest. */
 export interface Carry {
   armor: number;
   sure: boolean;
   crit: boolean;
   pierce: boolean;
   split: boolean;
-  passer: Cls | null;
+  /** Heroes whose buffs are in the shot (credited with assists if it scores). */
+  helpers: Cls[];
 }
-const emptyCarry = (): Carry => ({ armor: 0, sure: false, crit: false, pierce: false, split: false, passer: null });
+export const emptyCarry = (): Carry => ({ armor: 0, sure: false, crit: false, pierce: false, split: false, helpers: [] });
 
-function enablerCarry(e: Enabler | undefined, mult: number, scouted: boolean, from: Cls): Carry {
-  const c = emptyCarry();
-  c.passer = from;
+/** Add a helper's buff to the shot. Buffs don't stack: a second Crit adds nothing. */
+function addBuff(c0: Carry, e: Enabler | undefined, mult: number, from: Cls): Carry {
+  const c = { ...c0, helpers: [...c0.helpers] };
   if (!e) return c;
-  // A scouted play's passes count for half: Armor is halved and the rest are lost.
-  if (e.kind === 'armor') c.armor = Math.round(e.amount * mult * (scouted ? 0.5 : 1));
-  else if (!scouted) c[e.kind] = true;
+  c.helpers.push(from);
+  if (e.kind === 'armor') c.armor = Math.max(c.armor, Math.round(e.amount * mult));
+  else c[e.kind] = true;
   return c;
 }
 
@@ -616,12 +617,13 @@ function doStep(ctx: StepCtx, step: PlayStep, i: number, primaryId: string, pick
   const mult = tm(h.tier);
   h.touches -= 1;
   g.stats.heroes[h.cls].touches += 1;
-  // Receive the pass.
-  if (carry.armor) h.armor += carry.armor;
+  const fin = isFinisher(m);
+  // Every buff the helpers built up goes to the finisher; helpers' own hits get none.
+  const buff = fin ? carry : emptyCarry();
+  if (buff.armor) h.armor += buff.armor;
   if (m.kind === 'signature' || m.kind === 'legendary') h.usedSpecial.push(m.id);
   const scoreBefore = g.score.party;
   const parts: string[] = [];
-  const fin = isFinisher(m);
   const chosen = g.enemies.find((e) => e.id === primaryId && e.hp > 0 && e.arrived) ?? onField(g)[0];
 
   // Effects on the party.
@@ -688,10 +690,10 @@ function doStep(ctx: StepCtx, step: PlayStep, i: number, primaryId: string, pick
       result: parts.join(', '),
     });
   } else if (chosen) {
-    const sure = !!m.sure || carry.sure;
-    const pierce = !!m.pierce || carry.pierce;
+    const sure = !!m.sure || buff.sure;
+    const pierce = !!m.pierce || buff.pierce;
     const deals = (m.damage ?? 0) > 0;
-    const extra = carry.split ? 1 : 0;
+    const extra = buff.split ? 1 : 0;
     const short = (e: Enemy) => e.name.replace('Goblin ', '');
 
     // Taunt: a single-target hit must go to the taunter; a wider one must include it.
@@ -703,7 +705,7 @@ function doStep(ctx: StepCtx, step: PlayStep, i: number, primaryId: string, pick
     }
     let targets: Enemy[] = [];
     const picked = (picks ?? []).map((id) => g.enemies.find((e) => e.id === id && e.hp > 0 && e.arrived)).filter((e): e is Enemy => !!e);
-    const n = maxPicks(m, carry);
+    const n = maxPicks(m, buff);
     if (m.targets === 'all') targets = onField(g);
     else if (picked.length && n > 1) {
       // The player's own picks; a Taunting big must be one of them.
@@ -748,7 +750,7 @@ function doStep(ctx: StepCtx, step: PlayStep, i: number, primaryId: string, pick
       let d = base * mult;
       if (e.exposed > 0) d += 3;
       if (m.doubleVsShaken && (e.taunted || e.disabled)) d *= 2;
-      if (carry.crit) d *= 1.5;
+      if (buff.crit) d *= 1.5;
       if (!pierce) d -= armorOf(g, e);
       const dealt = Math.max(0, Math.min(e.hp, Math.round(d)));
       e.hp -= dealt;
@@ -837,7 +839,7 @@ function doStep(ctx: StepCtx, step: PlayStep, i: number, primaryId: string, pick
         const pts = g.tuning.shotPoints;
         g.stats.party.shots += pts;
         award(g, h.cls, pts, ctx.playId);
-        if (carry.passer) g.stats.heroes[carry.passer].ast += 1;
+        for (const helper of buff.helpers) g.stats.heroes[helper].ast += 1;
         parts.push(`bucket: +${pts}`);
       } else parts.push('no bucket');
     }
@@ -864,7 +866,8 @@ function doStep(ctx: StepCtx, step: PlayStep, i: number, primaryId: string, pick
   }
 
   // Pass on.
-  ctx.carry = enablerCarry(m.enabler, mult, scouted, h.cls);
+  ctx.carry = fin ? emptyCarry() : addBuff(carry, m.enabler, mult, h.cls);
+  void scouted;
   for (let k = firstFrame; k < frames.length; k++) frames[k].step = i;
 }
 
@@ -872,7 +875,8 @@ export function runPossession(g0: Game, play: Play, primaryId: string, defense: 
   const g = clone(g0);
   const frames: Frame[] = [];
   const rec = !opts.preview;
-  const scouted = g.lastPlayId === play.id;
+  // Saved plays are presets now: no scouting penalty for calling one again.
+  const scouted = false;
   g.stats.plays[play.id] ??= { calls: 0, pts: 0 };
   g.stats.plays[play.id].calls += 1;
   g.last = { crewDowns: {}, clericHealed: 0 };
@@ -916,7 +920,7 @@ export function beginLive(g0: Game): Live {
 
 /** How many targets the player picks for this move: several for multi-target moves and multi-hit finishers, one more with Split. */
 export function maxPicks(m: Move, carry: Carry): number {
-  const extra = carry.split ? 1 : 0;
+  const extra = carry.split && isFinisher(m) ? 1 : 0;
   if (m.targets === 'multi') return (m.count ?? 1) + extra;
   if (m.targets === 'primary' && m.hits) return m.hits + extra;
   if (m.targets === 'primary') return 1 + extra;
@@ -959,7 +963,7 @@ export function liveOptions(l: Live): { heroes: Cls[]; finishersOnly: boolean; d
   const last = l.steps[l.steps.length - 1];
   const finished = !!last && isFinisher(MOVE[last.move]);
   const heroes = activeHeroes(g)
-    .filter((h) => h.touches > 0 && h.cls !== last?.cls && l.steps.filter((s) => s.cls === h.cls).length < 2)
+    .filter((h) => h.touches > 0 && !l.steps.some((s) => s.cls === h.cls))
     .map((h) => h.cls);
   return { heroes, finishersOnly: l.steps.length >= 3, done: finished || l.steps.length >= 4 };
 }
@@ -1360,20 +1364,13 @@ export function halftimeAdjustment(g: Game, playbook: Play[]): Adjustment {
       star: star.c,
       text: `They double the ${CLASS_INFO[star.c].name}: its first hit each possession is smothered unless it's Sure${mild ? ', in the third quarter' : ''}.`,
     };
-  if (!playbook.length)
-    return {
-      id: 'double',
-      name: 'Double the star',
-      star: star.c,
-      text: `They double the ${CLASS_INFO[star.c].name}: its first hit each possession is smothered unless it's Sure${mild ? ', in the third quarter' : ''}.`,
-    };
-  const top = Object.entries(g.stats.plays).sort((a, b) => b[1].pts - a[1].pts)[0];
-  const p = playbook.find((x) => x.id === top?.[0]) ?? playbook[0];
+  // Otherwise they double the top scorer.
+  void playbook;
   return {
-    id: 'scout',
-    name: 'Scout the play',
-    playId: p.id,
-    text: `${p.name} starts the second half scouted: its passes count for half until you call something else.`,
+    id: 'double',
+    name: 'Double the star',
+    star: star.c,
+    text: `They double the ${CLASS_INFO[star.c].name}: its first hit each possession is smothered unless it's Sure${mild ? ', in the third quarter' : ''}.`,
   };
 }
 
