@@ -19,7 +19,7 @@ export const TERMS: Record<string, { name: string; def: string }> = {
   quick: { name: 'Quick', def: 'The first hit on this enemy each possession misses. A cheap hit first, a Slow, or a Sure hit gets past it.' },
   barrier: {
     name: 'Barrier',
-    def: 'The Shaman’s wall in front of the whole horde for your next possession. Nothing behind it can be targeted; the first damaging move breaks it (a finisher spent on it scores no bucket).',
+    def: 'The Shaman’s wall in front of the whole horde for your next possession. Aim at any enemy and the Barrier takes the hit instead; the first damaging move breaks it (a finisher spent on it scores no bucket).',
   },
   block: {
     name: 'Block',

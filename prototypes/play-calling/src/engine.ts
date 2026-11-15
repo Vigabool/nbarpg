@@ -701,12 +701,12 @@ function doStep(ctx: StepCtx, step: PlayStep, i: number, primaryId: string, pick
   if (m.enabler?.kind === 'guided') parts.push('lights a lane: the finisher ignores Taunt');
 
   if (chosen && g.barrierUp && (m.targets ?? 'none') !== 'none') {
-    // The Barrier stands in front of everyone: the first damaging move breaks it, and nothing behind it can be targeted.
+    // The Barrier stands in front of everyone: whatever a move aims at, the Barrier takes it, and the first damaging move breaks it.
     const deals = (m.damage ?? 0) > 0;
     if (deals) {
       g.barrierUp = false;
       parts.push('the Barrier absorbs it and breaks');
-    } else parts.push('the Barrier stops it: nothing behind it can be targeted');
+    } else parts.push('the Barrier takes it: no effect gets through');
     if (fin) parts.push('no bucket');
     frames.push({
       game: snap(),

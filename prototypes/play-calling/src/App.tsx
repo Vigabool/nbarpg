@@ -926,6 +926,9 @@ function BuilderSheet(props: {
   const name = (id?: string) => (id ? (g.enemies.find((e) => e.id === id)?.name.replace('Goblin ', '') ?? '') : '');
   const targetText = (st: BuildStep, i: number) => {
     const m = MOVE[st.move];
+    // With the Barrier still up when this step fires, whatever it aims at, the Barrier takes it.
+    if (g.barrierUp && (m.targets ?? 'none') !== 'none' && !barrierBrokenBefore(slots, i))
+      return (m.damage ?? 0) > 0 ? '→ ✨ Barrier (breaks it)' : '→ ✨ Barrier (stopped)';
     if (!needsTarget(m)) return m.targets === 'all' ? 'every enemy' : '';
     if (i === 3) return st.picks?.length ? `→ ${st.picks.map(name).join(', ')}` : st.target ? `→ ${name(st.target)}` : 'pick a target';
     return st.target ? `→ ${name(st.target)}` : '→ finisher’s target';
@@ -1771,7 +1774,7 @@ function Board(props: {
   projections: Map<string, Proj>;
   picking: boolean;
   target: string | null;
-  /** An earlier move in the play breaks the Barrier, so the board shows the enemies behind it. */
+  /** An earlier move in the play breaks the Barrier, so for this step it's already gone. */
   barrierHidden?: boolean;
   /** Targets picked for a multi-target move, in order. */
   picks?: string[];
@@ -1790,7 +1793,7 @@ function Board(props: {
   const gob = (e: Enemy) => (
     <button
       key={e.id}
-      className={`gob ${e.onRam ? 'ram' : ''} ${props.picking ? 'target' : ''} ${isPicked(e.id) ? 'picked' : ''} ${hit(e.id) ? 'hit' : ''}`}
+      className={`gob ${shielded ? 'shielded' : ''} ${e.onRam ? 'ram' : ''} ${props.picking ? 'target' : ''} ${isPicked(e.id) ? 'picked' : ''} ${hit(e.id) ? 'hit' : ''}`}
       onClick={() => props.onPick(e.id)}
       aria-label={`Goblin, ${e.hp} HP${e.onRam ? ', on the ram' : ''}`}
     >
@@ -1798,11 +1801,14 @@ function Board(props: {
       👺 <span className="num">{e.hp}</span>
       {e.stripped && <span className="chip ball">Stripped</span>}
       {e.exposed > 0 && <span className="chip ball">Exp</span>}
-      {props.picking && !props.picks && <span className="proj">+{props.projections.get(e.id)?.points ?? 0}</span>}
+      {props.picking && !props.picks && <span className="proj">{shielded ? '✨' : `+${props.projections.get(e.id)?.points ?? 0}`}</span>}
     </button>
   );
   const caster = field.find((e) => e.barrier);
   const blocker = blockUp(g) ? field.find((e) => e.block) : undefined;
+  // The Barrier stands in front of the horde: cards stay readable, and any aim at them goes to the Barrier.
+  const shielded = g.barrierUp && !props.barrierHidden;
+  const aimLabel = (proj: ReactNode) => (shielded ? '✨ Barrier takes it' : proj);
   return (
     <div className="stack boardwrap">
       {blocker && !g.barrierUp && (
@@ -1811,17 +1817,18 @@ function Board(props: {
           <span className="small">The {blocker.name.replace('Goblin ', '')} cancels the first hit on any enemy this possession. Sure moves get through.</span>
         </div>
       )}
-      {g.barrierUp && !props.barrierHidden && (
+      {shielded && (
         <button
           className={`barrier ${props.picking ? 'target' : ''} ${props.frame?.target === 'barrier' ? 'hit' : ''}`}
           onClick={() => props.onPick(caster?.id ?? field[0]?.id ?? '')}
-          aria-label="The Barrier: the first damaging hit breaks it"
+          aria-label="The Barrier: it takes the first damaging hit, then breaks"
         >
           <span className="barrier-title">✨ Barrier</span>
           <span className="small">
-            The Shaman’s wall stands in front of the whole horde. Nothing behind it can be targeted: the first damaging move breaks it.
+            {props.picking
+              ? 'Tap it or any enemy: the Barrier takes this hit. A damaging move breaks it.'
+              : 'In front of the whole horde: it takes the first damaging hit, then breaks.'}
           </span>
-          {props.picking && !props.picks && <span className="proj">Tap to hit the Barrier</span>}
         </button>
       )}
       <div className="enemies">
@@ -1830,7 +1837,7 @@ function Board(props: {
           return (
             <button
               key={e.id}
-              className={`ecard ${props.picking ? 'target' : ''} ${isPicked(e.id) ? 'picked' : ''} ${ci >= 0 ? 'inCall' : ''} ${hit(e.id) ? 'hit' : ''}`}
+              className={`ecard ${shielded ? 'shielded' : ''} ${props.picking ? 'target' : ''} ${isPicked(e.id) ? 'picked' : ''} ${ci >= 0 ? 'inCall' : ''} ${hit(e.id) ? 'hit' : ''}`}
               onClick={() => props.onPick(e.id)}
               aria-pressed={props.picks ? pickNo(e.id) > 0 : undefined}
             >
@@ -1856,7 +1863,7 @@ function Board(props: {
                   </span>
                 ))}
               </div>
-              {props.picking && !props.picks && <span className="proj">{projText(props.projections.get(e.id))}</span>}
+              {props.picking && !props.picks && <span className="proj">{aimLabel(projText(props.projections.get(e.id)))}</span>}
             </button>
           );
         })}
@@ -2794,7 +2801,7 @@ function Guide(props: { onClose: () => void }) {
     ],
     [
       'Defenses',
-      'Taunt (the Ogre): single-target hits must go to it, unless the Cleric’s Guiding Light guides the finisher past it. Armor: each hit deals less. Quick: the first hit on it each possession misses. Barrier (the Shaman’s cast on the horde’s turn, when the ram has its 4 goblins): a wall in front of the whole horde for your next possession; the first damaging move breaks it, and nothing behind it can be targeted until then. War Drum (automatic): the ram hits +2 while the Shaman stands. Block (the Chieftain): the first hit on any enemy each possession is cancelled.',
+      'Taunt (the Ogre): single-target hits must go to it, unless the Cleric’s Guiding Light guides the finisher past it. Armor: each hit deals less. Quick: the first hit on it each possession misses. Barrier (the Shaman’s cast on the horde’s turn, when the ram has its 4 goblins): a wall in front of the whole horde for your next possession. Aim at any enemy and the Barrier takes the hit instead; the first damaging move breaks it. War Drum (automatic): the ram hits +2 while the Shaman stands. Block (the Chieftain): the first hit on any enemy each possession is cancelled.',
     ],
     [
       'Passes',
