@@ -1819,3 +1819,9 @@ th {
     transform: scale(1);
   }
 }
+
+/* The play designer's slot being edited */
+.slot2.editing {
+  outline: 2px solid var(--ball);
+  outline-offset: 1px;
+}

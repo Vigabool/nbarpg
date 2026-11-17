@@ -2525,23 +2525,47 @@ function Library(props: {
 function Designer(props: { tuning: Tuning; difficulty: Difficulty; initial?: Play; onSave: (p: Play) => void; onClose: () => void }) {
   const isCustom = props.initial && !TEMPLATES.some((t) => t.id === props.initial!.id);
   const [name, setName] = useState(props.initial ? (isCustom ? props.initial.name : `${props.initial.name} (mine)`) : 'New play');
-  const [steps, setSteps] = useState<PlayStep[]>(
-    props.initial?.steps ?? [
-      { cls: 'warrior', move: 'provoke' },
-      { cls: 'rogue', move: 'backstab' },
-    ],
-  );
+  // The same four slots as the possession builder: Start, Support, Support, Finish, filled in any order.
+  const [slots, setSlots] = useState<(PlayStep | null)[]>(() => {
+    const out: (PlayStep | null)[] = [null, null, null, null];
+    const st = props.initial?.steps;
+    if (st?.length) {
+      st.slice(0, -1).forEach((x, k) => (out[k] = x));
+      out[3] = st[st.length - 1];
+    }
+    return out;
+  });
+  const [editSlot, setEditSlot] = useState<number | null>(props.initial ? null : 3);
+  const [pickHero, setPickHero] = useState<Cls | null>(null);
   const [vs, setVs] = useState<string>('ogre');
-  const errors = validatePlay(steps);
+  const steps = slots.filter((x): x is PlayStep => !!x);
+  const finisher = slots[3];
+  const errors = !finisher ? ['Add a finisher.'] : steps.length < 2 ? ['Add at least one helper before the finisher.'] : validatePlay(steps);
   const heroLines = Object.fromEntries(week.heroes.map((h) => [h.cls, h]));
-  const setStep = (i: number, s: PlayStep) => setSteps((x) => x.map((y, j) => (j === i ? s : y)));
-  const movesFor = (c: Cls) =>
+  const movesFor = (c: Cls, i: number) =>
     MOVES.filter(
       (m) =>
         m.cls === c &&
+        (i === 3 ? isFinisher(m) : !isFinisher(m)) &&
         (m.kind !== 'signature' || heroLines[c].doubleDouble || heroLines[c].tripleDouble) &&
         (m.kind !== 'legendary' || heroLines[c].tripleDouble),
     );
+  const openSlot = (i: number) => {
+    setEditSlot(editSlot === i ? null : i);
+    setPickHero(slots[i]?.cls ?? null);
+  };
+  const choose = (i: number, st: PlayStep) => {
+    setSlots((x) => x.map((y, j) => (j === i ? st : y)));
+    setEditSlot(null);
+    setPickHero(null);
+  };
+  const clear = (i: number) => {
+    setSlots((x) => x.map((y, j) => (j === i ? null : y)));
+    setPickHero(null);
+  };
+  const inOther = (c: Cls, i: number) => slots.some((x, j) => j !== i && x?.cls === c);
+  const finMove = finisher ? MOVE[finisher.move] : undefined;
+  const buffLabel = (m: Move) => (m.enabler ? (m.enabler.kind === 'armor' ? 'Armor' : (m.enablerText?.split(' (')[0] ?? '')) : '');
 
   // Preview against one enemy, with the whole horde on the floor (so Taunt and Block are up; the Barrier is left down).
   const preview = useMemo(() => {
@@ -2556,7 +2580,7 @@ function Designer(props: { tuning: Tuning; difficulty: Difficulty; initial?: Pla
     const target = base.enemies.find((e) => e.kind === vs) ?? base.enemies[0];
     const open = project(base, play, target.id);
     return { target, open };
-  }, [steps, vs, errors.length, name, props.tuning, props.difficulty]);
+  }, [slots, vs, errors.length, name, props.tuning, props.difficulty]); // eslint-disable-line
 
   return (
     <ModalShell title="Play designer" onClose={props.onClose}>
@@ -2569,76 +2593,111 @@ function Designer(props: { tuning: Tuning; difficulty: Difficulty; initial?: Pla
           style={{ padding: 8, borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface)' }}
         />
       </label>
-      {steps.map((s, i) => {
-        const m = MOVE[s.move];
-        const next = steps[i + 1] ? MOVE[steps[i + 1].move] : undefined;
-        return (
-          <div key={i} className="stack">
-            <div className="step">
-              <div className="row" style={{ justifyContent: 'space-between' }}>
-                <span className="eyebrow">Step {i + 1}</span>
-                {steps.length > 2 && (
-                  <button className="linkish" onClick={() => setSteps((x) => x.filter((_, j) => j !== i))}>
-                    Remove
-                  </button>
-                )}
-              </div>
-              <div className="herochoice">
-                {CLASSES.map((c) => (
-                  <button
-                    key={c}
-                    className="opt"
-                    aria-pressed={s.cls === c}
-                    onClick={() => setStep(i, { cls: c, move: movesFor(c).find((x) => (i === steps.length - 1 ? isFinisher(x) : !isFinisher(x)))!.id })}
-                  >
-                    {CLASS_INFO[c].icon} {CLASS_INFO[c].name}
-                  </button>
-                ))}
-              </div>
-              <div className="movechoice">
-                {movesFor(s.cls).map((mv) => (
-                  <button key={mv.id} className="mv" aria-pressed={s.move === mv.id} onClick={() => setStep(i, { cls: s.cls, move: mv.id })}>
-                    <span className="k">{mv.kind}</span> <strong>{mv.name}</strong>
-                    <br />
-                    <span className="small">
-                      Action: <Rich>{mv.action}</Rich>
-                    </span>
-                    {mv.enablerText && (
-                      <>
-                        <br />
-                        <span className="small">
-                          Pass: <Rich>{mv.enablerText}</Rich>
-                        </span>
-                      </>
-                    )}
-                  </button>
-                ))}
-              </div>
+      <div className="slotstrip">
+        {slots.map((st, i) => {
+          const m = st ? MOVE[st.move] : null;
+          return (
+            <button
+              key={i}
+              className={`slot2 ${i === 3 ? 'finish' : ''} ${st ? 'filled' : ''} ${editSlot === i ? 'editing' : ''}`}
+              aria-pressed={editSlot === i}
+              onClick={() => openSlot(i)}
+            >
+              <span className="slotlabel">{SLOT_ROLE[i]}</span>
+              {st && m ? (
+                <>
+                  <span className="slotmove">
+                    {CLASS_INFO[st.cls].icon} {m.name}
+                  </span>
+                  {i < 3 && buffLabel(m) && <span className="slotbuff">+{buffLabel(m)}</span>}
+                </>
+              ) : (
+                <span className="slotempty">+ {i === 3 ? 'Finisher' : 'Add'}</span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+      {editSlot !== null && (
+        <div className="panel stack">
+          <div className="row" style={{ justifyContent: 'space-between' }}>
+            <strong>
+              {SLOT_ROLE[editSlot]}: {pickHero ? 'pick a move' : 'pick a hero'}
+            </strong>
+            <div className="row">
+              {slots[editSlot] && (
+                <button className="btn small quiet" onClick={() => clear(editSlot)}>
+                  Remove
+                </button>
+              )}
+              <button className="btn quiet small" onClick={() => setEditSlot(null)}>
+                ✕ Close
+              </button>
             </div>
-            {i < steps.length - 1 && m && (
-              <div className={`pass ${passHelps(m, next) ? 'good' : 'bad'}`}>
-                {m.enablerText ? `${m.enablerText} → ${CLASS_INFO[steps[i + 1].cls].name} ` : 'No pass '}
-                {passHelps(m, next) ? <span className="ok">✓ boosts {next?.name}</span> : <span className="err">– wasted on {next?.name}</span>}
-              </div>
-            )}
           </div>
-        );
-      })}
-      {steps.length < 4 && (
-        <button
-          className="btn"
-          onClick={() =>
-            setSteps((x) => {
-              const last = x[x.length - 1];
-              const prevCls = x[x.length - 2].cls;
-              const cls: Cls = CLASSES.find((c) => c !== last.cls && c !== prevCls)!;
-              const filler = MOVES.find((mv) => mv.cls === cls && mv.kind === 'enabler')!;
-              return [...x.slice(0, -1), { cls, move: filler.id }, last];
-            })
-          }
-        >
-          Add a step before the finisher
-        </button>
+          <div className="livepick">
+            {CLASSES.map((c) => {
+              const used = inOther(c, editSlot);
+              return (
+                <button key={c} className={`lhero ${pickHero === c ? 'on' : ''}`} disabled={used} aria-pressed={pickHero === c} onClick={() => setPickHero(c)}>
+                  <span>{CLASS_INFO[c].icon}</span>
+                  <strong>{CLASS_INFO[c].name}</strong>
+                  <span className="small muted">{lastName(heroLines[c].player)}</span>
+                  <span className="small muted">{used ? 'in the play' : ''}</span>
+                </button>
+              );
+            })}
+          </div>
+          {pickHero && (
+            <div className="movegrid">
+              {movesFor(pickHero, editSlot).map((m) => (
+                <button
+                  key={m.id}
+                  className={`mcard ${slots[editSlot]?.move === m.id ? 'on' : ''} ${isFinisher(m) ? 'fin' : ''} ${isSpecial(m) ? 'special' : ''}`}
+                  onClick={() => choose(editSlot, { cls: pickHero, move: m.id })}
+                >
+                  <strong>{m.name}</strong>
+                  <span className={`mkind ${isSpecial(m) ? 'special' : isFinisher(m) ? 'fin' : ''}`}>
+                    {m.kind === 'signature' ? (
+                      '★ DD special'
+                    ) : m.kind === 'legendary' ? (
+                      '★★ TD special'
+                    ) : isFinisher(m) ? (
+                      'Finisher'
+                    ) : (
+                      <Rich>{`Buff: ${buffLabel(m)}`}</Rich>
+                    )}
+                  </span>
+                  <span className="small">
+                    <Rich>{m.action}</Rich>
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+      {steps.some((x, k) => k < steps.length - 1 || !isFinisher(MOVE[x.move])) && (
+        <div className="panel stack">
+          <span className="eyebrow">Buffs for the finisher</span>
+          {slots.slice(0, 3).map((st, i) => {
+            if (!st) return null;
+            const m = MOVE[st.move];
+            const helps = passHelps(m, finMove);
+            return (
+              <span key={i} className="small">
+                {CLASS_INFO[st.cls].icon} {m.name}: <Rich>{m.enablerText ?? 'no buff'}</Rich>{' '}
+                {!finMove ? (
+                  <span className="muted">(add a finisher)</span>
+                ) : helps ? (
+                  <span className="ok">✓ boosts {finMove.name}</span>
+                ) : (
+                  <span className="err">– wasted on {finMove.name}</span>
+                )}
+              </span>
+            );
+          })}
+        </div>
       )}
       {errors.map((e) => (
         <p className="err" key={e}>
@@ -2671,7 +2730,7 @@ function Designer(props: { tuning: Tuning; difficulty: Difficulty; initial?: Pla
             </p>
           </>
         ) : (
-          <p className="small muted">Fix the play to see a preview.</p>
+          <p className="small muted">Fill the Finish slot and at least one more to see a preview.</p>
         )}
       </div>
       <button
