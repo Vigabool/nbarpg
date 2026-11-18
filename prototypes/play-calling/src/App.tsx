@@ -870,7 +870,12 @@ function simulateBuild(g: Game, slots: (BuildStep | null)[], defense?: Defense):
   if (fin && ready && !bucket) {
     const target = g.enemies.find((e) => e.id === primary);
     notes.push({
-      t: target?.kind === 'goblin' ? 'No bucket: goblins only score their takedowns.' : 'No bucket: the finisher doesn’t get damage through.',
+      t:
+        target?.kind === 'goblin'
+          ? 'No bucket: goblins only score their takedowns.'
+          : target?.kind === 'wagon'
+            ? 'No bucket: the Loot wagon is treasure, not a Champion. Breaking it scores 3 and 5 gold.'
+            : 'No bucket: the finisher doesn’t get damage through.',
       ok: false,
     });
   }
