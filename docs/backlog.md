@@ -41,9 +41,9 @@ Getting the game ready for outside testers, in this order.
 **Built (data feed).** The form window (`src/data/form.ts`: last 15 regular-season games before the week, topped up from the prior season), with ratings fixed at each chapter's first week; players short of 15 games across both seasons (rookies included) can't be signed for now; the CDN fetcher (`scripts/fetch-cdn.ts`) and the Monday **Refresh season data** workflow; the build makes every season in `data/raw/` and a `seasons.json` list; the title screen opens on the live season with older seasons as replays; unfinished weeks stay locked. 2025–26 has no prior season in the repo, so it keeps whole-season averages and the golden baseline is unchanged.
 
 **Still to do.**
-1. **Schedule ✅:** `main` now carries everything on `milestones-1-3`, so the Monday run is live. GitHub starts it late when busy (6 hours late on Oct 26), still the same day. Keep `main` up to date with `git push origin milestones-1-3:main`.
+1. **Schedule ✅:** `main` now carries everything on `possession-prototype` (the working branch, renamed from `milestones-1-3` on Nov 18), so the Monday run is live. GitHub starts it late when busy (6 hours late on Oct 26), still the same day. Keep `main` up to date with `git push origin possession-prototype:main`.
 2. **First real fetch ✅:** the CDN answers GitHub's servers. On week 1's data: 389 players, 281 signable, a normal tier mix.
-3. **Ship to friends (TBD):** decide how the weekly data reaches `playtest` (the workflow pushes to `milestones-1-3` only; a deploy needs a push to `playtest`).
+3. **Ship to friends (TBD):** decide how the weekly data reaches `playtest` (the workflow pushes to `possession-prototype` only; a deploy needs a push to `playtest`).
 4. **2024–25 data ✅:** in `data/raw/`. The live season reaches back to it for players who missed most of 2025–26 (16 more players signable on week 1), and the measurement of last season against this one is in the design doc. It also shows up as a replay season.
 5. **Simulators on the live season:** the season simulator still rates players on whole-season averages; switch it to form views before tuning on 2026–27.
 6. **Recalibration:** after 6–8 weeks, `npm run data:calibrate` on 2026–27; adopt at a chapter boundary if the tier mix moved.
