@@ -29,11 +29,18 @@ export const TERMS: Record<string, { name: string; def: string }> = {
   marked: { name: 'Marked', def: 'Exposed through the next possession too.' },
   disabled: { name: 'Disabled', def: 'Out of the horde’s next play, and loses its Taunt or Quick. A Disabled Shaman casts nothing and drums nothing.' },
   slowed: { name: 'Slowed', def: 'Loses Quick, and its next hit deals half.' },
-  stripped: { name: 'Stripped', def: 'Knocked off the ram by Strip the Ball: it doesn’t push this turn, but still counts as crew.' },
+  stripped: {
+    name: 'Stripped',
+    def: 'Knocked off the ram by Strip the Ball: it doesn’t push this turn (the ram hits a quarter softer for each), but still counts as crew.',
+  },
   warDrum: { name: 'War Drum', def: 'While the Shaman stands (and isn’t Disabled), the ram hits +2.' },
   callPack: {
     name: 'Call the Pack',
     def: 'The Shaman summons 2 goblins (3 if Great or better) when fewer than 4 are on the ram. The Chieftain calls 2 every other turn.',
+  },
+  turnover: {
+    name: 'Turnover',
+    def: 'Your finisher is Blocked, evaded or swallowed by the Barrier: the horde scores 2 on the fast break. A cheap hit first, or a Sure finisher, avoids it.',
   },
   bucket: { name: 'Bucket', def: '2 points for a finisher that damages a Champion or the boss. One per finisher, however many it hits.' },
   takedown: { name: 'Takedown', def: 'Each enemy taken down scores its 🏀 value: goblins 1, Champions 4 or more, the boss most.' },
@@ -77,6 +84,8 @@ const FORMS: [string, string][] = [
   ['Slowed', 'slowed'],
   ['Slows', 'slowed'],
   ['Stripped', 'stripped'],
+  ['Turnover', 'turnover'],
+  ['turnover', 'turnover'],
   ['bucket', 'bucket'],
   ['takedowns', 'takedown'],
   ['takedown', 'takedown'],

@@ -33,6 +33,8 @@ export interface Tuning {
   hordeDamage: number;
   championHp: number;
   hordeHitPoints: number;
+  /** The horde's fast break when your finisher is stopped. */
+  turnoverPoints: number;
 }
 export const DEFAULT_TUNING: Tuning = {
   gateHp: 70,
@@ -45,6 +47,7 @@ export const DEFAULT_TUNING: Tuning = {
   hordeDamage: 1,
   championHp: 1.25,
   hordeHitPoints: 2,
+  turnoverPoints: 2,
 };
 export type Difficulty = 'normal' | 'hard';
 
@@ -133,7 +136,7 @@ export interface Stats {
   heroes: Record<Cls, { pts: number; ast: number; stops: number; touches: number; dmg: number }>;
   plays: Record<string, { calls: number; pts: number }>;
   party: { shots: number; takedowns: number; objectives: number };
-  horde: { hits: number; takedowns: number; gate: number; pillage: number };
+  horde: { hits: number; takedowns: number; gate: number; pillage: number; turnovers: number };
 }
 
 export interface LogLine {
@@ -317,7 +320,7 @@ export function newGame(tuning: Tuning = DEFAULT_TUNING, difficulty: Difficulty 
     heroes: Object.fromEntries(CLASSES.map((c) => [c, { pts: 0, ast: 0, stops: 0, touches: 0, dmg: 0 }])) as Stats['heroes'],
     plays: {},
     party: { shots: 0, takedowns: 0, objectives: 0 },
-    horde: { hits: 0, takedowns: 0, gate: 0, pillage: 0 },
+    horde: { hits: 0, takedowns: 0, gate: 0, pillage: 0, turnovers: 0 },
   };
   const g: Game = {
     tuning,
@@ -409,6 +412,12 @@ export const onField = (g: Game) => g.enemies.filter((e) => e.arrived && e.hp > 
 export const crew = (g: Game) => onField(g).filter((e) => e.kind === 'goblin' && e.onRam);
 /** Goblins actually pushing the ram this turn. */
 export const pushing = (g: Game) => crew(g).filter((e) => !e.stripped);
+/** What the ram hits the gate for with this many goblins pushing: each of the first four pushes a quarter of the hit, each extra adds 1. */
+export function ramHit(g: Game, pushers: number, boost = 0): number {
+  if (pushers <= 0) return 0;
+  const full = g.ramBase + boost + g.ramBonus + warDrum(g);
+  return Math.max(1, Math.round((full * Math.min(pushers, 4)) / 4)) + Math.max(0, pushers - 4);
+}
 export const freeGoblins = (g: Game) => onField(g).filter((e) => e.kind === 'goblin' && !e.onRam);
 export const activeHeroes = (g: Game) => CLASSES.map((c) => g.heroes[c]).filter((h) => h.benched === 0 && h.hp > 0);
 const isChampion = (e: Enemy) => e.kind !== 'goblin' && e.kind !== 'wagon';
@@ -628,6 +637,14 @@ interface StepCtx {
   playId: string;
 }
 
+/** Points off turnovers: your finisher was stopped, so the horde scores on the fast break. */
+function turnover(g: Game, frames: Frame[], rec: boolean, why: string) {
+  const pts = g.tuning.turnoverPoints;
+  g.score.horde += pts;
+  g.stats.horde.turnovers += pts;
+  frames.push({ game: rec ? clone(g) : g, text: `Turnover (${why}): the horde runs the fast break: +${pts}.`, side: 'horde', pts });
+}
+
 /** One hero's step: receive the pass, act, score, then pass on. */
 /** `picks`: the targets the player chose, in order (live moves). Without picks, the move fills its own targets. */
 function doStep(ctx: StepCtx, step: PlayStep, i: number, primaryId: string, picks?: string[]) {
@@ -717,6 +734,7 @@ function doStep(ctx: StepCtx, step: PlayStep, i: number, primaryId: string, pick
       kind: 'step',
       result: parts.join(', '),
     });
+    if (fin && deals) turnover(g, frames, rec, 'the Barrier swallowed the shot');
   } else if (chosen) {
     const sure = !!m.sure || buff.sure;
     const pierce = !!m.pierce || buff.pierce;
@@ -790,6 +808,8 @@ function doStep(ctx: StepCtx, step: PlayStep, i: number, primaryId: string, pick
 
     // Whether the move connected with its main target (statuses need that).
     let connected = !deals;
+    /** Every hit was Blocked or evaded: a finisher like that is a turnover. */
+    let stopped = false;
     if (m.effect === 'assassinate' && !primary.boss) {
       g.stats.heroes[h.cls].dmg += primary.hp;
       if (isChampion(primary)) champDamaged = true;
@@ -817,11 +837,13 @@ function doStep(ctx: StepCtx, step: PlayStep, i: number, primaryId: string, pick
         }
       }
       parts.push(`${dmg} damage from ${landed} of ${total} hits`);
+      stopped = landed === 0;
     } else if (deals) {
       const res = targets.map((x) => ({ x, d: hit(x, m.damage!) }));
       connected = res.some((r) => r.x.id === primary.id && r.d >= 0);
       const landed = res.filter((r) => r.d >= 0);
       const dmg = landed.reduce((s, r) => s + r.d, 0);
+      stopped = res.length > 0 && landed.length === 0;
       // A hit that's Blocked or evaded is explained by its note, so it isn't also called a miss.
       if (res.length === 1) {
         if (landed.length) parts.push(`${dmg} to the ${short(res[0].x)}`);
@@ -882,6 +904,7 @@ function doStep(ctx: StepCtx, step: PlayStep, i: number, primaryId: string, pick
       kind: 'step',
       result: parts.join(', '),
     });
+    if (fin && stopped) turnover(g, frames, rec, notes.join(' and ') || 'the shot was stopped');
     sweep(g, h.cls, frames, rec, ctx.playId);
   } else {
     frames.push({
@@ -1098,12 +1121,10 @@ function hordeHit(g: Game, actor: Enemy, targetCls: Cls, bonus: number, defense:
     actor.slowed = false;
     notes.push('Slowed: half damage');
   }
-  // An Elite Warrior's Protect is a Block: the first hit on that hero is cancelled.
-  const protectedHere = off.has('warrior') && defense.protect === cls;
-  if (protectedHere && tierIndex(g.heroes.warrior.defTier) >= tierIndex('elite') && !g.blocked) {
-    g.blocked = true;
-    d = 0;
-    notes.push('Blocked by the Warrior');
+  // An Elite Warrior's Protect also halves the hit on that hero (then Armor applies): it reduces scoring, never cancels it.
+  if (off.has('warrior') && defense.protect === cls && tierIndex(g.heroes.warrior.defTier) >= tierIndex('elite') && d > 0) {
+    d = Math.ceil(d / 2);
+    notes.push('the Warrior takes half');
   }
   const before = d;
   d = Math.max(0, d - h.armor);
@@ -1281,8 +1302,8 @@ function enemyTurn(g: Game, inPlay: Set<Cls>, defense: Defense, frames: Frame[])
   // The ram.
   if (!g.gate.breached) {
     const p = pushing(g);
-    if (p.length >= 4) {
-      let d = g.ramBase + (p.length - 4) + ramBoost + g.ramBonus + warDrum(g);
+    if (p.length > 0) {
+      let d = ramHit(g, p.length, ramBoost);
       const guarded = off.has('warrior') && defense.protect === 'gate';
       if (guarded) {
         d = Math.ceil(d / 2);
@@ -1293,7 +1314,7 @@ function enemyTurn(g: Game, inPlay: Set<Cls>, defense: Defense, frames: Frame[])
       g.gate.dmg += d;
       g.gate.hp -= d;
       let pts = Math.floor(g.gate.dmg / 2) - before;
-      let text = `The ram hits the gate for ${d}${guarded ? ' (the Warrior braces it)' : ''}`;
+      let text = `The ram hits the gate for ${d}${p.length < 4 ? ` (${p.length} of 4 crew pushing)` : ''}${guarded ? ' (the Warrior braces it)' : ''}`;
       if (g.gate.hp <= 0) {
         g.gate.breached = true;
         pts += 10;
@@ -1304,7 +1325,7 @@ function enemyTurn(g: Game, inPlay: Set<Cls>, defense: Defense, frames: Frame[])
       g.stats.horde.gate += pts;
       frames.push({ game: clone(g), text: `${text}${pts ? `: +${pts}` : ''}.`, side: 'horde', target: 'gate', pts: pts || undefined });
     } else if (crew(g).length > 0) {
-      frames.push({ game: clone(g), text: `The ram stalls: only ${p.length} of 4 crew pushing.`, side: 'info', target: 'gate' });
+      frames.push({ game: clone(g), text: 'The ram stalls: no crew pushing.', side: 'info', target: 'gate' });
     }
   } else {
     const pillagers = onField(g).filter((e) => e.kind === 'goblin' && !e.summonedThisTurn);
@@ -1451,14 +1472,16 @@ export function project(g: Game, play: Play, targetId: string): Projection {
   if (!g.gate.breached) {
     const pushNow = pushing(g).length;
     const pushAfter = pushing(game).length;
-    if (pushNow >= 4 && pushAfter < 4) crewBroken = 1;
+    crewBroken = (Math.min(pushNow, 4) - Math.min(pushAfter, 4)) / 4;
   }
   const points = game.score.party - g.score.party;
   // Breaking the horde's call counts: its finisher Disabled or down.
   const callFin = g.call?.actors[g.call.actors.length - 1];
   const fin = callFin ? game.enemies.find((e) => e.id === callFin) : undefined;
   const broke = fin && (fin.hp <= 0 || fin.disabled) ? 1 : 0;
-  const value = points + damage * 0.12 + crewBroken * 4 + broke * 3;
+  // Points the horde scores during your possession (off a turnover) count against the play.
+  const given = game.score.horde - g.score.horde;
+  const value = points - given + damage * 0.12 + crewBroken * 4 + broke * 3;
   return { playId: play.id, targetId, points, damage, kills, open, value };
 }
 

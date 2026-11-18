@@ -45,6 +45,7 @@ import {
   playAvailable,
   project,
   pushing,
+  ramHit,
   shamanCast,
   warDrum,
   quarterOf,
@@ -149,7 +150,6 @@ function SpecialChip(props: { m: Move }) {
 }
 /** The extra effect a top defensive tier adds. */
 const ELITE_DEFENSE: Partial<Record<Cls, string>> = {
-  warrior: 'At Elite, Protect blocks the first hit on that ally outright.',
   rogue: 'At Elite, two goblins are knocked off the ram.',
 };
 /** What a hero does on the horde's turn when they don't touch the ball. */
@@ -679,9 +679,10 @@ export function App() {
           </div>
           <div className="panel small">
             <strong>How the horde scores</strong>
-            <span>2 when its finisher damages a hero (a hit fully stopped by Armor, a Block or a Slow scores nothing).</span>
+            <span>2 when its finisher damages a hero (a hit fully stopped by Armor or a Slow scores nothing).</span>
+            <span>2 on a turnover: your finisher is Blocked, evaded or swallowed by the Barrier.</span>
             <span>4 for a hero it takes down.</span>
-            <span>1 for every 2 damage the ram does to the gate, and 10 when the gate falls.</span>
+            <span>1 for every 2 damage the ram does to the gate, and 10 when the gate falls. Each goblin pushing adds a quarter of the ram’s hit.</span>
             <span>After the gate falls, 1 for every goblin on the field each turn.</span>
             <span className="muted">
               Heroes who aren’t in your play defend: the Warrior Protects, the Ranger Closes Out, the Wizard Wards, the Cleric heals and the Rogue Strips the
@@ -879,12 +880,14 @@ function simulateBuild(g: Game, slots: (BuildStep | null)[], defense?: Defense):
       ok: false,
     });
   }
+  if (l.ctx.g.stats.horde.turnovers > g.stats.horde.turnovers)
+    notes.push({ t: `Turnover: your finisher is stopped, and the horde scores ${g.tuning.turnoverPoints} on the fast break.`, ok: false });
   // Play out the horde's turn that would follow.
   let horde: Sim['horde'];
   if (defense) {
     const res = finishLive(l, defense);
     const lines = res.frames
-      .filter((f) => f.phase === 'horde' && !/^Possession|^Halftime|^Final/.test(f.text))
+      .filter((f) => (f.phase === 'horde' || /^Turnover/.test(f.text)) && !/^Possession|^Halftime|^Final/.test(f.text))
       .map((f) => ({ t: f.text, pts: f.side === 'horde' ? f.pts : undefined, side: f.side }));
     horde = { points: res.game.score.horde - g.score.horde, lines };
   }
@@ -1369,9 +1372,9 @@ function PlanScreen(props: {
               </div>
               {open === 'gate' && (
                 <div className="panel detail small">
-                  The ram needs 4 goblins pushing. It hits the {g.gate.max}-HP gate for {g.ramBase} each enemy turn, +1 per extra goblin (the opponents shot{' '}
-                  {(opponentsFg() * 100).toFixed(1)}% this week). The horde scores 1 per 2 gate damage and 10 when it falls; after that, every goblin on the
-                  field pillages for 1 a turn.
+                  Each goblin pushing the ram adds a quarter of its hit: with 4 pushing it hits the {g.gate.max}-HP gate for {g.ramBase} each enemy turn, +1 per
+                  extra goblin (the opponents shot {(opponentsFg() * 100).toFixed(1)}% this week). The horde scores 1 per 2 gate damage and 10 when it falls;
+                  after that, every goblin on the field pillages for 1 a turn.
                 </div>
               )}
               {open === 'bounty' && (
@@ -1681,7 +1684,7 @@ function Objectives(props: { game: Game }) {
             ))}
           </div>
           <span className="small">
-            {p.length >= 4 ? `hits for ${g.ramBase + (p.length - 4) + g.ramBonus + warDrum(g)}${warDrum(g) ? ' (War Drum +2)' : ''}` : 'stalled'} ·{' '}
+            {p.length > 0 ? `hits for ${ramHit(g, p.length)}${warDrum(g) ? ' (War Drum +2)' : ''}` : 'stalled'} ·{' '}
             {c.length - p.length > 0 ? `${c.length - p.length} pinned · ` : ''}
             {p.length}/4 pushing
           </span>
@@ -1999,13 +2002,15 @@ function ReplayBody(props: { replay: Replay; beats: Beat[]; beat: number }) {
   const shownIdx = new Set(shownBeats.filter((b): b is number => b !== 'break'));
   const fr = replay.frames;
   const partyFrames = fr.map((f, i) => ({ f, i })).filter((x) => x.f.phase === 'party');
-  const hordeFrames = fr.map((f, i) => ({ f, i })).filter((x) => x.f.phase === 'horde' && shownIdx.has(x.i));
+  // A turnover happens during your possession, but it's the horde's points, so it's listed with the horde's turn.
+  const isTurnover = (f: Frame) => f.side === 'horde' && /^Turnover/.test(f.text);
+  const hordeFrames = fr.map((f, i) => ({ f, i })).filter((x) => (x.f.phase === 'horde' || isTurnover(x.f)) && shownIdx.has(x.i));
   const lastShown = [...shownBeats].reverse().find((b) => b !== 'break');
   const pastBreak = shownBeats.includes('break');
   const partyPts = partyFrames.filter((x) => shownIdx.has(x.i)).reduce((s, x) => s + (x.f.side === 'party' ? (x.f.pts ?? 0) : 0), 0);
   const hordePts = hordeFrames.reduce((s, x) => s + (x.f.side === 'horde' ? (x.f.pts ?? 0) : 0), 0);
   const play = replay.play;
-  const info = partyFrames.filter((x) => x.f.step === undefined && shownIdx.has(x.i));
+  const info = partyFrames.filter((x) => x.f.step === undefined && !isTurnover(x.f) && shownIdx.has(x.i));
   const hordeRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     hordeRef.current?.scrollIntoView({ block: 'nearest' });
@@ -2210,6 +2215,11 @@ function BoxScore(props: { game: Game; names: Record<string, string> }) {
                 <td>Objectives</td>
                 <td>{g.stats.party.objectives}</td>
                 <td>{g.stats.horde.gate}</td>
+              </tr>
+              <tr>
+                <td>Points off turnovers</td>
+                <td>—</td>
+                <td>{g.stats.horde.turnovers}</td>
               </tr>
               <tr>
                 <td>Pillage</td>
@@ -2879,7 +2889,7 @@ function Guide(props: { onClose: () => void }) {
     ],
     [
       'The horde',
-      'Its goblins push the ram automatically when 4 are on it. Its Champions run one called play each turn and score 2 for a finisher that damages a hero and 4 for a hero they take down.',
+      'Its goblins push the ram automatically: each one pushing adds a quarter of the hit, so knocking goblins off slows the ram. Its Champions run one called play each turn and score 2 for a finisher that damages a hero and 4 for a hero they take down. If your finisher is Blocked, evaded or swallowed by the Barrier, that’s a turnover: the horde scores 2 on the fast break.',
     ],
     [
       'Statuses',

@@ -14,7 +14,7 @@ export const CLASS_INFO: Record<Cls, { name: string; role: string; icon: string;
     icon: '🛡',
     hp: 40,
     defense: 'Protect',
-    defenseText: 'Gives one ally Armor against the horde’s hit (a Block at Elite), or halves the ram on the gate.',
+    defenseText: 'Gives one ally Armor against the horde’s hit, or halves the ram on the gate.',
   },
   cleric: { name: 'Cleric', role: 'the point guard', icon: '✚', hp: 28, defense: 'Triage', defenseText: 'Heals the most injured hero after the enemy turn.' },
   rogue: {
@@ -501,7 +501,7 @@ export const ENEMY_INFO: Record<EnemyKind, { name: string; icon: string; mirrors
   goblin: {
     name: 'Goblin',
     icon: '👺',
-    job: 'Crews the ram: four pushing make it hit the gate. A finisher that only hits goblins scores no bucket, just their takedowns.',
+    job: 'Crews the ram: each one pushing adds a quarter of its hit on the gate. A finisher that only hits goblins scores no bucket, just their takedowns.',
   },
   shaman: {
     name: 'Goblin Shaman',
