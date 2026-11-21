@@ -456,6 +456,7 @@ export function App() {
               picks={aimSlot === 3 && aimMax > 1 ? (finisher?.picks ?? (aimTaunter ? [aimTaunter.id] : [])) : undefined}
               frame={curFrame}
               onPick={(id) => (aimSlot !== null && !frames ? aimAt(id) : setModal({ kind: 'enemy', id }))}
+              ram={!replay && game.phase === 'party' ? ramProjection(sim.horde) : undefined}
             />
             {/* While the builder is open its own hero chips are the ones to tap, so the board's row steps aside. */}
             {(replay || !planOpen || game.phase !== 'party') && (
@@ -1924,8 +1925,18 @@ function WaveBanner({ wave, onClose }: { wave: Wave; onClose: () => void }) {
   );
 }
 
+/** The ram's projected hit and points from the horde's turn after your play (the same numbers as the Horde calls row). */
+function ramProjection(horde: Sim['horde'] | undefined): { d: number; pts: number } | undefined {
+  if (!horde) return undefined;
+  const gate = horde.lines.filter((x) => x.target === 'gate');
+  const hit = gate.find((x) => /hits the gate/.test(x.t));
+  return { d: hit ? Number(/for (\d+)/.exec(hit.t)?.[1] ?? 0) : 0, pts: gate.reduce((s2, x) => s2 + (x.pts ?? 0), 0) };
+}
+
 function Board(props: {
   game: Game;
+  /** The ram's projected hit for the play you're building (none during replays). */
+  ram?: { d: number; pts: number };
   projections: Map<string, Proj>;
   picking: boolean;
   target: string | null;
@@ -2029,10 +2040,10 @@ function Board(props: {
           {!g.gate.breached && (
             <span className="small muted">
               {(() => {
-                const d = Math.min(ramHit(g, pushing(g).length), g.gate.hp);
+                // The projection for your play and defense; in a replay, the ram as the board stands.
+                const d = props.ram ? props.ram.d : Math.min(ramHit(g, pushing(g).length), g.gate.hp);
                 if (d <= 0) return 'stalled';
-                // 1 point per 2 gate damage (counting damage already done), and 10 more if this hit breaks the gate.
-                const pts = Math.floor((g.gate.dmg + d) / 2) - Math.floor(g.gate.dmg / 2) + (d >= g.gate.hp ? 10 : 0);
+                const pts = props.ram ? props.ram.pts : Math.floor((g.gate.dmg + d) / 2) - Math.floor(g.gate.dmg / 2) + (d >= g.gate.hp ? 10 : 0);
                 return `hits the gate for ${d} (${pts} point${pts === 1 ? '' : 's'})`;
               })()}
             </span>
