@@ -109,6 +109,8 @@ interface Saved {
   tuning?: Tuning;
   /** Replay pace (the older `speed` field is ignored so everyone starts on Step). */
   pace?: 'step' | 'auto' | 'fast';
+  /** The Horde calls panel is collapsed to its total. */
+  callsClosed?: boolean;
 }
 const KEY = 'play-calling-prototype-v1';
 function load(): Saved {
@@ -213,6 +215,7 @@ export function App() {
   const [beat, setBeat] = useState(0);
   const [lastReplay, setLastReplay] = useState<Replay | null>(null);
   const [speed, setSpeed] = useState<Speed>(saved.pace ?? 'step');
+  const [callsClosed, setCallsClosed] = useState(saved.callsClosed ?? false);
   const frames = replay?.frames ?? null;
   const [override, setOverride] = useState<Defense>({});
   const [modal, setModal] = useState<Modal | null>(null);
@@ -223,8 +226,8 @@ export function App() {
   const startedAt = useRef<number>(0);
 
   useEffect(() => {
-    store({ custom, active, difficulty, manual, tuning, pace: speed });
-  }, [custom, active, difficulty, manual, tuning, speed]);
+    store({ custom, active, difficulty, manual, tuning, pace: speed, callsClosed });
+  }, [custom, active, difficulty, manual, tuning, speed, callsClosed]);
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [screen]);
@@ -430,15 +433,20 @@ export function App() {
             canTimeout={!!history.length && game.timeouts > 0 && !frames}
             onMenu={() => setModal({ kind: 'menu' })}
             onLast={lastReplay && !frames ? () => setModal({ kind: 'recap' }) : undefined}
-            hordeNext={!replay && game.phase === 'party' ? sim.horde?.points : undefined}
-            onHorde={() => setModal({ kind: 'horde' })}
           />
           <div className="wrap">
             {!replay && game.phase === 'party' && game.wave && waveClosed !== game.possession && (
               <WaveBanner wave={game.wave} onClose={() => setWaveClosed(game.possession)} />
             )}
             <Objectives game={shown} />
-            <CallBanner key={game.possession} game={shown} horde={!replay && game.phase === 'party' ? sim.horde : undefined} />
+            <CallBanner
+              key={game.possession}
+              game={shown}
+              horde={!replay && game.phase === 'party' ? sim.horde : undefined}
+              closed={callsClosed}
+              onToggle={() => setCallsClosed((c) => !c)}
+              onRules={() => setModal({ kind: 'horde' })}
+            />
             <Board
               game={shown}
               projections={aimProjections}
@@ -1627,8 +1635,6 @@ function Scoreboard(props: {
   onMenu: () => void;
   onLast?: () => void;
   /** What the horde will score on its next turn, if the current plan runs. */
-  hordeNext?: number;
-  onHorde?: () => void;
 }) {
   const g = props.game;
   const q = quarterOf(Math.min(11, g.possession));
@@ -1649,11 +1655,6 @@ function Scoreboard(props: {
           </span>
         </div>
         <div className="side right">
-          {props.hordeNext !== undefined && (
-            <button className="hordechip" onClick={props.onHorde} aria-label={`The horde will score ${props.hordeNext} on its next turn. Details`}>
-              +{props.hordeNext}
-            </button>
-          )}
           <span className="pts">{g.score.horde}</span>
           <span className="team">Goblins</span>
         </div>
@@ -1820,39 +1821,56 @@ function callRows(g: Game, horde: Sim['horde'] | undefined): CallRow[] {
   return rows;
 }
 
-function CallBanner(props: { game: Game; horde?: Sim['horde'] }) {
+function CallBanner(props: { game: Game; horde?: Sim['horde']; closed: boolean; onToggle: () => void; onRules: () => void }) {
   const g = props.game;
   const [open, setOpen] = useState<string | null>(null);
   if (g.phase !== 'party') return null;
   const rows = callRows(g, props.horde);
   return (
     <div className="call" aria-live="polite">
-      <span className="eyebrow" style={{ color: 'var(--horde)' }}>
-        Horde calls
-      </span>
-      {!rows.length && <span className="small">The horde has nothing to do this turn.</span>}
-      <div className="callrows">
-        {rows.map((r) => (
-          <div key={r.key} className="callrowwrap">
-            <button className="callrow" aria-expanded={open === r.key} onClick={() => setOpen(open === r.key ? null : r.key)}>
-              <span className="cl">{r.label}</span>
-              {r.value && <span className={`cv num ${/^\+0$/.test(r.value) ? 'zero' : ''}`}>{r.value}</span>}
-              <span className="chev" aria-hidden="true">
-                {open === r.key ? '▾' : '▸'}
-              </span>
+      <button className="callhead" aria-expanded={!props.closed} onClick={props.onToggle}>
+        <span className="eyebrow" style={{ color: 'var(--horde)' }}>
+          Horde calls
+        </span>
+        {props.horde && (
+          <span className={`calltotal num ${props.horde.points ? '' : 'zero'}`} aria-label={`The horde will score ${props.horde.points} on its next turn`}>
+            +{props.horde.points}
+          </span>
+        )}
+        <span className="chev" aria-hidden="true">
+          {props.closed ? '▸' : '▾'}
+        </span>
+      </button>
+      {!props.closed && !rows.length && <span className="small">The horde has nothing to do this turn.</span>}
+      {!props.closed && (
+        <div className="callrows">
+          {rows.map((r) => (
+            <div key={r.key} className="callrowwrap">
+              <button className="callrow" aria-expanded={open === r.key} onClick={() => setOpen(open === r.key ? null : r.key)}>
+                <span className="cl">{r.label}</span>
+                {r.value && <span className={`cv num ${/^\+0$/.test(r.value) ? 'zero' : ''}`}>{r.value}</span>}
+                <span className="chev" aria-hidden="true">
+                  {open === r.key ? '▾' : '▸'}
+                </span>
+              </button>
+              {open === r.key && (
+                <div className="calldetail small">
+                  {r.detail.map((d, i) => (
+                    <span key={i}>
+                      <Rich>{d}</Rich>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+          {props.horde && (
+            <button className="linkish small callrules" onClick={props.onRules}>
+              How the horde scores
             </button>
-            {open === r.key && (
-              <div className="calldetail small">
-                {r.detail.map((d, i) => (
-                  <span key={i}>
-                    <Rich>{d}</Rich>
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
