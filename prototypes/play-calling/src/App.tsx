@@ -2026,7 +2026,17 @@ function Board(props: {
       <div className="panel goblins">
         <div className="gob-head">
           <strong>{g.gate.breached ? '🔥 Pillage' : '🪵 Ram'}</strong>
-          {!g.gate.breached && <span className="small muted">{pushing(g).length > 0 ? `hits the gate for ${ramHit(g, pushing(g).length)}` : 'stalled'}</span>}
+          {!g.gate.breached && (
+            <span className="small muted">
+              {(() => {
+                const d = Math.min(ramHit(g, pushing(g).length), g.gate.hp);
+                if (d <= 0) return 'stalled';
+                // 1 point per 2 gate damage (counting damage already done), and 10 more if this hit breaks the gate.
+                const pts = Math.floor((g.gate.dmg + d) / 2) - Math.floor(g.gate.dmg / 2) + (d >= g.gate.hp ? 10 : 0);
+                return `hits the gate for ${d} (${pts} point${pts === 1 ? '' : 's'})`;
+              })()}
+            </span>
+          )}
         </div>
         {!g.gate.breached && (
           <div className="gob-row">
