@@ -666,37 +666,36 @@ export function App() {
         />
       )}
       {modal?.kind === 'guide' && <Guide onClose={() => setModal(null)} />}
-      {modal?.kind === 'horde' && sim.horde && (
-        <ModalShell title={`The horde’s next turn: +${sim.horde.points}`} onClose={() => setModal(null)}>
-          <p className="small muted">
-            What the horde will do after the play you’re building, with{' '}
-            {defenders(game, inPlay).length
-              ? defenders(game, inPlay)
-                  .map((c) => CLASS_INFO[c].name)
-                  .join(', ')
-              : 'nobody'}{' '}
-            on defense (the heroes not in your play). Change the play and this updates.
-          </p>
-          <div className="hordepanel">
-            {sim.horde.lines.map((ln, k) => (
-              <span key={k} className={`small hline ${ln.side}`}>
-                <Rich>{ln.t}</Rich>
-              </span>
+      {modal?.kind === 'horde' && (
+        <ModalShell title="How the horde scores" onClose={() => setModal(null)}>
+          <div className="list">
+            {(
+              [
+                ['+2 for a hit on a hero', 'When the horde’s finisher damages a hero. A hit fully stopped by Armor or a Slow scores nothing.'],
+                ['+4 for a takedown', 'When the horde takes a hero down.'],
+                ['+2 on a turnover', 'When your finisher is Blocked, evaded or swallowed by the Barrier, the horde scores on the fast break.'],
+                [
+                  '+1 for every 2 gate damage',
+                  'The ram hits the gate each turn. Each goblin pushing adds a quarter of its hit, so knocking goblins off the ram slows it.',
+                ],
+                ['+10 when the gate falls', 'Then the goblins pour into the city.'],
+                ['+1 per goblin, pillaging', 'After the gate falls, every goblin on the field scores 1 each turn.'],
+              ] as [string, string][]
+            ).map(([k, v]) => (
+              <div className="li" key={k} style={{ gridTemplateColumns: '1fr' }}>
+                <strong>{k}</strong>
+                <span className="small">
+                  <Rich>{v}</Rich>
+                </span>
+              </div>
             ))}
-            {!sim.horde.lines.length && <span className="small muted">The horde has nothing to do.</span>}
           </div>
-          <div className="panel small">
-            <strong>How the horde scores</strong>
-            <span>2 when its finisher damages a hero (a hit fully stopped by Armor or a Slow scores nothing).</span>
-            <span>2 on a turnover: your finisher is Blocked, evaded or swallowed by the Barrier.</span>
-            <span>4 for a hero it takes down.</span>
-            <span>1 for every 2 damage the ram does to the gate, and 10 when the gate falls. Each goblin pushing adds a quarter of the ram’s hit.</span>
-            <span>After the gate falls, 1 for every goblin on the field each turn.</span>
-            <span className="muted">
-              Heroes who aren’t in your play defend: the Warrior Protects, the Ranger Closes Out, the Wizard Wards, the Cleric heals and the Rogue Strips the
-              Ball off the ram.
-            </span>
-          </div>
+          <p className="small muted">
+            <Rich>
+              Heroes who aren’t in your play defend: the Warrior Protects, the Ranger Closes Out, the Wizard Wards, the Cleric heals (Triage) and the Rogue
+              Strips the Ball off the ram.
+            </Rich>
+          </p>
         </ModalShell>
       )}
       {modal?.kind === 'recap' && lastReplay && (
@@ -1828,10 +1827,22 @@ function CallBanner(props: { game: Game; horde?: Sim['horde']; closed: boolean; 
   const rows = callRows(g, props.horde);
   return (
     <div className="call" aria-live="polite">
-      <button className="callhead" aria-expanded={!props.closed} onClick={props.onToggle}>
-        <span className="eyebrow" style={{ color: 'var(--horde)' }}>
+      <div className="callhead" onClick={props.onToggle}>
+        <button className="callhead-label eyebrow" aria-expanded={!props.closed}>
           Horde calls
-        </span>
+        </button>
+        {!props.closed && (
+          <button
+            className="linkish small callrules"
+            onClick={(e) => {
+              e.stopPropagation();
+              props.onRules();
+            }}
+          >
+            How the horde scores
+          </button>
+        )}
+        <span className="callspacer" />
         {props.horde && (
           <span className={`calltotal num ${props.horde.points ? '' : 'zero'}`} aria-label={`The horde will score ${props.horde.points} on its next turn`}>
             +{props.horde.points}
@@ -1840,7 +1851,7 @@ function CallBanner(props: { game: Game; horde?: Sim['horde']; closed: boolean; 
         <span className="chev" aria-hidden="true">
           {props.closed ? '▸' : '▾'}
         </span>
-      </button>
+      </div>
       {!props.closed && !rows.length && <span className="small">The horde has nothing to do this turn.</span>}
       {!props.closed && (
         <div className="callrows">
@@ -1864,11 +1875,6 @@ function CallBanner(props: { game: Game; horde?: Sim['horde']; closed: boolean; 
               )}
             </div>
           ))}
-          {props.horde && (
-            <button className="linkish small callrules" onClick={props.onRules}>
-              How the horde scores
-            </button>
-          )}
         </div>
       )}
     </div>
