@@ -247,17 +247,19 @@ body::before {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  gap: 8px;
+  gap: 18px;
 }
 .side {
   display: flex;
   align-items: baseline;
+  /* Each score sits at the inner edge of its half, so the clock is the same distance from both. */
+  justify-content: flex-end;
   gap: 8px;
   font-family: var(--font-display);
   min-width: 0;
 }
 .side.right {
-  justify-content: flex-end;
+  justify-content: flex-start;
 }
 .side .team {
   font-size: 0.85rem;
@@ -273,17 +275,29 @@ body::before {
   line-height: 1;
 }
 .clock {
-  text-align: center;
   font-family: var(--font-display);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-inline: 6px;
+}
+.clock .q {
+  font-size: 2.1rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--ball);
+}
+.clock-sub {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: 3px;
 }
-.clock .q {
-  font-size: 1.1rem;
-  font-weight: 800;
-  color: var(--ball);
+.clock .poss {
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  font-weight: 700;
+  white-space: nowrap;
 }
 .pips {
   display: flex;

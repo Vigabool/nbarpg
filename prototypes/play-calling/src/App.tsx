@@ -1627,14 +1627,7 @@ function PlaySlot(props: { play: Play; open: boolean; onToggle: () => void; onCh
 
 // ---------- Game screen ----------
 
-function Scoreboard(props: {
-  game: Game;
-  onTimeout: () => void;
-  canTimeout: boolean;
-  onMenu: () => void;
-  onLast?: () => void;
-  /** What the horde will score on its next turn, if the current plan runs. */
-}) {
+function Scoreboard(props: { game: Game; onTimeout: () => void; canTimeout: boolean; onMenu: () => void; onLast?: () => void }) {
   const g = props.game;
   const q = quarterOf(Math.min(11, g.possession));
   const inQ = Math.min(11, g.possession) % 3;
@@ -1645,12 +1638,15 @@ function Scoreboard(props: {
           <span className="team">Heroes</span>
           <span className="pts">{g.score.party}</span>
         </div>
-        <div className="clock" aria-label={`Quarter ${q}, possession ${inQ + 1} of 3`}>
+        <div className="clock" aria-label={`Quarter ${q}, possession ${inQ + 1} of 3 in the quarter, ${Math.min(12, g.possession + 1)} of 12 in the game`}>
           <span className="q">Q{q}</span>
-          <span className="pips">
-            {[0, 1, 2].map((i) => (
-              <span key={i} className={`pip ${i <= inQ ? 'on' : ''}`} />
-            ))}
+          <span className="clock-sub">
+            <span className="pips">
+              {[0, 1, 2].map((i) => (
+                <span key={i} className={`pip ${i <= inQ ? 'on' : ''}`} />
+              ))}
+            </span>
+            <span className="poss num">{Math.min(12, g.possession + 1)} of 12</span>
           </span>
         </div>
         <div className="side right">
@@ -1662,7 +1658,6 @@ function Scoreboard(props: {
         <button onClick={props.onTimeout} disabled={!props.canTimeout} title="Take back the last possession">
           Timeouts: {g.timeouts}
         </button>
-        <span style={{ whiteSpace: 'nowrap' }}>{Math.min(12, g.possession + 1)} of 12</span>
         <span className="row" style={{ gap: 6 }}>
           {props.onLast && <button onClick={props.onLast}>Recap</button>}
           <button onClick={props.onMenu}>Menu</button>
