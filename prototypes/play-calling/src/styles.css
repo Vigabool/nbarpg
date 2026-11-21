@@ -1913,3 +1913,11 @@ th {
 .callrules {
   padding: 2px 8px;
 }
+
+/* The Ram panel's heading */
+.gob-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}

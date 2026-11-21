@@ -32,7 +32,6 @@ import {
   blockUp,
   hasQuick,
   taunter,
-  crew,
   defenders,
   freeGoblins,
   halftimeAdjustment,
@@ -1691,8 +1690,6 @@ function Scoreboard(props: {
 
 function Objectives(props: { game: Game }) {
   const g = props.game;
-  const c = crew(g);
-  const p = pushing(g);
   const wagon = g.enemies.find((e) => e.kind === 'wagon');
   return (
     <div className="panel objectives">
@@ -1703,21 +1700,6 @@ function Objectives(props: { game: Game }) {
         </div>
         <span className="num small">{g.gate.breached ? 'Broken: pillage!' : `${g.gate.hp}/${g.gate.max}`}</span>
       </div>
-      {!g.gate.breached && (
-        <div className="gate">
-          <span>🪵 Ram</span>
-          <div className="crewpips" aria-label={`${p.length} of 4 crew pushing`}>
-            {Array.from({ length: Math.max(4, c.length) }, (_, i) => (
-              <span key={i} className={i < p.length ? '' : i < c.length ? 'idle' : 'off'} />
-            ))}
-          </div>
-          <span className="small">
-            {p.length > 0 ? `hits for ${ramHit(g, p.length)}${warDrum(g) ? ' (War Drum +2)' : ''}` : 'stalled'} ·{' '}
-            {c.length - p.length > 0 ? `${c.length - p.length} pinned · ` : ''}
-            {p.length}/4 pushing
-          </span>
-        </div>
-      )}
       <div className="objline">
         <span>
           🎯 Shaman bounty:{' '}
@@ -2042,6 +2024,10 @@ function Board(props: {
         })}
       </div>
       <div className="panel goblins">
+        <div className="gob-head">
+          <strong>{g.gate.breached ? '🔥 Pillage' : '🪵 Ram'}</strong>
+          {!g.gate.breached && <span className="small muted">{pushing(g).length > 0 ? `hits the gate for ${ramHit(g, pushing(g).length)}` : 'stalled'}</span>}
+        </div>
         {!g.gate.breached && (
           <div className="gob-row">
             <span className="small" style={{ minWidth: 70 }}>
@@ -2056,17 +2042,19 @@ function Board(props: {
           </span>
           {free.length ? free.map(gob) : <span className="small muted">none</span>}
         </div>
-        <span className="small muted">
-          {(() => {
-            const t = taunter(g);
-            const b = blockUp(g);
-            const bits = [
-              t ? `The ${t.name.replace('Goblin ', '')} Taunts: single-target hits go to it.` : '',
-              b ? 'The Chieftain’s Block cancels the first hit this possession.' : '',
-            ].filter(Boolean);
-            return <Rich>{bits.length ? bits.join(' ') : 'Finishers score 2 when they damage a Champion or the boss.'}</Rich>;
-          })()}
-        </span>
+        {(() => {
+          const t = taunter(g);
+          const b = blockUp(g);
+          const bits = [
+            t ? `The ${t.name.replace('Goblin ', '')} Taunts: single-target hits go to it.` : '',
+            b ? 'The Chieftain’s Block cancels the first hit this possession.' : '',
+          ].filter(Boolean);
+          return bits.length ? (
+            <span className="small muted">
+              <Rich>{bits.join(' ')}</Rich>
+            </span>
+          ) : null;
+        })()}
       </div>
     </div>
   );
