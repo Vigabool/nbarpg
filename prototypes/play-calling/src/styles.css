@@ -251,15 +251,25 @@ body::before {
 }
 .side {
   display: flex;
-  align-items: baseline;
-  /* Each score sits at the inner edge of its half, so the clock is the same distance from both. */
-  justify-content: flex-end;
+  align-items: center;
+  /* The score at the outer edge; the label and projection beside the clock, the same distance from it on both sides. */
+  justify-content: space-between;
   gap: 8px;
   font-family: var(--font-display);
   min-width: 0;
 }
-.side.right {
-  justify-content: flex-start;
+.sidelabel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 3.5em;
+}
+.sidelabel .next {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 700;
+  opacity: 0.9;
 }
 .side .team {
   font-size: 0.85rem;

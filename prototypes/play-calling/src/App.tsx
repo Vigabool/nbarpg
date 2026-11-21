@@ -433,6 +433,7 @@ export function App() {
             canTimeout={!!history.length && game.timeouts > 0 && !frames}
             onMenu={() => setModal({ kind: 'menu' })}
             onLast={lastReplay && !frames ? () => setModal({ kind: 'recap' }) : undefined}
+            next={!replay && game.phase === 'party' ? { party: sim.shot.points, horde: sim.horde?.points ?? 0 } : undefined}
           />
           <div className="wrap">
             {!replay && game.phase === 'party' && game.wave && waveClosed !== game.possession && (
@@ -1627,7 +1628,14 @@ function PlaySlot(props: { play: Play; open: boolean; onToggle: () => void; onCh
 
 // ---------- Game screen ----------
 
-function Scoreboard(props: { game: Game; onTimeout: () => void; canTimeout: boolean; onMenu: () => void; onLast?: () => void }) {
+function Scoreboard(props: {
+  game: Game;
+  onTimeout: () => void;
+  canTimeout: boolean;
+  onMenu: () => void;
+  onLast?: () => void;
+  /** What each side scores if the play you're building runs. */ next?: { party: number; horde: number };
+}) {
   const g = props.game;
   const q = quarterOf(Math.min(11, g.possession));
   const inQ = Math.min(11, g.possession) % 3;
@@ -1635,8 +1643,15 @@ function Scoreboard(props: { game: Game; onTimeout: () => void; canTimeout: bool
     <div className="board">
       <div className="board-inner">
         <div className="side">
-          <span className="team">Heroes</span>
           <span className="pts">{g.score.party}</span>
+          <span className="sidelabel">
+            <span className="team">Heroes</span>
+            {props.next && (
+              <span className="next num" aria-label={`Your play scores ${props.next.party}`}>
+                +{props.next.party}
+              </span>
+            )}
+          </span>
         </div>
         <div className="clock" aria-label={`Quarter ${q}, possession ${inQ + 1} of 3 in the quarter, ${Math.min(12, g.possession + 1)} of 12 in the game`}>
           <span className="q">Q{q}</span>
@@ -1650,8 +1665,15 @@ function Scoreboard(props: { game: Game; onTimeout: () => void; canTimeout: bool
           </span>
         </div>
         <div className="side right">
+          <span className="sidelabel">
+            <span className="team">Horde</span>
+            {props.next && (
+              <span className="next num" aria-label={`The horde scores ${props.next.horde} on its turn`}>
+                +{props.next.horde}
+              </span>
+            )}
+          </span>
           <span className="pts">{g.score.horde}</span>
-          <span className="team">Goblins</span>
         </div>
       </div>
       <div className="board-tools">
