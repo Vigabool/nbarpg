@@ -1158,7 +1158,8 @@ function hordeHit(g: Game, actor: Enemy, targetCls: Cls, bonus: number, defense:
   });
 }
 
-function summon(g: Game, n: number, frames: Frame[], who: string) {
+function summon(g: Game, n: number, frames: Frame[], by: Enemy) {
+  const who = by.name;
   for (let i = 0; i < n; i++) {
     const e = goblin(`e${g.nextId++}`, g.tuning, quarterOf(g.possession));
     e.arrived = true;
@@ -1166,7 +1167,7 @@ function summon(g: Game, n: number, frames: Frame[], who: string) {
     e.onRam = !g.gate.breached && crew(g).length < 6;
     g.enemies.push(e);
   }
-  frames.push({ game: clone(g), text: `${who} calls the pack: ${n} goblins${g.gate.breached ? '' : ' head for the ram'}.`, side: 'horde', actor: who });
+  frames.push({ game: clone(g), text: `${who} calls the pack: ${n} goblins${g.gate.breached ? '' : ' head for the ram'}.`, side: 'horde', actor: by.id });
 }
 
 function enemyTurn(g: Game, inPlay: Set<Cls>, defense: Defense, frames: Frame[]) {
@@ -1207,7 +1208,7 @@ function enemyTurn(g: Game, inPlay: Set<Cls>, defense: Defense, frames: Frame[])
   const shaman = onField(g).find((e) => e.barrier);
   if (shaman && !shaman.disabled) {
     const cast = shamanCast(g);
-    if (cast === 'pack') summon(g, tierIndex(shaman.tier ?? 'average') >= tierIndex('great') ? 3 : 2, frames, shaman.name);
+    if (cast === 'pack') summon(g, tierIndex(shaman.tier ?? 'average') >= tierIndex('great') ? 3 : 2, frames, shaman);
     else if (cast === 'barrier') {
       g.barrierUp = true;
       frames.push({
@@ -1244,7 +1245,7 @@ function enemyTurn(g: Game, inPlay: Set<Cls>, defense: Defense, frames: Frame[])
       switch (s.kind) {
         case 'callPack': {
           const n = tierIndex(actor.tier ?? 'average') >= tierIndex('great') ? 3 : 2;
-          summon(g, n, frames, actor.name);
+          summon(g, n, frames, actor);
           bonus = 3;
           break;
         }
@@ -1298,7 +1299,7 @@ function enemyTurn(g: Game, inPlay: Set<Cls>, defense: Defense, frames: Frame[])
   const chief = onField(g).find((e) => e.kind === 'chieftain');
   if (chief) {
     g.chieftainTurns += 1;
-    if (g.chieftainTurns % 2 === 0 && !chief.disabled) summon(g, 2, frames, chief.name);
+    if (g.chieftainTurns % 2 === 0 && !chief.disabled) summon(g, 2, frames, chief);
   }
 
   // The ram.

@@ -1719,10 +1719,44 @@ interface HordeLine {
 }
 interface CallRow {
   key: string;
-  label: string;
+  label: ReactNode;
   /** Points, or a word for actions that don't score (BARRIER, PACK). */
   value?: string;
   detail: string[];
+}
+
+/** What a horde helper's step adds to the attack that follows. */
+const HORDE_BUFF: Partial<Record<string, string>> = { hex: 'Hex +3', command: 'Command +3', warDrum: 'War Drum +2', callPack: 'Pack +3' };
+
+/** The called play as helpers (with their buff) passing to the attacker, who hits a hero: "Hexer [Hex +3] → Cutthroat ⚔ Wizard". */
+function CallChain(props: { game: Game }) {
+  const g = props.game;
+  const call = g.call;
+  const play = call && HORDE_PLAYS.find((x) => x.id === call.playId);
+  if (!call || !play) return null;
+  const name = (id: string) => g.enemies.find((e) => e.id === id)?.name.replace('Goblin ', '') ?? '';
+  const steps = play.steps.map((st, i) => ({ st, id: call.actors[i] })).filter((x): x is { st: (typeof play.steps)[number]; id: string } => !!x.id);
+  const last = steps[steps.length - 1];
+  const helpers = steps.slice(0, -1);
+  return (
+    <span className="chain">
+      {helpers.map(({ st, id }) => (
+        <span key={id} className="chelper">
+          {name(id)} <span className="cbuff">{HORDE_BUFF[st.kind] ?? 'buff'}</span>
+          <span className="carrow" aria-hidden="true">
+            {' '}
+            →{' '}
+          </span>
+        </span>
+      ))}
+      {last && (
+        <span className="cattack">
+          {name(last.id)}
+          {last.st.kind === 'toss' ? ' tosses a goblin' : ''} <span aria-label="attacks">⚔</span> {call.target ? CLASS_INFO[call.target].name : 'a hero'}
+        </span>
+      )}
+    </span>
+  );
 }
 
 /** The horde's turn as a short list of actions, from the projection of the play you're building. */
@@ -1776,7 +1810,7 @@ function callRows(g: Game, horde: Sim['horde'] | undefined): CallRow[] {
     const ls = take((x) => !!x.actor && actors.has(x.actor) && !/calls the pack/.test(x.t));
     callRow = {
       key: 'call',
-      label: pound ? g.call.text : `${g.call.name}: ${g.call.text}`,
+      label: <CallChain game={g} />,
       value: val(ls),
       detail: horde ? (ls.length ? ls.map((x) => x.t) : ['Its players are out of the play: nothing happens.']) : [`${g.call.name}: ${g.call.text}.`],
     };

@@ -1971,3 +1971,23 @@ th {
   align-items: baseline;
   gap: 8px;
 }
+
+/* The called play in Horde calls: helpers with a buff tag, then the attack */
+.chain .chelper {
+  font-weight: 500;
+  color: var(--muted);
+}
+.chain .cbuff {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--horde);
+  background: color-mix(in srgb, var(--horde) 14%, transparent);
+  border-radius: 999px;
+  padding: 0 6px;
+  vertical-align: 1px;
+}
+.chain .cattack {
+  font-weight: 700;
+  white-space: nowrap;
+}
