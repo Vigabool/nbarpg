@@ -593,34 +593,41 @@ body::before {
   font-size: 0.85rem;
   line-height: 1;
 }
-/* HP: the number sits on the bar */
+/* HP: the number sits on the bar. The fill is a soft tint so the number, in the normal text color, reads in light and dark themes. */
 .hpnum {
   position: relative;
   display: block;
-  height: 15px;
+  height: 19px;
   border-radius: 999px;
   background: var(--surface-2);
+  border: 1px solid color-mix(in srgb, var(--party) 45%, transparent);
   overflow: hidden;
 }
 .hpnum i {
   position: absolute;
   inset: 0 auto 0 0;
-  background: var(--party);
+  background: color-mix(in srgb, var(--party) 38%, var(--surface));
+}
+.hpnum.low {
+  border-color: color-mix(in srgb, var(--horde) 55%, transparent);
+}
+.hpnum.low i {
+  background: color-mix(in srgb, var(--horde) 38%, var(--surface));
 }
 .hpnum b {
   position: relative;
   display: block;
-  font-size: 0.66rem;
-  line-height: 15px;
-  font-weight: 700;
-  color: #fff;
-  text-shadow:
-    0 0 2px rgb(0 0 0 / 0.75),
-    0 0 1px rgb(0 0 0 / 0.75);
+  font-size: 0.82rem;
+  line-height: 17px;
+  font-weight: 800;
+  color: var(--ink);
+}
+.hpnum.benched {
+  border-color: var(--line);
 }
 .hpnum.benched b {
   color: var(--muted);
-  text-shadow: none;
+  font-size: 0.72rem;
 }
 .touches {
   font-size: 0.7rem;

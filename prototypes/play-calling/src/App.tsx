@@ -2099,7 +2099,10 @@ function HeroVitals(props: { hero: Hero; touchesLabel?: string }) {
   const benched = h.benched > 0 || h.hp <= 0;
   return (
     <>
-      <span className={`hpnum ${benched ? 'benched' : ''}`} aria-label={benched ? `On the bench for ${h.benched}` : `${h.hp} of ${h.maxHp} HP`}>
+      <span
+        className={`hpnum ${benched ? 'benched' : h.hp / h.maxHp < 0.34 ? 'low' : ''}`}
+        aria-label={benched ? `On the bench for ${h.benched}` : `${h.hp} of ${h.maxHp} HP`}
+      >
         <i style={{ width: `${benched ? 0 : (Math.max(0, h.hp) / h.maxHp) * 100}%` }} />
         <b className="num">{benched ? `Bench ${h.benched}` : `${h.hp}/${h.maxHp}`}</b>
       </span>
