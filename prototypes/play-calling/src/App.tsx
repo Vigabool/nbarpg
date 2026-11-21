@@ -438,7 +438,7 @@ export function App() {
               <WaveBanner wave={game.wave} onClose={() => setWaveClosed(game.possession)} />
             )}
             <Objectives game={shown} />
-            <CallBanner game={shown} />
+            <CallBanner key={game.possession} game={shown} horde={!replay && game.phase === 'party' ? sim.horde : undefined} />
             <Board
               game={shown}
               projections={aimProjections}
@@ -803,7 +803,12 @@ interface Sim {
   /** The Barrier soaks the play's first damaging move. */
   barrierBroken: boolean;
   /** The horde's turn that would follow this play (with the current defenders). */
-  horde?: { points: number; lines: { t: string; pts?: number; side: string }[] };
+  horde?: {
+    points: number;
+    lines: HordeLine[];
+    /** What the ram would score if the Rogue weren't Stripping the Ball (only when the Rogue defends). */
+    ramNoStrip?: number;
+  };
 }
 /** Whether a move earlier than slot i breaks the Barrier, so slot i can aim past it. */
 const barrierBrokenBefore = (slots: (BuildStep | null)[], i: number) =>
@@ -888,8 +893,14 @@ function simulateBuild(g: Game, slots: (BuildStep | null)[], defense?: Defense):
     const res = finishLive(l, defense);
     const lines = res.frames
       .filter((f) => (f.phase === 'horde' || /^Turnover/.test(f.text)) && !/^Possession|^Halftime|^Final/.test(f.text))
-      .map((f) => ({ t: f.text, pts: f.side === 'horde' ? f.pts : undefined, side: f.side }));
-    horde = { points: res.game.score.horde - g.score.horde, lines };
+      .map((f) => ({ t: f.text, pts: f.side === 'horde' ? f.pts : undefined, side: f.side, actor: f.actor, target: f.target, game: f.game }));
+    // What the Rogue's strip saves: the same turn without it.
+    let ramNoStrip: number | undefined;
+    if (lines.some((x) => x.actor === 'rogue' && /Strip the Ball/.test(x.t))) {
+      const alt = finishLive(l, { ...defense, noStrip: true });
+      ramNoStrip = alt.frames.filter((f) => f.phase === 'horde' && f.target === 'gate').reduce((s2, f) => s2 + (f.pts ?? 0), 0);
+    }
+    horde = { points: res.game.score.horde - g.score.horde, lines, ramNoStrip };
   }
   return { buffs, shot: { damage, kills, points }, bucket, notes, ready, hits, barrierBroken, horde };
 }
@@ -1702,33 +1713,146 @@ function Objectives(props: { game: Game }) {
   );
 }
 
-function CallBanner(props: { game: Game }) {
+/** One line of the horde's projected turn. */
+interface HordeLine {
+  t: string;
+  pts?: number;
+  side: string;
+  actor?: string;
+  target?: string;
+  game: Game;
+}
+interface CallRow {
+  key: string;
+  label: string;
+  /** Points, or a word for actions that don't score (BARRIER, PACK). */
+  value?: string;
+  detail: string[];
+}
+
+/** The horde's turn as a short list of actions, from the projection of the play you're building. */
+function callRows(g: Game, horde: Sim['horde'] | undefined): CallRow[] {
+  const rows: CallRow[] = [];
+  const lines = horde?.lines ?? [];
+  const used = new Set<HordeLine>();
+  const take = (f: (x: HordeLine) => boolean) => {
+    const out = lines.filter((x) => !used.has(x) && f(x));
+    out.forEach((x) => used.add(x));
+    return out;
+  };
+  const pts = (ls: HordeLine[]) => ls.reduce((s, x) => s + (x.pts ?? 0), 0);
+  const val = (ls: HordeLine[]) => (horde ? `+${pts(ls)}` : undefined);
+  const name = (id?: string) => g.enemies.find((e) => e.id === id)?.name.replace('Goblin ', '') ?? 'The horde';
+  const pound = g.call?.playId === 'pound';
+
+  // The ram (or, once the gate is down, the pillage).
+  const ramLines = take((x) => x.target === 'gate' || /pillage/i.test(x.t));
+  const strip = lines.find((x) => x.actor === 'rogue' && /Strip the Ball/.test(x.t));
+  const ramRow: CallRow = { key: 'ram', label: g.gate.breached ? 'Pillage' : pound ? 'Pound the Gate' : 'Ram → Gate', value: val(ramLines), detail: [] };
+  if (g.gate.breached) ramRow.detail.push('The gate is down: every goblin on the field pillages for 1 a turn.', ...ramLines.map((x) => x.t));
+  else if (!horde) ramRow.detail.push('Each goblin pushing the ram adds a quarter of its hit on the gate.');
+  else {
+    const hitLine = ramLines.find((x) => /hits the gate/.test(x.t));
+    const scored = pts(ramLines);
+    if (!hitLine) ramRow.detail.push('No goblins are pushing: the ram stalls this turn.');
+    else {
+      const n = pushing(hitLine.game).length;
+      const d = Number(/for (\d+)/.exec(hitLine.t)?.[1] ?? 0);
+      ramRow.detail.push(
+        `With ${n === 1 ? 'one goblin' : `${['', '', 'two', 'three', 'four', 'five', 'six'][n] ?? n} goblins`} pushing, the ram deals ${d} damage to the gate and scores ${scored} point${scored === 1 ? '' : 's'}.`,
+      );
+      if (/braces/.test(hitLine.t)) ramRow.detail.push('The Warrior is bracing the gate, halving the hit.');
+      if (warDrum(g)) ramRow.detail.push('The Shaman’s War Drum adds 2 to the full hit while it stands.');
+      if (/gate falls/.test(hitLine.t)) ramRow.detail.push('The gate falls: +10, and the goblins start pillaging.');
+    }
+    if (strip) {
+      const k = Number(/(\d+) goblin/.exec(strip.t)?.[1] ?? 1);
+      const saved = (horde.ramNoStrip ?? scored) - scored;
+      ramRow.detail.push(
+        `The Rogue is pinning ${k === 1 ? 'one goblin' : `${k} goblins`}${saved > 0 ? `, reducing points by ${saved}` : ', though it doesn’t change the points this turn'}.`,
+      );
+    }
+  }
+
+  // The called play.
+  let callRow: CallRow | null = null;
+  if (g.call) {
+    const actors = new Set(g.call.actors.filter((a): a is string => !!a));
+    const ls = take((x) => !!x.actor && actors.has(x.actor) && !/calls the pack/.test(x.t));
+    callRow = {
+      key: 'call',
+      label: pound ? g.call.text : `${g.call.name}: ${g.call.text}`,
+      value: val(ls),
+      detail: horde ? (ls.length ? ls.map((x) => x.t) : ['Its players are out of the play: nothing happens.']) : [`${g.call.name}: ${g.call.text}.`],
+    };
+  }
+  rows.push(...(pound || !callRow ? [ramRow, ...(callRow ? [callRow] : [])] : [callRow, ramRow]));
+
+  // The Shaman's cast and the Chieftain's call.
+  const shaman = onField(g).find((e) => e.barrier);
+  if (shaman) {
+    const ls = take((x) => x.actor === shaman.id && /raises the Barrier|calls the pack/.test(x.t));
+    const cast = horde ? (ls.some((x) => /Barrier/.test(x.t)) ? 'barrier' : ls.length ? 'pack' : null) : shamanCast(g);
+    if (cast)
+      rows.push({
+        key: 'shaman',
+        label: `${name(shaman.id)} →`,
+        value: cast === 'barrier' ? 'BARRIER' : 'PACK',
+        detail: [
+          cast === 'barrier'
+            ? 'The Barrier stands in front of the horde for your next possession: the first damaging move breaks it. If your play leaves fewer than 4 goblins on the ram, the Shaman Calls the Pack instead.'
+            : 'Fewer than 4 goblins are on the ram, so the Shaman calls more.',
+          'Disable the Shaman or take it down to stop it.',
+        ],
+      });
+    else if (shaman.disabled) rows.push({ key: 'shaman', label: `${name(shaman.id)} is Disabled`, value: '—', detail: ['No cast and no War Drum this turn.'] });
+  }
+  const chief = take((x) => /calls the pack/.test(x.t));
+  if (chief.length) rows.push({ key: 'chief', label: `${name(chief[0].actor)} →`, value: 'PACK', detail: chief.map((x) => x.t) });
+
+  // A turnover during your possession.
+  const to = take((x) => /^Turnover/.test(x.t));
+  if (to.length) rows.push({ key: 'turnover', label: 'Fast break (turnover)', value: val(to), detail: to.map((x) => x.t) });
+
+  // Anything else that scores.
+  const rest = take((x) => x.side === 'horde' && (x.pts ?? 0) > 0);
+  if (rest.length) rows.push({ key: 'other', label: 'Other', value: val(rest), detail: rest.map((x) => x.t) });
+  return rows;
+}
+
+function CallBanner(props: { game: Game; horde?: Sim['horde'] }) {
   const g = props.game;
+  const [open, setOpen] = useState<string | null>(null);
   if (g.phase !== 'party') return null;
-  const cast = shamanCast(g);
-  const shamanLine = cast && (
-    <span className="small shamanline">
-      {cast === 'pack'
-        ? '🥁 Shaman will Call the Pack: fewer than 4 goblins are on the ram.'
-        : '🥁 Shaman will raise the Barrier for your next possession. If your play leaves fewer than 4 goblins on the ram, it Calls the Pack instead.'}{' '}
-      Disable or take it down to stop it.
-    </span>
-  );
-  if (!g.call)
-    return (
-      <div className="call small">
-        The horde has no play to run this turn{g.gate.breached ? '; its goblins keep pillaging.' : '.'}
-        {shamanLine}
-      </div>
-    );
+  const rows = callRows(g, props.horde);
   return (
     <div className="call" aria-live="polite">
       <span className="eyebrow" style={{ color: 'var(--horde)' }}>
         Horde calls
       </span>
-      <strong>{g.call.name}</strong>
-      <span className="small">{g.call.text}</span>
-      {shamanLine}
+      {!rows.length && <span className="small">The horde has nothing to do this turn.</span>}
+      <div className="callrows">
+        {rows.map((r) => (
+          <div key={r.key} className="callrowwrap">
+            <button className="callrow" aria-expanded={open === r.key} onClick={() => setOpen(open === r.key ? null : r.key)}>
+              <span className="cl">{r.label}</span>
+              {r.value && <span className={`cv num ${/^\+0$/.test(r.value) ? 'zero' : ''}`}>{r.value}</span>}
+              <span className="chev" aria-hidden="true">
+                {open === r.key ? '▾' : '▸'}
+              </span>
+            </button>
+            {open === r.key && (
+              <div className="calldetail small">
+                {r.detail.map((d, i) => (
+                  <span key={i}>
+                    <Rich>{d}</Rich>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

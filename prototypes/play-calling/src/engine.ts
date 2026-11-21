@@ -130,6 +130,8 @@ export interface Defense {
   protect?: Cls | 'gate';
   closeOut?: string;
   ward?: Cls;
+  /** What-if only: play the horde's turn as if the Rogue didn't Strip the Ball (to show what the strip saves). */
+  noStrip?: boolean;
 }
 
 export interface Stats {
@@ -1186,7 +1188,7 @@ function enemyTurn(g: Game, inPlay: Set<Cls>, defense: Defense, frames: Frame[])
     const a = Math.round(4 * tm(g.heroes.wizard.defTier));
     g.heroes[defense.ward].armor += a;
   }
-  if (off.has('rogue') && !g.gate.breached) {
+  if (off.has('rogue') && !g.gate.breached && !defense.noStrip) {
     const n = tierIndex(g.heroes.rogue.defTier) >= tierIndex('elite') ? 2 : 1;
     const ps = pushing(g).slice(0, n);
     for (const e of ps) e.stripped = true;
