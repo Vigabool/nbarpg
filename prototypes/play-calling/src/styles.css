@@ -554,13 +554,14 @@ body::before {
   gap: 5px;
 }
 .hcard {
+  position: relative;
   background: var(--surface);
   border: 1.5px solid var(--line);
   border-radius: var(--r);
-  padding: 6px 5px;
+  padding: 6px 4px 5px;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
   align-items: stretch;
   min-width: 0;
   text-align: center;
@@ -576,41 +577,85 @@ body::before {
   border-color: var(--horde);
 }
 .hcard.benched {
-  opacity: 0.5;
-}
-.hcard .ic {
-  font-size: 1.1rem;
+  opacity: 0.55;
 }
 .hcard .cl {
   font-weight: 700;
-  font-size: 0.75rem;
-}
-.hcard .pl {
-  font-size: 0.66rem;
-  color: var(--muted);
+  font-size: 0.72rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.touch {
-  display: flex;
-  gap: 2px;
-  justify-content: center;
-  flex-wrap: wrap;
+.targetmark {
+  position: absolute;
+  top: -8px;
+  right: -5px;
+  font-size: 0.85rem;
+  line-height: 1;
 }
-.touch i {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--ball);
-}
-.touch i.used {
+/* HP: the number sits on the bar */
+.hpnum {
+  position: relative;
+  display: block;
+  height: 15px;
+  border-radius: 999px;
   background: var(--surface-2);
+  overflow: hidden;
 }
-.role {
-  font-size: 0.64rem;
+.hpnum i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--party);
+}
+.hpnum b {
+  position: relative;
+  display: block;
+  font-size: 0.66rem;
+  line-height: 15px;
   font-weight: 700;
+  color: #fff;
+  text-shadow:
+    0 0 2px rgb(0 0 0 / 0.75),
+    0 0 1px rgb(0 0 0 / 0.75);
+}
+.hpnum.benched b {
+  color: var(--muted);
+  text-shadow: none;
+}
+.touches {
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+.touches.low {
+  color: var(--ball);
+}
+.hchips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 3px;
+}
+.hchips:empty {
+  display: none;
+}
+.hchip {
+  font-size: 0.62rem;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 1px 5px;
+  white-space: nowrap;
+}
+.hchip.def {
+  background: var(--party-soft);
   color: var(--party);
+}
+.hchip.ball {
+  background: var(--ball);
+  color: #fff;
+}
+.hchip.armor {
+  background: var(--surface-2);
+  color: var(--ink);
 }
 
 /* Playbook dock */
@@ -1673,10 +1718,8 @@ th {
 }
 
 /* HP on the builder's hero chips */
-.lhero .hpbar {
-  display: block;
+.lhero .hpnum {
   width: 100%;
-  height: 5px;
 }
 .lhero .small {
   max-width: 100%;

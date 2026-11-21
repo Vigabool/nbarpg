@@ -56,6 +56,7 @@ import {
   type Enemy,
   type Frame,
   type Game,
+  type Hero,
   type Wave,
   type Carry,
   type Tuning,
@@ -1052,16 +1053,10 @@ function BuilderSheet(props: {
               const w = why(c);
               return (
                 <button key={c} className={`lhero ${pickHero === c ? 'on' : ''}`} disabled={!!w} aria-pressed={pickHero === c} onClick={() => setPickHero(c)}>
-                  <span>{CLASS_INFO[c].icon}</span>
-                  <strong>{CLASS_INFO[c].name}</strong>
-                  <span className="small muted">{lastName(g.heroes[c].player)}</span>
-                  <span className="bar hpbar" aria-hidden="true">
-                    <i style={{ width: `${(Math.max(0, g.heroes[c].hp) / g.heroes[c].maxHp) * 100}%` }} />
-                  </span>
-                  <span className="small num">
-                    {Math.max(0, g.heroes[c].hp)}/{g.heroes[c].maxHp} HP
-                  </span>
-                  <span className="small muted">{w || `${g.heroes[c].touches} touches`}</span>
+                  <strong>
+                    {CLASS_INFO[c].icon} {CLASS_INFO[c].name}
+                  </strong>
+                  <HeroVitals hero={g.heroes[c]} touchesLabel={w || undefined} />
                 </button>
               );
             })}
@@ -2081,18 +2076,53 @@ function Board(props: {
   );
 }
 
+/** Short names for the defense chips on the hero cards. */
+const SHORT: Record<string, string> = {
+  warrior: 'War',
+  cleric: 'Cle',
+  rogue: 'Rog',
+  wizard: 'Wiz',
+  ranger: 'Ran',
+  shaman: 'Shaman',
+  hexer: 'Hexer',
+  ogre: 'Ogre',
+  cutthroat: 'Cutthr.',
+  sharpshooter: 'Sharp.',
+  chieftain: 'Chief',
+  goblin: 'Gob',
+  wagon: 'Wagon',
+};
+
+/** A hero's HP as a bar with the number on it (or "Bench N"), and touches left. */
+function HeroVitals(props: { hero: Hero; touchesLabel?: string }) {
+  const h = props.hero;
+  const benched = h.benched > 0 || h.hp <= 0;
+  return (
+    <>
+      <span className={`hpnum ${benched ? 'benched' : ''}`} aria-label={benched ? `On the bench for ${h.benched}` : `${h.hp} of ${h.maxHp} HP`}>
+        <i style={{ width: `${benched ? 0 : (Math.max(0, h.hp) / h.maxHp) * 100}%` }} />
+        <b className="num">{benched ? `Bench ${h.benched}` : `${h.hp}/${h.maxHp}`}</b>
+      </span>
+      <span className={`touches num ${h.touches <= 2 ? 'low' : ''}`} aria-label={`${h.touches} touches left`}>
+        {props.touchesLabel ?? `🏀 ${h.touches}`}
+      </span>
+    </>
+  );
+}
+
 function HeroRow(props: { game: Game; inPlay: Set<Cls>; defense: Defense | null; frame: Frame | null; onTap: (c: Cls) => void }) {
   const g = props.game;
   const d = props.defense;
   const off = d ? new Set(defenders(g, props.inPlay)) : new Set<Cls>();
-  const roleText = (c: Cls) => {
-    if (!d || !off.has(c)) return '';
-    const name = (x?: string) =>
-      x === 'gate' ? 'gate' : x ? (CLASS_INFO[x as Cls]?.name ?? g.enemies.find((e) => e.id === x)?.name.replace('Goblin ', '') ?? '') : '?';
-    if (c === 'warrior') return `Protect → ${name(d.protect)}`;
-    if (c === 'ranger') return `Close Out → ${name(d.closeOut)}`;
-    if (c === 'wizard') return `Ward → ${name(d.ward)}`;
-    return CLASS_INFO[c].defense;
+  const short = (x?: string) => (x === 'gate' ? 'Gate' : x ? (SHORT[x] ?? SHORT[g.enemies.find((e) => e.id === x)?.kind ?? ''] ?? '?') : '?');
+  /** The defense chip: short text, and the full words for screen readers and the tooltip. */
+  const role = (c: Cls): { t: string; full: string } | null => {
+    if (!d || !off.has(c)) return null;
+    if (c === 'warrior') return { t: `→ ${short(d.protect)}`, full: `Protect → ${d.protect === 'gate' ? 'the gate' : short(d.protect)}` };
+    if (c === 'ranger') return { t: `→ ${short(d.closeOut)}`, full: `Close Out → ${short(d.closeOut)}` };
+    if (c === 'wizard') return { t: `→ ${short(d.ward)}`, full: `Ward → ${short(d.ward)}` };
+    if (c === 'cleric') return { t: 'Heal', full: 'Triage: heals the most injured hero' };
+    return { t: 'Strip', full: 'Strip the Ball: knocks a goblin off the ram' };
   };
   return (
     <div className="heroes">
@@ -2101,26 +2131,36 @@ function HeroRow(props: { game: Game; inPlay: Set<Cls>; defense: Defense | null;
         const benched = h.benched > 0 || h.hp <= 0;
         const acting = props.frame?.actor === c;
         const targeted = props.frame?.target === c || (!props.frame && g.call?.target === c);
+        const r = role(c);
         return (
           <button
             key={c}
             className={`hcard ${props.inPlay.has(c) ? 'onball' : ''} ${acting ? 'acting' : ''} ${targeted ? 'targeted' : ''} ${benched ? 'benched' : ''}`}
             onClick={() => props.onTap(c)}
+            aria-label={`${CLASS_INFO[c].name}${targeted ? ', the horde’s target' : ''}`}
           >
-            <span className="ic">{CLASS_INFO[c].icon}</span>
-            <span className="cl">{CLASS_INFO[c].name}</span>
-            <span className="pl">{lastName(h.player)}</span>
-            <div className="bar">
-              <i style={{ width: `${(Math.max(0, h.hp) / h.maxHp) * 100}%` }} />
-            </div>
-            <span className="small num">{benched ? `bench ${h.benched}` : `${h.hp}/${h.maxHp}`}</span>
-            <div className="touch" aria-label={`${h.touches} touches left`}>
-              {Array.from({ length: h.touchesMax }, (_, i) => (
-                <i key={i} className={i < h.touches ? '' : 'used'} />
-              ))}
-            </div>
-            {h.armor > 0 && <span className="chip">+{h.armor} armor</span>}
-            {roleText(c) && <span className="role">{roleText(c)}</span>}
+            {targeted && (
+              <span className="targetmark" aria-hidden="true">
+                🎯
+              </span>
+            )}
+            <span className="cl">
+              {CLASS_INFO[c].icon} {CLASS_INFO[c].name}
+            </span>
+            <HeroVitals hero={h} />
+            <span className="hchips">
+              {props.inPlay.has(c) && <span className="hchip ball">In play</span>}
+              {r && (
+                <span className="hchip def" title={r.full} aria-label={r.full}>
+                  {r.t}
+                </span>
+              )}
+              {h.armor > 0 && (
+                <span className="hchip armor" aria-label={`Armor ${h.armor}`}>
+                  🛡{h.armor}
+                </span>
+              )}
+            </span>
           </button>
         );
       })}
@@ -2829,10 +2869,10 @@ function Designer(props: { tuning: Tuning; difficulty: Difficulty; initial?: Pla
               const used = inOther(c, editSlot);
               return (
                 <button key={c} className={`lhero ${pickHero === c ? 'on' : ''}`} disabled={used} aria-pressed={pickHero === c} onClick={() => setPickHero(c)}>
-                  <span>{CLASS_INFO[c].icon}</span>
-                  <strong>{CLASS_INFO[c].name}</strong>
-                  <span className="small muted">{lastName(heroLines[c].player)}</span>
-                  <span className="small muted">{used ? 'in the play' : ''}</span>
+                  <strong>
+                    {CLASS_INFO[c].icon} {CLASS_INFO[c].name}
+                  </strong>
+                  {used && <span className="small muted">in the play</span>}
                 </button>
               );
             })}
