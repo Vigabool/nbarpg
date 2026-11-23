@@ -20,7 +20,7 @@ import {
   type PlayStep,
   type Tier,
 } from './content';
-import week from './week.json';
+import { getWeek, type WeekLine } from './week';
 
 export interface Tuning {
   gateHp: number;
@@ -56,7 +56,7 @@ export interface Hero {
   player: string;
   team: string;
   opp: string;
-  line: (typeof week.heroes)[number]['line'];
+  line: WeekLine;
   tier: Tier;
   defTier: Tier;
   maxHp: number;
@@ -68,6 +68,8 @@ export interface Hero {
   usedSpecial: string[];
   /** Party possessions left on the bench after falling (0 = playing). */
   benched: number;
+  /** No game this week: sits out the whole game (never returns from the bench). */
+  out?: boolean;
   armor: number;
   exposed: boolean;
   untargetable: boolean;
@@ -206,12 +208,14 @@ export interface Frame {
 }
 
 const clone = <T>(x: T): T => structuredClone(x);
+/** Bench count for a hero who sits out the whole game. */
+const OUT = 99;
 const tm = (t: Tier) => TIER_MULT[t];
 export const quarterOf = (possession: number) => Math.min(4, Math.floor(possession / 3) + 1);
 
 // ---------- Setup ----------
 
-const ROLE_OF: Record<string, EnemyKind> = {
+export const ROLE_OF: Record<string, EnemyKind> = {
   warlock: 'hexer',
   hunter: 'sharpshooter',
   ogre: 'ogre',
@@ -227,17 +231,19 @@ export function ramDamageFromFg(pct: number): number {
   return 8;
 }
 export const opponentsFg = () => {
-  const t = week.teams;
+  const t = getWeek().teams;
   // Weighted by goblins would hide low-scoring teams; a plain average of team FG% is easier to explain.
   return t.reduce((s, x) => s + x.fgPct, 0) / t.length;
 };
 
 export function newGame(tuning: Tuning = DEFAULT_TUNING, difficulty: Difficulty = 'normal'): Game {
+  const week = getWeek();
   const heroes = {} as Record<Cls, Hero>;
   for (const h of week.heroes) {
     const cls = h.cls as Cls;
     const maxHp = CLASS_INFO[cls].hp;
-    const touches = Math.max(2, Math.round(h.trueUsage / tuning.usagePerTouch));
+    // A hero with no game this week sits out: no touches, and on the bench for the whole game.
+    const touches = h.out ? 0 : Math.max(2, Math.round(h.trueUsage / tuning.usagePerTouch));
     heroes[cls] = {
       cls,
       player: h.player,
@@ -253,7 +259,8 @@ export function newGame(tuning: Tuning = DEFAULT_TUNING, difficulty: Difficulty 
       dd: h.doubleDouble || h.tripleDouble,
       td: h.tripleDouble,
       usedSpecial: [],
-      benched: 0,
+      benched: h.out ? OUT : 0,
+      out: !!h.out,
       armor: 0,
       exposed: false,
       untargetable: false,
@@ -709,7 +716,7 @@ function doStep(ctx: StepCtx, step: PlayStep, i: number, primaryId: string, pick
       break;
     case 'revive':
       for (const x of CLASSES.map((c) => g.heroes[c]))
-        if (x.benched > 0) {
+        if (x.benched > 0 && !x.out) {
           x.benched = 0;
           x.hp = x.maxHp;
           parts.push(`the ${CLASS_INFO[x.cls].name} returns`);
@@ -1436,6 +1443,7 @@ export function startSecondHalf(g0: Game, adjustment: Adjustment): Game {
   // Locker room.
   for (const c of CLASSES) {
     const h = g.heroes[c];
+    if (h.out) continue;
     if (h.benched > 0 || h.hp <= 0) {
       h.benched = 0;
       h.hp = Math.ceil(h.maxHp / 2);

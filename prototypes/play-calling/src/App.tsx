@@ -62,9 +62,11 @@ import {
   type Tuning,
 } from './engine';
 import { Rich, TermLayer } from './terms';
-import week from './week.json';
+import { FIXED_WEEK, getWeek, setWeek, type WeekLine } from './week';
+import { AssignScreen, EncounterScreen, GamesScreen, RosterScreen, emptySetup, seasonData, type SetupState } from './setup/Setup';
+import { buildWeek } from './setup/buildWeek';
 
-type Screen = 'intro' | 'plan' | 'game' | 'halftime' | 'final';
+type Screen = 'intro' | 'roster' | 'encounter' | 'assign' | 'games' | 'plan' | 'game' | 'halftime' | 'final';
 type Modal =
   | { kind: 'designer'; play?: Play; slot?: number }
   | { kind: 'library'; slot: number }
@@ -111,6 +113,8 @@ interface Saved {
   pace?: 'step' | 'auto' | 'fast';
   /** The Horde calls panel is collapsed to its total. */
   callsClosed?: boolean;
+  /** The setup flow's choices: roster, encounter, heroes and games. */
+  setup?: SetupState;
 }
 const KEY = 'play-calling-prototype-v1';
 function load(): Saved {
@@ -128,7 +132,7 @@ function store(s: Saved) {
   }
 }
 
-type StatLine = (typeof week.heroes)[number]['line'];
+type StatLine = WeekLine;
 /** The 10+ stats behind a double-double or triple-double, e.g. "21 pts · 13 reb · 10 ast". */
 const bigNight = (l: StatLine) =>
   (
@@ -174,10 +178,15 @@ function OffBallCard(props: { cls: Cls; defTier: Tier; line: StatLine }) {
 }
 
 const chainText = (p: Play) => p.steps.map((s) => `${CLASS_INFO[s.cls].icon} ${MOVE[s.move].name}`).join(' → ');
-const lastName = (n: string) => n.split(' ').slice(-1)[0];
+/** A player's last name, skipping suffixes ("Michael Porter Jr." is "Porter"). */
+const lastName = (n: string) => {
+  const parts = n.split(' ');
+  while (parts.length > 1 && /^(Jr\.?|Sr\.?|II|III|IV|V)$/.test(parts[parts.length - 1])) parts.pop();
+  return parts[parts.length - 1];
+};
 const tierLabel = (t: Tier) => t[0].toUpperCase() + t.slice(1);
 function playForm(p: Play): string {
-  const tiers = p.steps.map((s) => week.heroes.find((h) => h.cls === s.cls)!.tier as Tier);
+  const tiers = p.steps.map((s) => getWeek().heroes.find((h) => h.cls === s.cls)!.tier as Tier);
   if (tiers.some((t) => t === 'cold')) return '❄️ a cold hero';
   if (tiers.every((t) => tierIndex(t) >= tierIndex('great'))) return '🔥 every hero Great or better';
   return '';
@@ -216,6 +225,7 @@ export function App() {
   const [lastReplay, setLastReplay] = useState<Replay | null>(null);
   const [speed, setSpeed] = useState<Speed>(saved.pace ?? 'step');
   const [callsClosed, setCallsClosed] = useState(saved.callsClosed ?? false);
+  const [setup, setSetup] = useState<SetupState>(saved.setup ?? emptySetup(FIXED_WEEK.week.index));
   const frames = replay?.frames ?? null;
   const [override, setOverride] = useState<Defense>({});
   const [modal, setModal] = useState<Modal | null>(null);
@@ -226,8 +236,8 @@ export function App() {
   const startedAt = useRef<number>(0);
 
   useEffect(() => {
-    store({ custom, active, difficulty, manual, tuning, pace: speed, callsClosed });
-  }, [custom, active, difficulty, manual, tuning, speed, callsClosed]);
+    store({ custom, active, difficulty, manual, tuning, pace: speed, callsClosed, setup });
+  }, [custom, active, difficulty, manual, tuning, speed, callsClosed, setup]);
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [screen]);
@@ -409,8 +419,28 @@ export function App() {
           setDifficulty={setDifficulty}
           manual={manual}
           setManual={setManual}
-          onStart={startGame}
+          onBuild={() => setScreen('roster')}
+          onSample={() => {
+            setWeek(FIXED_WEEK);
+            startGame();
+          }}
           onGuide={() => setModal({ kind: 'guide' })}
+        />
+      )}
+      {screen === 'roster' && <RosterScreen state={setup} onChange={setSetup} onBack={() => setScreen('intro')} onNext={() => setScreen('encounter')} />}
+      {screen === 'encounter' && (
+        <EncounterScreen state={setup} difficulty={difficulty} onChange={setSetup} onBack={() => setScreen('roster')} onNext={() => setScreen('assign')} />
+      )}
+      {screen === 'assign' && <AssignScreen state={setup} onChange={setSetup} onBack={() => setScreen('encounter')} onNext={() => setScreen('games')} />}
+      {screen === 'games' && (
+        <GamesScreen
+          state={setup}
+          onChange={setSetup}
+          onBack={() => setScreen('assign')}
+          onNext={() => {
+            setWeek(buildWeek(seasonData(), setup.weekIndex, setup.slots, setup.gamePicks));
+            startGame();
+          }}
         />
       )}
       {screen === 'plan' && (
@@ -718,7 +748,8 @@ function Intro(props: {
   setDifficulty: (d: Difficulty) => void;
   manual: boolean;
   setManual: (m: boolean) => void;
-  onStart: () => void;
+  onBuild: () => void;
+  onSample: () => void;
   onGuide: () => void;
 }) {
   return (
@@ -733,7 +764,8 @@ function Intro(props: {
           and outscore them.
         </p>
         <p className="muted small">
-          Week of {week.week.start} to {week.week.end}, 2025–26. Your heroes are powered by {week.heroes.map((h) => lastName(h.player)).join(', ')}.
+          Build a roster from the 2025–26 season, pick the week’s games, and play the horde they bring. Or jump straight in with the sample week (
+          {FIXED_WEEK.heroes.map((h) => lastName(h.player)).join(', ')}).
         </p>
       </div>
       <div className="panel">
@@ -747,8 +779,11 @@ function Intro(props: {
         </div>
         <DefenseChoice manual={props.manual} setManual={props.setManual} />
       </div>
-      <button className="btn primary big" onClick={props.onStart}>
-        Game plan
+      <button className="btn primary big" onClick={props.onBuild}>
+        Build your roster
+      </button>
+      <button className="btn big" onClick={props.onSample}>
+        Play the sample week
       </button>
       <button className="btn quiet" onClick={props.onGuide}>
         How it works
@@ -1354,8 +1389,12 @@ function PlanScreen(props: {
                 <div className="panel detail">
                   <strong>{goblins.length} goblins</strong>
                   <span className="small muted">
-                    1 per 40 opposing points ({week.teams.map((t) => `${t.team} ${t.pts}`).join(', ')}). Q1 {goblins.filter((x) => x.quarter === 1).length}, Q2{' '}
-                    {goblins.filter((x) => x.quarter === 2).length}, Q3 {goblins.filter((x) => x.quarter === 3).length}.
+                    1 per 40 opposing points (
+                    {getWeek()
+                      .teams.map((t) => `${t.team} ${t.pts}`)
+                      .join(', ')}
+                    ). Q1 {goblins.filter((x) => x.quarter === 1).length}, Q2 {goblins.filter((x) => x.quarter === 2).length}, Q3{' '}
+                    {goblins.filter((x) => x.quarter === 3).length}.
                   </span>
                   <span className="small num">{g.tuning.goblinHp} HP · worth 🏀 1</span>
                   <span className="small">
@@ -1537,7 +1576,7 @@ function PlaySlot(props: { play: Play; open: boolean; onToggle: () => void; onCh
   const m = s ? MOVE[s.move] : null;
   const next = step !== null && step < p.steps.length - 1 ? p.steps[step + 1] : null;
   const nextMove = next ? MOVE[next.move] : undefined;
-  const hero = s ? week.heroes.find((h) => h.cls === s.cls)! : null;
+  const hero = s ? getWeek().heroes.find((h) => h.cls === s.cls)! : null;
   return (
     <div className="panel slotcard">
       <button className="slothead" aria-expanded={props.open} onClick={props.onToggle}>
@@ -2807,7 +2846,7 @@ function Designer(props: { tuning: Tuning; difficulty: Difficulty; initial?: Pla
   const steps = slots.filter((x): x is PlayStep => !!x);
   const finisher = slots[3];
   const errors = !finisher ? ['Add a finisher.'] : steps.length < 2 ? ['Add at least one helper before the finisher.'] : validatePlay(steps);
-  const heroLines = Object.fromEntries(week.heroes.map((h) => [h.cls, h]));
+  const heroLines = Object.fromEntries(getWeek().heroes.map((h) => [h.cls, h]));
   const movesFor = (c: Cls, i: number) =>
     MOVES.filter(
       (m) =>

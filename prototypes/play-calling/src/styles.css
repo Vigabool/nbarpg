@@ -1991,3 +1991,208 @@ th {
   font-weight: 700;
   white-space: nowrap;
 }
+
+/* ---------- Setup flow: roster, encounter, heroes, games ---------- */
+.wrap.setup {
+  padding-bottom: 120px;
+}
+.setupsteps {
+  display: flex;
+  gap: 4px;
+}
+.setupsteps span {
+  flex: 1;
+  text-align: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 4px 0;
+  border-bottom: 3px solid var(--line);
+  color: var(--muted);
+}
+.setupsteps span.done {
+  border-color: var(--party);
+  color: var(--party);
+}
+.setupsteps span.on {
+  border-color: var(--ball);
+  color: var(--ink);
+}
+.setupbar .sheet-inner {
+  padding-block: 10px;
+  gap: 6px;
+}
+.setupstatus {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.setupnext {
+  flex: 1;
+  padding: 12px;
+}
+.input {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font: inherit;
+  min-width: 0;
+  max-width: 100%;
+}
+input.input {
+  width: 100%;
+}
+.ellip {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+/* Auto-draft menu */
+.draftwrap {
+  position: relative;
+}
+.draftmenu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 6;
+  width: min(260px, calc(100vw - 32px));
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+}
+.draftmenu button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  text-align: left;
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  padding: 8px;
+  border-radius: 6px;
+  font: inherit;
+}
+.draftmenu button:hover {
+  background: var(--surface-2);
+}
+/* Salary cap */
+.capbar {
+  display: block;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.capbar i {
+  display: block;
+  height: 100%;
+  background: var(--party);
+}
+.capbar i.over {
+  background: var(--horde);
+}
+/* Roster slots and the player list */
+.rosterslot {
+  display: grid;
+  grid-template-columns: 84px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding-block: 4px;
+  border-top: 1px solid var(--line);
+  min-width: 0;
+}
+.rclass {
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+.playerrow {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-block: 8px;
+  border-top: 1px solid var(--line);
+}
+.classchips {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 4px;
+}
+.classchip {
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--muted);
+  border-radius: 6px;
+  padding: 4px 2px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.classchip.good {
+  color: var(--ink);
+  background: var(--surface);
+}
+.classchip.great {
+  background: var(--ball-soft);
+  color: var(--ball);
+  border-color: color-mix(in srgb, var(--ball) 40%, transparent);
+}
+.classchip.elite {
+  background: var(--ball);
+  color: #fff;
+  border-color: var(--ball);
+}
+/* Encounters */
+.enccard {
+  text-align: left;
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+.enccard.on {
+  border-color: var(--ball);
+  box-shadow: 0 0 0 2px var(--ball-soft);
+}
+.enccard:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+.foe {
+  display: inline-block;
+  margin-right: 10px;
+  white-space: nowrap;
+}
+/* Pick games */
+.gamecard {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  text-align: left;
+  border: 1.5px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  border-radius: var(--r);
+  padding: 9px 10px;
+  font: inherit;
+  cursor: pointer;
+}
+.gamecard.on {
+  border-color: var(--ball);
+  background: var(--ball-soft);
+}
+.brings {
+  border-top: 1px dashed color-mix(in srgb, var(--horde) 40%, transparent);
+  padding-top: 5px;
+  color: var(--horde);
+}

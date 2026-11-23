@@ -1,6 +1,7 @@
 /**
  * Plays the prototype's Goblin Horde with simple bots and prints the numbers the concept doc asks for.
  * Run: npx tsx prototypes/play-calling/scripts/sim.ts
+ * Rosters a player might build (auto-draft, suggested heroes, Smart pick) for the first N weeks: ROSTERS=6 npx tsx …/sim.ts
  */
 import { DEFAULT_PLAYBOOK, TEMPLATES, type Play } from '../src/content';
 import {
@@ -113,6 +114,52 @@ function play(difficulty: Difficulty, bot: 'smart' | 'naive' | 'expert', seed: n
     possessions: g.possession,
     stats: g.stats,
   };
+}
+
+if (process.env.ROSTERS) {
+  // Rosters a player might build: auto-drafted under the cap (balance), suggested heroes, Smart-picked games,
+  // for the first weeks of 2025-26. Each week is played by the expert and smart bots.
+  const { loadSeasonFile } = await import('../../../scripts/load-season');
+  const { formView } = await import('../../../src/data/form');
+  const { autoDraft } = await import('../../../src/app/autoDraft');
+  const { autoAssign } = await import('../../../src/app/autoAssign');
+  const { smartGames } = await import('../../../src/app/smartPick');
+  const { newGame: newSave } = await import('../../../src/app/game');
+  const { buildWeek } = await import('../src/setup/buildWeek');
+  const { setWeek } = await import('../src/week');
+  const full = loadSeasonFile('2025-26');
+  const weeks = full.weeks.filter((w) => w.gameIds.length > 0).slice(0, Number(process.env.ROSTERS) || 6);
+  const rows: string[] = [];
+  const totals = { normal: [0, 0, 0], hard: [0, 0, 0] } as Record<Difficulty, number[]>;
+  for (const w of weeks) {
+    const view = formView(full, w.index);
+    const d = autoDraft(view, w, 'balance');
+    if (!d) continue;
+    const save = { ...newSave('2025-26', w.index), roster: [...Object.values(d.slots), ...d.reserves], encounter: 'goblin-horde' };
+    save.assignments = autoAssign(save, view);
+    save.gamePicks = smartGames(save, view);
+    const week = buildWeek(full, w.index, save.assignments, save.gamePicks);
+    setWeek(week);
+    const touches = week.heroes.reduce((s2, h) => s2 + (h.out ? 0 : Math.max(2, Math.round(h.trueUsage / DEFAULT_TUNING.usagePerTouch))), 0);
+    for (const difficulty of ['normal', 'hard'] as Difficulty[]) {
+      const e = play(difficulty, 'expert', 1);
+      const sm = play(difficulty, 'smart', 1);
+      totals[difficulty][0] += e.party - e.horde;
+      totals[difficulty][1] += sm.party - sm.horde;
+      totals[difficulty][2] += e.party > e.horde ? 1 : 0;
+      rows.push(
+        `week ${w.index} ${difficulty}: expert ${e.party}-${e.horde}, smart ${sm.party}-${sm.horde} · touches ${touches} · heroes ${week.heroes.map((h) => `${h.cls[0]}:${h.tier}`).join(' ')}`,
+      );
+    }
+  }
+  console.log(rows.join('\n'));
+  for (const difficulty of ['normal', 'hard'] as Difficulty[]) {
+    const [e, sm, wins] = totals[difficulty];
+    console.log(
+      `${difficulty}: expert wins ${wins}/${weeks.length}, average margin expert ${(e / weeks.length).toFixed(1)}, smart ${(sm / weeks.length).toFixed(1)}`,
+    );
+  }
+  process.exit(0);
 }
 
 for (const difficulty of ['normal', 'hard'] as Difficulty[]) {
