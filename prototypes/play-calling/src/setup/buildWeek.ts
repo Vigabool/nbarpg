@@ -8,6 +8,7 @@ import { buildHorde, opponentOf, playerLine, type HeroGamePick } from '../../../
 import { computePool } from '../../../../src/engine/rating';
 import { rules, type HeroClass } from '../../../../src/rules';
 import { FIXED_WEEK, type WeekData, type WeekHero, type WeekLine } from '../week';
+import { DEFAULT_TUNING } from '../engine';
 
 export const SETUP_CLASSES: HeroClass[] = ['warrior', 'cleric', 'rogue', 'wizard', 'ranger'];
 export const ENCOUNTER = 'goblin-horde';
@@ -21,8 +22,8 @@ export function defTierOf(r: number): string {
   const t = CAL.defThresholds;
   return r >= t.elite ? 'elite' : r >= t.great ? 'great' : r >= t.good ? 'good' : r >= t.average ? 'average' : 'cold';
 }
-/** Touches a game gives: true usage over the calibrated usage per touch (at least 2). */
-export const touchesOf = (l: StatLine) => Math.max(2, Math.round(trueUsage(l) / CAL.usagePerTouch));
+/** Touches a game gives, on the same scale the game uses (DEFAULT_TUNING.usagePerTouch; at least 2). */
+export const touchesOf = (l: StatLine) => Math.max(2, Math.round(trueUsage(l) / DEFAULT_TUNING.usagePerTouch));
 
 const lineOf = (l: StatLine): WeekLine => ({
   min: l.min,
