@@ -11,9 +11,6 @@ import { decodeSeason, type CompactSeason } from '../../../../src/data/format';
 import { formView } from '../../../../src/data/form';
 import type { SeasonData, StatLine } from '../../../../src/data/types';
 import { DRAFT_MODES, autoDraft } from '../../../../src/app/autoDraft';
-import { autoAssign, bestGames } from '../../../../src/app/autoAssign';
-import { smartGames } from '../../../../src/app/smartPick';
-import { newGame as newSave, type SaveGame } from '../../../../src/app/game';
 import { eligiblePlayers } from '../../../../src/engine/calibration';
 import { computeSalary, seasonTier } from '../../../../src/engine/rating';
 import { playerGamesInWeek } from '../../../../src/engine/week';
@@ -24,6 +21,7 @@ import { rules, tierIndex, type HeroClass } from '../../../../src/rules';
 import { CLASS_INFO, ENEMY_INFO, type Cls } from '../content';
 import { ROLE_OF, ramDamageFromFg, type Difficulty } from '../engine';
 import { Rich } from '../terms';
+import { mostTouches, smartPicks, suggestHeroes } from './picks';
 import { ENCOUNTER, SETUP_CLASSES, defRating, defTierOf, heroFromGame, teamOf, touchesOf } from './buildWeek';
 
 export const SEASON = '2025-26';
@@ -48,11 +46,6 @@ const RESERVES = rules.salary.rosterSize - rules.salary.heroSlots;
 const CAP = rules.salary.cap;
 const tierLabel = (t: string) => t[0].toUpperCase() + t.slice(1);
 const roster = (s: SetupState) => [...SETUP_CLASSES.map((c) => s.slots[c]).filter((x): x is number => x !== undefined), ...s.reserves];
-
-/** The main game's save shape, so its helpers (auto-assign, game picks) can run on these choices. */
-function asSave(s: SetupState): SaveGame {
-  return { ...newSave(SEASON, s.weekIndex), roster: roster(s), assignments: { ...s.slots }, gamePicks: { ...s.gamePicks }, encounter: s.encounter };
-}
 
 function TierChip(props: { t: string; prefix?: string }) {
   return (
@@ -464,7 +457,7 @@ export function AssignScreen(props: { state: SetupState; onChange: (s: SetupStat
     props.onChange({ ...state, slots, reserves, gamePicks });
   };
   const suggest = () => {
-    const next = autoAssign(asSave(state), data);
+    const next = suggestHeroes(data, full, state.weekIndex, ros);
     const placed = new Set(Object.values(next));
     props.onChange({ ...state, slots: next, reserves: ros.filter((id) => !placed.has(id)), gamePicks: {} });
   };
@@ -593,12 +586,16 @@ export function GamesScreen(props: { state: SetupState; onChange: (s: SetupState
       <div className="row">
         <button
           className="btn small"
-          onClick={() => props.onChange({ ...state, gamePicks: { ...state.gamePicks, ...smartGames(asSave(state), formView(full, state.weekIndex)) } })}
+          onClick={() => props.onChange({ ...state, gamePicks: { ...state.gamePicks, ...smartPicks(full, state.weekIndex, state.slots) } })}
+          title="Weighs each game's tier, touches, defense and special against the Champions, boss and goblins the games bring together"
         >
           🧠 Smart pick
         </button>
-        <button className="btn small quiet" onClick={() => props.onChange({ ...state, gamePicks: { ...state.gamePicks, ...bestGames(asSave(state), full) } })}>
-          Best tier for each
+        <button
+          className="btn small quiet"
+          onClick={() => props.onChange({ ...state, gamePicks: { ...state.gamePicks, ...mostTouches(full, state.weekIndex, state.slots) } })}
+        >
+          Most touches for each
         </button>
       </div>
       {heroes.map((c) => {

@@ -43,7 +43,8 @@ export const DEFAULT_TUNING: Tuning = {
   championPoints: 4,
   bossPoints: 8,
   bountyPoints: 6,
-  usagePerTouch: 4.7,
+  // A drafted lineup's picked games total about 136 true usage (median over weeks 1–20 and all four draft modes), so 3.8 gives about 36 touches.
+  usagePerTouch: 3.8,
   hordeDamage: 1,
   championHp: 1.25,
   hordeHitPoints: 2,

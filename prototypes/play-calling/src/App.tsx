@@ -113,10 +113,14 @@ interface Saved {
   pace?: 'step' | 'auto' | 'fast';
   /** The Horde calls panel is collapsed to its total. */
   callsClosed?: boolean;
+  /** Which defaults the saved tuning was made with; older tuning is dropped so new defaults apply. */
+  tuningVersion?: number;
   /** The setup flow's choices: roster, encounter, heroes and games. */
   setup?: SetupState;
 }
 const KEY = 'play-calling-prototype-v1';
+/** Bump when DEFAULT_TUNING changes, so players' saved tuning (which stores every value) picks up the new defaults. */
+const TUNING_VERSION = 2;
 function load(): Saved {
   try {
     return JSON.parse(localStorage.getItem(KEY) ?? '{}') as Saved;
@@ -208,7 +212,7 @@ export function App() {
   const [aimPrompt, setAimPrompt] = useState<string | null>(null);
   /** The possession whose wave banner the player closed. */
   const [waveClosed, setWaveClosed] = useState(-1);
-  const [tuning, setTuning] = useState<Tuning>({ ...DEFAULT_TUNING, ...(saved.tuning ?? {}) });
+  const [tuning, setTuning] = useState<Tuning>({ ...DEFAULT_TUNING, ...(saved.tuningVersion === TUNING_VERSION ? (saved.tuning ?? {}) : {}) });
   const [custom, setCustom] = useState<Play[]>((saved.custom ?? []).filter((p) => p.steps.every((s) => MOVE[s.move])));
   const library = useMemo(() => [...TEMPLATES, ...custom], [custom]);
   const [active, setActive] = useState<string[]>(() => {
@@ -236,7 +240,7 @@ export function App() {
   const startedAt = useRef<number>(0);
 
   useEffect(() => {
-    store({ custom, active, difficulty, manual, tuning, pace: speed, callsClosed, setup });
+    store({ custom, active, difficulty, manual, tuning, tuningVersion: TUNING_VERSION, pace: speed, callsClosed, setup });
   }, [custom, active, difficulty, manual, tuning, speed, callsClosed, setup]);
   useEffect(() => {
     window.scrollTo(0, 0);

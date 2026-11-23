@@ -126,38 +126,50 @@ if (process.env.ROSTERS) {
   const { smartGames } = await import('../../../src/app/smartPick');
   const { newGame: newSave } = await import('../../../src/app/game');
   const { buildWeek } = await import('../src/setup/buildWeek');
+  const { smartPicks, suggestHeroes, PICK_WEIGHTS } = await import('../src/setup/picks');
+  // PICKW='{"touch":1.5}' tries other pick weights.
+  const pw = { ...PICK_WEIGHTS, ...JSON.parse(process.env.PICKW ?? '{}') };
+  // PICKS=main uses the main game's energy-based Suggest and Smart pick, for comparison.
+  const mainPicks = process.env.PICKS === 'main';
+  const modes = (process.env.MODES ?? 'balance').split(',') as ('offense' | 'defense' | 'balance' | 'flexibility')[];
   const { setWeek } = await import('../src/week');
   const full = loadSeasonFile('2025-26');
   const weeks = full.weeks.filter((w) => w.gameIds.length > 0).slice(0, Number(process.env.ROSTERS) || 6);
   const rows: string[] = [];
   const totals = { normal: [0, 0, 0], hard: [0, 0, 0] } as Record<Difficulty, number[]>;
-  for (const w of weeks) {
-    const view = formView(full, w.index);
-    const d = autoDraft(view, w, 'balance');
-    if (!d) continue;
-    const save = { ...newSave('2025-26', w.index), roster: [...Object.values(d.slots), ...d.reserves], encounter: 'goblin-horde' };
-    save.assignments = autoAssign(save, view);
-    save.gamePicks = smartGames(save, view);
-    const week = buildWeek(full, w.index, save.assignments, save.gamePicks);
-    setWeek(week);
-    const touches = week.heroes.reduce((s2, h) => s2 + (h.out ? 0 : Math.max(2, Math.round(h.trueUsage / DEFAULT_TUNING.usagePerTouch))), 0);
-    for (const difficulty of ['normal', 'hard'] as Difficulty[]) {
-      const e = play(difficulty, 'expert', 1);
-      const sm = play(difficulty, 'smart', 1);
-      totals[difficulty][0] += e.party - e.horde;
-      totals[difficulty][1] += sm.party - sm.horde;
-      totals[difficulty][2] += e.party > e.horde ? 1 : 0;
-      rows.push(
-        `week ${w.index} ${difficulty}: expert ${e.party}-${e.horde}, smart ${sm.party}-${sm.horde} · touches ${touches} · heroes ${week.heroes.map((h) => `${h.cls[0]}:${h.tier}`).join(' ')}`,
-      );
+  let games = 0;
+  const touchTotals: number[] = [];
+  for (const w of weeks)
+    for (const mode of modes) {
+      const view = formView(full, w.index);
+      const d = autoDraft(view, w, mode);
+      if (!d) continue;
+      games++;
+      const save = { ...newSave('2025-26', w.index), roster: [...Object.values(d.slots), ...d.reserves], encounter: 'goblin-horde' };
+      save.assignments = mainPicks ? autoAssign(save, view) : suggestHeroes(view, full, w.index, save.roster, pw);
+      save.gamePicks = mainPicks ? smartGames(save, view) : smartPicks(full, w.index, save.assignments, pw);
+      const week = buildWeek(full, w.index, save.assignments, save.gamePicks);
+      setWeek(week);
+      const tuning = { ...DEFAULT_TUNING, ...JSON.parse(process.env.TUNE ?? '{}') };
+      const touches = week.heroes.reduce((s2, h) => s2 + (h.out ? 0 : Math.max(2, Math.round(h.trueUsage / tuning.usagePerTouch))), 0);
+      touchTotals.push(touches);
+      for (const difficulty of ['normal', 'hard'] as Difficulty[]) {
+        const e = play(difficulty, 'expert', 1);
+        const sm = play(difficulty, 'smart', 1);
+        totals[difficulty][0] += e.party - e.horde;
+        totals[difficulty][1] += sm.party - sm.horde;
+        totals[difficulty][2] += e.party > e.horde ? 1 : 0;
+        rows.push(
+          `week ${w.index} ${mode} ${difficulty}: expert ${e.party}-${e.horde}, smart ${sm.party}-${sm.horde} · touches ${touches} · heroes ${week.heroes.map((h) => `${h.cls[0]}:${h.tier}`).join(' ')}`,
+        );
+      }
     }
-  }
-  console.log(rows.join('\n'));
+  if (process.env.VERBOSE) console.log(rows.join('\n'));
+  const sorted = [...touchTotals].sort((a, b) => a - b);
+  console.log(`touches a game: median ${sorted[Math.floor(sorted.length / 2)]}, range ${sorted[0]}–${sorted[sorted.length - 1]} (${games} rosters)`);
   for (const difficulty of ['normal', 'hard'] as Difficulty[]) {
     const [e, sm, wins] = totals[difficulty];
-    console.log(
-      `${difficulty}: expert wins ${wins}/${weeks.length}, average margin expert ${(e / weeks.length).toFixed(1)}, smart ${(sm / weeks.length).toFixed(1)}`,
-    );
+    console.log(`${difficulty}: expert wins ${wins}/${games}, average margin expert ${(e / games).toFixed(1)}, smart ${(sm / games).toFixed(1)}`);
   }
   process.exit(0);
 }
