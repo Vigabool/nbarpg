@@ -13,7 +13,7 @@ export const TERMS: Record<string, { name: string; def: string }> = {
   },
   taunt: {
     name: 'Taunt',
-    def: 'A big (the Ogre, or the Crypt’s Bone Giant) forces single-target hits onto itself while it stands; hits that reach several enemies must include it. Get past it with Guided, by Disabling it, or by taking it down.',
+    def: 'A big (the Ogre) forces single-target hits onto itself while it stands; hits that reach several enemies must include it. Get past it with Guided, by Disabling it, or by taking it down.',
   },
   taunted: { name: 'Taunted', def: 'This enemy attacks the Warrior on the horde’s turn.' },
   quick: { name: 'Quick', def: 'The first hit on this enemy each possession misses. A cheap hit first, a Slow, or a Sure hit gets past it.' },
@@ -43,11 +43,11 @@ export const TERMS: Record<string, { name: string; def: string }> = {
   },
   ritual: {
     name: 'The Ritual',
-    def: 'The Crypt’s objective. It grows each enemy turn by 1 per skeleton and bone pile, and 1 more while the Wight stands; the horde scores 1 per 4 Ritual points. When it completes, the Lich rises at once (or rises again, or is restored), the horde scores 6, and it starts over. Destroying the dead for good sets it back 1; the Necromancer, 3.',
+    def: 'The Crypt’s objective. It grows each enemy turn by 1 per skeleton and bone pile, and 1 more while the Wight stands; the horde scores 1 per 2 Ritual points. When it completes (at 22), the horde scores 8 and it starts over; the first time, the Lich rises early. Destroying the dead for good sets it back 1; the Necromancer, 3.',
   },
   restless: {
     name: 'Restless Dead',
-    def: 'In the Crypt, a skeleton killed by a weapon hit crumbles into a bone pile and rises next possession with half its HP. Fire or a Blessed finisher destroys it for good, and only then does it score. The Skeletal Archer rises once.',
+    def: 'In the Crypt, a skeleton killed by a weapon hit crumbles into a bone pile and rises next possession with half its HP. Fire or a Blessed finisher destroys it for good, and only then does it score. The Bone Knight rises once.',
   },
   pile: {
     name: 'Bone pile',
@@ -67,16 +67,10 @@ export const TERMS: Record<string, { name: string; def: string }> = {
     def: 'The Wraith: only Wizard spells and holy (Blessed) hits touch it, and the first one makes it solid for the rest of the possession. Other hits pass through it, and a finisher that only passes through is a turnover.',
   },
   raiseDead: { name: 'Raise Dead', def: 'The Wight’s cast when bone piles are on the floor: every pile rises at once, at the HP it had before it crumbled.' },
-  boneShield: { name: 'Bone Shield', def: 'The Wight’s cast when there are no bone piles: +2 Armor on the horde through your next possession.' },
   unholyVigor: { name: 'Unholy Vigor', def: 'The Wight’s passive: the Ritual grows 1 more each turn while it stands (and isn’t Disabled).' },
   enervate: { name: 'Enervate', def: 'The Necromancer’s setup: the targeted hero loses a touch, and the next hit +2.' },
   deathBolt: { name: 'Death Bolt', def: 'The Lich, every other enemy turn: 1.5× its damage to the lowest-HP hero, ignoring Armor.' },
-  phylactery: {
-    name: 'Phylactery',
-    def: 'The Lich’s soul jar. While it stands the Lich takes half damage. It can’t be hit while any skeleton stands (moves that hit every enemy still land). Breaking it scores 3; it shatters if the Lich falls.',
-  },
   consecrate: { name: 'Consecrate', def: 'Close an open grave for good with holy damage (+3). An open grave raises a skeleton at the start of every quarter.' },
-  boneHarvest: { name: 'Bone Harvest', def: 'The Bone Giant heals 2 whenever a skeleton crumbles from a weapon kill. Fire and holy kills give it nothing.' },
   turnover: {
     name: 'Turnover',
     def: 'Your finisher is Blocked, evaded, swallowed by the Barrier, or (in the Crypt) passes through the Wraith or hits a grave without holy damage: the horde scores 2 on the fast break. A cheap hit first, or a Sure finisher, avoids it.',
@@ -138,12 +132,9 @@ const FORMS: [string, string][] = [
   ['bone pile', 'pile'],
   ['Bone piles', 'pile'],
   ['Raise Dead', 'raiseDead'],
-  ['Bone Shield', 'boneShield'],
   ['Unholy Vigor', 'unholyVigor'],
   ['Enervate', 'enervate'],
   ['Death Bolt', 'deathBolt'],
-  ['Phylactery', 'phylactery'],
-  ['Bone Harvest', 'boneHarvest'],
   ['Ritual', 'ritual'],
   ['Blessed', 'blessed'],
   ['holy', 'holy'],

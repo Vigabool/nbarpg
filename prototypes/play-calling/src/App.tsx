@@ -51,8 +51,6 @@ import {
   piles,
   ritualGain,
   ritualFeeders,
-  phylacteryStands,
-  skeletonsStand,
   shamanCast,
   warDrum,
   quarterOf,
@@ -737,10 +735,7 @@ export function App() {
                         `+1 for every ${tuning.ritualPer} Ritual points`,
                         'The Ritual grows each turn by 1 per skeleton and bone pile, and 1 more while the Wight stands. Destroying the dead for good sets it back 1, the Necromancer 3.',
                       ],
-                      [
-                        `+${tuning.ritualFill} when the Ritual completes`,
-                        `At ${tuning.ritualMax}: the Lich rises at once (or rises again, or is restored), and the Ritual starts over.`,
-                      ],
+                      [`+${tuning.ritualFill} when the Ritual completes`, `At ${tuning.ritualMax}, and it starts over. The first time, the Lich rises early.`],
                     ]
                   : [
                       [
@@ -1468,7 +1463,7 @@ function PlanScreen(props: {
                     {goblins.length} {crypt ? 'skeletons' : 'goblins'}
                   </strong>
                   <span className="small muted">
-                    1 per {crypt ? '45' : '40'} opposing points{crypt ? ', plus one a quarter from each open grave' : ''} (
+                    1 per {crypt ? g.tuning.skeletonPer : 40} opposing points{crypt ? ', plus one a quarter from each open grave' : ''} (
                     {getWeek()
                       .teams.map((t) => `${t.team} ${t.pts}`)
                       .join(', ')}
@@ -1502,16 +1497,11 @@ function PlanScreen(props: {
                     <strong>Consecrate the graves</strong>
                     <span className="small muted">3 graves · +3 each</span>
                   </button>
-                  <button className={`mini ${open === 'phylactery' ? 'on' : ''}`} aria-expanded={open === 'phylactery'} onClick={() => toggle('phylactery')}>
-                    <span>⚱️</span>
-                    <strong>Phylactery</strong>
-                    <span className="small muted">with the Lich · +3</span>
-                  </button>
                 </div>
                 {open === 'ritual' && (
                   <div className="panel detail small">
                     <Rich>
-                      {`The Ritual grows each enemy turn by 1 per skeleton and bone pile, and 1 more while the Wight stands. The horde scores 1 per ${g.tuning.ritualPer} Ritual points. At ${g.ritual.max} it completes: +${g.tuning.ritualFill}, the Lich rises at once (or rises again, or is restored), and it starts over. Destroying the dead for good sets it back 1; the Necromancer, 3. Strip the Ball pins a skeleton away from it, and the Warrior can guard the circle to halve it.`}
+                      {`The Ritual grows each enemy turn by 1 per skeleton and bone pile, and 1 more while the Wight stands. The horde scores 1 per ${g.tuning.ritualPer} Ritual points. At ${g.ritual.max} it completes: +${g.tuning.ritualFill}, and it starts over; the first time, the Lich rises early. Destroying the dead for good sets it back 1; the Necromancer, 3. Strip the Ball pins a skeleton away from it, and the Warrior can guard the circle to halve it.`}
                     </Rich>
                   </div>
                 )}
@@ -1526,14 +1516,6 @@ function PlanScreen(props: {
                     <Rich>
                       Three open graves raise a skeleton each at the start of every quarter. Only holy damage (a Cleric hit, or a Blessed finisher) consecrates
                       one, closing it for good: +3 each. Hitting one without holy damage is a turnover.
-                    </Rich>
-                  </div>
-                )}
-                {open === 'phylactery' && (
-                  <div className="panel detail small">
-                    <Rich>
-                      The Lich’s soul jar arrives with it. While it stands the Lich takes half damage, and the skeletons shield it (moves that hit every enemy
-                      still land). Breaking it scores 3; it shatters if the Lich falls first.
                     </Rich>
                   </div>
                 )}
@@ -1864,7 +1846,6 @@ function Objectives(props: { game: Game }) {
   if (g.encounter === 'crypt') {
     const graves = g.enemies.filter((e) => e.kind === 'grave');
     const open = graves.filter((e) => e.hp > 0).length;
-    const ph = g.enemies.find((e) => e.kind === 'phylactery');
     return (
       <div className="panel objectives">
         <div className="gate">
@@ -1882,7 +1863,6 @@ function Objectives(props: { game: Game }) {
             {g.bounty === 'open' ? (g.possession <= 2 ? `open until Q1 ends (+${g.tuning.bountyPoints})` : 'open') : g.bounty === 'won' ? 'won ✓' : 'expired'}
           </span>
           <span>🪦 Graves: {open ? `${open} open` : 'all consecrated ✓'}</span>
-          <span>⚱️ Phylactery: {!ph?.arrived ? 'comes with the Lich' : ph.hp > 0 ? `${ph.hp}/${ph.maxHp} HP` : 'shattered ✓'}</span>
           {g.ritual.fills > 0 && <span>☠️ Ritual completed ×{g.ritual.fills}</span>}
         </div>
       </div>
@@ -2004,7 +1984,10 @@ function callRows(g: Game, horde: Sim['horde'] | undefined): CallRow[] {
       );
       const why = /\(([^)]*)\)/.exec(grow.t)?.[1];
       if (why) ramRow.detail.push(`${why[0].toUpperCase()}${why.slice(1)}.`);
-      if (after.fills > g.ritual.fills) ramRow.detail.push(`The Ritual completes: +${g.tuning.ritualFill}, and the Lich rises (or is restored).`);
+      if (after.fills > g.ritual.fills)
+        ramRow.detail.push(
+          `The Ritual completes: +${g.tuning.ritualFill}${g.enemies.some((e) => e.kind === 'lich' && !e.arrived) ? ', and the Lich rises early' : ''}.`,
+        );
       else {
         const per = Math.max(1, d);
         ramRow.detail.push(`At this pace it completes in about ${Math.ceil((after.max - after.value) / per)} more turns.`);
@@ -2076,21 +2059,19 @@ function callRows(g: Game, horde: Sim['horde'] | undefined): CallRow[] {
   const chief = take((x) => /calls the pack/.test(x.t));
   if (chief.length) rows.push({ key: 'chief', label: `${name(chief[0].actor)} →`, value: 'PACK', detail: chief.map((x) => x.t) });
 
-  // The Crypt: the Wight's cast, the Lich's Death Bolt and the Wraith's drain.
+  // The Crypt: the Wight's cast and the Lich's Death Bolt.
   const w = onField(g).find((e) => e.wight);
   if (w) {
-    const ls = take((x) => x.actor === w.id && /Raise Dead|Bone Shield/.test(x.t));
-    const cast = horde ? (ls.some((x) => /Raise Dead/.test(x.t)) ? 'raise' : ls.length ? 'shield' : null) : piles(g).length ? 'raise' : 'shield';
+    const ls = take((x) => x.actor === w.id && /Raise Dead/.test(x.t));
+    const cast = horde ? (ls.length ? 'raise' : null) : piles(g).length ? 'raise' : null;
     if (w.disabled) rows.push({ key: 'wight', label: `${w.name} is Disabled`, value: '—', detail: ['No cast and no Unholy Vigor this turn.'] });
     else if (cast)
       rows.push({
         key: 'wight',
         label: `${w.name} →`,
-        value: cast === 'raise' ? 'RAISE DEAD' : 'BONE SHIELD',
+        value: 'RAISE DEAD',
         detail: [
-          cast === 'raise'
-            ? 'Raise Dead: every bone pile rises now, at the HP it had before it crumbled.'
-            : 'Bone Shield: +2 Armor on the horde through your next possession (no bone piles to raise).',
+          'Raise Dead: every bone pile rises now, at the HP it had before it crumbled.',
           'Disable the Wight or take it down to stop it; it also adds 1 to the Ritual each turn.',
         ],
       });
@@ -2102,14 +2083,6 @@ function callRows(g: Game, horde: Sim['horde'] | undefined): CallRow[] {
       label: `${name(bolt[0].actor)} → Death Bolt`,
       value: val(bolt),
       detail: [...bolt.map((x) => x.t), 'Death Bolt ignores Armor and hits the lowest-HP hero, every other turn.'],
-    });
-  const drain = take((x) => /Drain:/.test(x.t));
-  if (drain.length)
-    rows.push({
-      key: 'drain',
-      label: `${name(drain[0].actor)} → Drain`,
-      value: 'DRAIN',
-      detail: [...drain.map((x) => x.t), 'It scores nothing, but leaves heroes low for the hits that follow.'],
     });
 
   // A turnover during your possession.
@@ -2195,8 +2168,6 @@ function statusChips(g: Game, e: Enemy) {
   if (e.intangible) out.push(e.solid ? { t: 'Solid', c: 'ball' } : { t: '👻 Intangible', c: 'cont' });
   if (e.undead !== undefined && e.kind !== 'goblin') out.push({ t: '💀 Restless', c: 'cont' });
   if (e.wight && !e.disabled) out.push({ t: '🧟 Unholy Vigor', c: 'cont' });
-  if (e.kind === 'phylactery' && skeletonsStand(g)) out.push({ t: '🛡 Shielded', c: 'cont' });
-  if (e.kind === 'lich' && phylacteryStands(g)) out.push({ t: '⚱️ Half damage', c: 'cont' });
   if (e.kind === 'grave') out.push({ t: 'Holy only', c: 'cont' });
   if (e.taunted) out.push({ t: 'Taunted', c: 'ball' });
   if (e.disabled) out.push({ t: 'Disabled', c: 'ball' });
@@ -2460,7 +2431,7 @@ const SHORT: Record<string, string> = {
 const SHORT_CRYPT: Record<string, string> = {
   shaman: 'Wight',
   hexer: 'Necro',
-  ogre: 'Giant',
+  ogre: 'Knight',
   cutthroat: 'Wraith',
   sharpshooter: 'Archer',
   lich: 'Lich',
@@ -3508,7 +3479,7 @@ function Guide(props: { onClose: () => void }) {
     ],
     [
       'Defenses',
-      'Taunt (the Ogre, or the Crypt’s Bone Giant): single-target hits must go to it, unless the Cleric’s Guiding Light guides the finisher past it. Armor: each hit deals less. Quick: the first hit on it each possession misses. Barrier (the Shaman’s cast on the horde’s turn, when the ram has its 4 goblins): a wall in front of the whole horde for your next possession. Aim at any enemy and the Barrier takes the hit instead; the first damaging move breaks it. War Drum (automatic): the ram hits +2 while the Shaman stands. Block (the Chieftain): the first hit on any enemy each possession is cancelled.',
+      'Taunt (the Ogre): single-target hits must go to it, unless the Cleric’s Guiding Light guides the finisher past it. Armor: each hit deals less. Quick: the first hit on it each possession misses. Barrier (the Shaman’s cast on the horde’s turn, when the ram has its 4 goblins): a wall in front of the whole horde for your next possession. Aim at any enemy and the Barrier takes the hit instead; the first damaging move breaks it. War Drum (automatic): the ram hits +2 while the Shaman stands. Block (the Chieftain): the first hit on any enemy each possession is cancelled.',
     ],
     [
       'Passes',

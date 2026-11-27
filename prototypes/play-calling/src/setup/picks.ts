@@ -10,7 +10,7 @@ import { computePool, seasonTier } from '../../../../src/engine/rating';
 import { playerGamesInWeek } from '../../../../src/engine/week';
 import { rules, tierIndex as mainTierIndex, type HeroClass } from '../../../../src/rules';
 import type { EnemyKind } from '../content';
-import { ROLE_OF } from '../engine';
+import { DEFAULT_TUNING, ROLE_OF } from '../engine';
 import { ENCOUNTER, SETUP_CLASSES, defRating, defTierOf, teamOf, touchesOf } from './buildWeek';
 
 export interface PickWeights {
@@ -77,10 +77,10 @@ export function hordeThreat(
   if (!list.length) return 0;
   const h = buildHorde(list, data, rules, encounter);
   const champs = h.champions.reduce((s, m) => s + (w.threat[ROLE_OF[m.kind]] ?? 0.8) * tierStep(m.tier ?? 'average'), 0);
-  // The Crypt raises 1 skeleton per 45 opposing points (the Goblin Horde, 1 goblin per 40).
+  // The Crypt raises 1 skeleton per DEFAULT_TUNING.skeletonPer opposing points (the Goblin Horde, 1 goblin per 40).
   const goblins = list.reduce((s, p) => {
     const t = teamOf(data, p.playerId, p.gameId);
-    return s + (encounter === 'crypt' ? Math.floor(t.pts / 45) : t.goblins);
+    return s + (encounter === 'crypt' ? Math.floor(t.pts / DEFAULT_TUNING.skeletonPer) : t.goblins);
   }, 0);
   return champs + w.boss * tierStep(h.warlord.tier ?? 'average') + w.goblin * goblins;
 }

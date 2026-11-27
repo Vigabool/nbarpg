@@ -42,8 +42,8 @@ export interface Tuning {
   ritualPer: number;
   /** The horde's bonus when the Ritual completes. */
   ritualFill: number;
-  /** The Wraith's drain on each hero, at Average tier (Great and Elite add 1). */
-  drain: number;
+  /** The Crypt raises 1 skeleton per this many opposing points. */
+  skeletonPer: number;
 }
 export const DEFAULT_TUNING: Tuning = {
   gateHp: 70,
@@ -58,10 +58,10 @@ export const DEFAULT_TUNING: Tuning = {
   championHp: 1.25,
   hordeHitPoints: 2,
   turnoverPoints: 2,
-  ritualMax: 28,
-  ritualPer: 4,
-  ritualFill: 6,
-  drain: 1,
+  ritualMax: 22,
+  ritualPer: 2,
+  ritualFill: 8,
+  skeletonPer: 40,
 };
 export type Difficulty = 'normal' | 'hard';
 
@@ -134,7 +134,7 @@ export interface Enemy {
   /** The Wraith: only spells and holy hits touch it, and the first one makes it solid for the possession. */
   intangible?: boolean;
   solid?: boolean;
-  /** The Wight: Unholy Vigor feeds the Ritual; it casts Raise Dead or Bone Shield. */
+  /** The Wight: Unholy Vigor feeds the Ritual; it casts Raise Dead. */
   wight?: boolean;
   /** The Lich after the Ritual raised it: Death Bolt every enemy turn. */
   enraged?: boolean;
@@ -222,8 +222,6 @@ export interface Game {
   encounter: Encounter;
   /** The Crypt's Ritual: fills by 1 per skeleton and bone pile each enemy turn; full, it raises the Lich. */
   ritual: { value: number; max: number; total: number; fills: number };
-  /** The Wight's Bone Shield: +2 Armor on the horde through the party's next possession. */
-  boneShield: boolean;
   /** The last quarter the open graves raised their skeletons. */
   graveQuarter: number;
 }
@@ -322,7 +320,7 @@ export function newGame(tuning: Tuning = DEFAULT_TUNING, difficulty: Difficulty 
       maxHp: Math.round(c.hp * mult * tuning.championHp),
       hp: Math.round(c.hp * mult * tuning.championHp),
       damage: Math.round(c.damage * mult * tuning.hordeDamage),
-      armor: kind === 'ogre' ? 3 : kind === 'chieftain' ? 2 : 0,
+      armor: kind === 'ogre' && !crypt ? 3 : kind === 'chieftain' ? 2 : 0,
       points: c.boss ? tuning.bossPoints : tuning.championPoints + (elite ? 2 : 0),
       boss: c.boss,
       onRam: false,
@@ -333,7 +331,7 @@ export function newGame(tuning: Tuning = DEFAULT_TUNING, difficulty: Difficulty 
       disabled: false,
       stripped: false,
       slowed: false,
-      taunts: kind === 'ogre',
+      taunts: kind === 'ogre' && !crypt,
       quick: (kind === 'cutthroat' && !crypt) || kind === 'sharpshooter',
       quickUsed: false,
       barrier: kind === 'shaman' && !crypt,
@@ -342,7 +340,8 @@ export function newGame(tuning: Tuning = DEFAULT_TUNING, difficulty: Difficulty 
       down: false,
       ...(crypt && kind === 'shaman' ? { wight: true } : {}),
       ...(crypt && kind === 'cutthroat' ? { intangible: true, solid: false } : {}),
-      ...(crypt && kind === 'sharpshooter' ? { undead: 1 } : {}),
+      // The Bone Knight (the rebounder's role in the Crypt) is a big skeleton: Restless, rising once.
+      ...(crypt && kind === 'ogre' ? { undead: 1 } : {}),
     } as Enemy;
   });
   // Quarter script: Shaman and Hexer open; the two weaker of the rest arrive in Q2; the strongest and the Chieftain in Q3.
@@ -353,7 +352,7 @@ export function newGame(tuning: Tuning = DEFAULT_TUNING, difficulty: Difficulty 
   for (const e of champs) if (e.boss) e.quarter = 3;
 
   // Goblins: 1 per 40 opposing points; the Crypt raises fewer, tougher dead (1 per 45).
-  const goblins = crypt ? week.teams.reduce((s, t) => s + Math.floor(t.pts / 45), 0) : week.teams.reduce((s, t) => s + t.goblins, 0);
+  const goblins = crypt ? week.teams.reduce((s, t) => s + Math.floor(t.pts / tuning.skeletonPer), 0) : week.teams.reduce((s, t) => s + t.goblins, 0);
   const q1 = Math.round(goblins * 0.3);
   const q2 = Math.round(goblins * 0.35);
   const enemies: Enemy[] = [...champs];
@@ -370,8 +369,7 @@ export function newGame(tuning: Tuning = DEFAULT_TUNING, difficulty: Difficulty 
     undead: undefined,
   });
   if (crypt) {
-    // The Phylactery arrives with the Lich; three open graves raise skeletons each quarter until consecrated.
-    enemies.push(object('phylactery', 3, 8, 0, 3));
+    // Three open graves raise skeletons each quarter until consecrated.
     for (let i = 0; i < 3; i++) enemies.push(object('grave', 1, 6, 0, 3));
   } else enemies.push(object('wagon', 2, 15, 2, 3));
 
@@ -409,7 +407,6 @@ export function newGame(tuning: Tuning = DEFAULT_TUNING, difficulty: Difficulty 
     barrierUp: false,
     encounter: enc,
     ritual: { value: 0, max: tuning.ritualMax, total: 0, fills: 0 },
-    boneShield: false,
     graveQuarter: 1,
   };
   arrive(g);
@@ -504,9 +501,8 @@ export function ritualGain(g: Game, feeders: number, boost = 0): number {
 }
 /** Skeletons and bone piles feeding the Ritual (pinned skeletons don't). */
 export const ritualFeeders = (g: Game) => pushing(g).length + piles(g).length;
-/** What the Wight will cast: Raise Dead with bone piles on the floor, otherwise Bone Shield. */
-export const wightCast = (g: Game): 'raise' | 'shield' | null => (wight(g) ? (piles(g).length ? 'raise' : 'shield') : null);
-export const phylacteryStands = (g: Game) => onField(g).some((e) => e.kind === 'phylactery');
+/** Whether the Wight will cast Raise Dead (it needs bone piles on the floor). */
+export const wightCast = (g: Game): 'raise' | null => (wight(g) && piles(g).length ? 'raise' : null);
 export const skeletonsStand = (g: Game) => onField(g).some((e) => e.kind === 'goblin');
 export const freeGoblins = (g: Game) => onField(g).filter((e) => e.kind === 'goblin' && !e.onRam);
 export const activeHeroes = (g: Game) => CLASSES.map((c) => g.heroes[c]).filter((h) => h.benched === 0 && h.hp > 0);
@@ -532,8 +528,7 @@ export function shamanCast(g: Game): 'pack' | 'barrier' | null {
 /** Whether the horde's Block is still up this possession. */
 export const blockUp = (g: Game) => !g.blockUsed && onField(g).some((e) => e.block);
 /** Everything that reduces a hit on this enemy. */
-export const armorOf = (g: Game, e: Enemy) =>
-  e.armor + (adjusting(g, 'lead') && isChampion(e) ? 1 : 0) + (g.boneShield && e.kind !== 'grave' && e.kind !== 'phylactery' ? 2 : 0);
+export const armorOf = (g: Game, e: Enemy) => e.armor + (adjusting(g, 'lead') && isChampion(e) ? 1 : 0);
 
 function starDoubled(g: Game, cls: Cls) {
   return adjusting(g, 'double') && g.adjustment?.star === cls;
@@ -687,13 +682,7 @@ function takedown(g: Game, e: Enemy, by: Cls, frames: Frame[], rec: boolean, pla
     e.prevMax = e.maxHp;
     e.maxHp = Math.max(2, Math.floor(e.maxHp / 2));
     e.onRam = false;
-    let text = `${e.name} crumbles into a bone pile (rises next possession with ${e.maxHp} HP)`;
-    const giant = onField(g).find((x) => x.kind === 'ogre');
-    if (giant && giant.hp < giant.maxHp) {
-      const healed = Math.min(2, giant.maxHp - giant.hp);
-      giant.hp += healed;
-      text += `; Bone Harvest heals the ${giant.name} ${healed}`;
-    }
+    const text = `${e.name} crumbles into a bone pile (rises next possession with ${e.maxHp} HP)`;
     if (rec) frames.push({ game: clone(g), text, side: 'info', actor: by, target: e.id, kind: 'ko' });
     return;
   }
@@ -918,10 +907,6 @@ function doStep(ctx: StepCtx, step: PlayStep, i: number, primaryId: string, pick
           note('only holy damage consecrates a grave');
           return -1;
         }
-        if (e.kind === 'phylactery' && m.targets !== 'all' && skeletonsStand(g)) {
-          note('the skeletons shield the Phylactery');
-          return -1;
-        }
         if (e.intangible && !e.solid) {
           if (!spell && !holy) {
             note(`passes through the ${short(e)}`);
@@ -955,10 +940,6 @@ function doStep(ctx: StepCtx, step: PlayStep, i: number, primaryId: string, pick
       if (m.doubleVsShaken && (e.taunted || e.disabled)) d *= 2;
       if (buff.crit) d *= 1.5;
       if (!pierce) d -= armorOf(g, e);
-      if (crypt && e.kind === 'lich' && phylacteryStands(g)) {
-        d /= 2;
-        note('the Phylactery halves it');
-      }
       const dealt = Math.max(0, Math.min(e.hp, Math.round(d)));
       e.hp -= dealt;
       if (crypt) e.pureHit = fire || holy;
@@ -1346,8 +1327,6 @@ function summon(g: Game, n: number, frames: Frame[], by: Enemy) {
 function enemyTurn(g: Game, inPlay: Set<Cls>, defense: Defense, frames: Frame[]) {
   const off = new Set(defenders(g, inPlay));
   g.blocked = false;
-  // Bone Shield lasted through the party's possession.
-  g.boneShield = false;
   // Protect, Close Out, Ward and Strip the Ball happen first.
   if (off.has('warrior') && defense.protect && defense.protect !== 'gate') {
     g.heroes[defense.protect].armor += Math.round(4 * tm(g.heroes.warrior.defTier));
@@ -1399,7 +1378,7 @@ function enemyTurn(g: Game, inPlay: Set<Cls>, defense: Defense, frames: Frame[])
   } else if (shaman?.disabled)
     frames.push({ game: clone(g), text: `${shaman.name} is Disabled: no cast and no War Drum this turn.`, side: 'party', actor: shaman.id });
 
-  // The Wight casts: Raise Dead with bone piles on the floor, otherwise Bone Shield.
+  // The Wight casts Raise Dead when there are bone piles to raise.
   const w = onField(g).find((e) => e.wight);
   if (w && w.disabled) frames.push({ game: clone(g), text: `${w.name} is Disabled: no cast and no Unholy Vigor this turn.`, side: 'party', actor: w.id });
   else if (w) {
@@ -1420,9 +1399,6 @@ function enemyTurn(g: Game, inPlay: Set<Cls>, defense: Defense, frames: Frame[])
         side: 'horde',
         actor: w.id,
       });
-    } else {
-      g.boneShield = true;
-      frames.push({ game: clone(g), text: `${w.name} · Bone Shield: the horde has +2 Armor through your next possession.`, side: 'horde', actor: w.id });
     }
   }
 
@@ -1535,27 +1511,6 @@ function enemyTurn(g: Game, inPlay: Set<Cls>, defense: Defense, frames: Frame[])
     if (target && !lich.disabled && g.chieftainTurns % 2 === 0)
       hordeHit(g, lich, target.cls, Math.round(lich.damage * 0.5), defense, off, frames, 'Death Bolt', { ignoreArmor: true });
   }
-  // The Wraith drains every hero (never the last HP), ignoring Armor, and heals itself by half of it.
-  const wraith = onField(g).find((e) => e.intangible && !e.disabled);
-  if (wraith) {
-    const per = g.tuning.drain + (tierIndex(wraith.tier ?? 'average') >= tierIndex('great') ? 1 : 0);
-    let total = 0;
-    for (const h of activeHeroes(g)) {
-      const d = Math.min(per, h.hp - 1);
-      h.hp -= d;
-      total += d;
-    }
-    const healed = Math.min(Math.floor(total / 2), wraith.maxHp - wraith.hp);
-    wraith.hp += healed;
-    if (total)
-      frames.push({
-        game: clone(g),
-        text: `${wraith.name} · Drain: ${total} HP across the party (never the last), and it heals ${healed}.`,
-        side: 'horde',
-        actor: wraith.id,
-      });
-  }
-
   // The Crypt's Ritual: 1 per skeleton and bone pile (pinned skeletons don't feed it), +1 for the Wight's Unholy Vigor.
   if (g.encounter === 'crypt') ritualTurn(g, off, defense, ramBoost, frames);
   // The ram.
@@ -1630,19 +1585,7 @@ function ritualTurn(g: Game, off: Set<Cls>, defense: Defense, boost: number, fra
     const lich = g.enemies.find((e) => e.kind === 'lich');
     if (lich && !lich.arrived) {
       lich.arrived = true;
-      lich.enraged = true;
-      const ph = g.enemies.find((e) => e.kind === 'phylactery' && !e.arrived);
-      if (ph) ph.arrived = true;
-      text += `. The Ritual completes: +${g.tuning.ritualFill}, and the Lich rises early, enraged`;
-    } else if (lich && lich.hp <= 0) {
-      lich.hp = Math.ceil(lich.maxHp / 2);
-      lich.down = false;
-      lich.enraged = true;
-      text += `. The Ritual completes: +${g.tuning.ritualFill}, and the Lich rises again at half HP, enraged`;
-    } else if (lich) {
-      lich.hp = lich.maxHp;
-      lich.enraged = true;
-      text += `. The Ritual completes: +${g.tuning.ritualFill}, and the Lich is restored, enraged`;
+      text += `. The Ritual completes: +${g.tuning.ritualFill}, and the Lich rises early`;
     } else text += `. The Ritual completes: +${g.tuning.ritualFill}`;
   }
   g.score.horde += pts;

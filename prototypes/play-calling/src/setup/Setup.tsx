@@ -19,7 +19,7 @@ import { encounterIds, encounterOf } from '../../../../src/engine/encounter';
 import { teamName } from '../../../../src/data/teams';
 import { rules, tierIndex, type HeroClass } from '../../../../src/rules';
 import { CLASS_INFO, enemyInfo, type Cls, type Encounter, type EnemyKind } from '../content';
-import { ROLE_OF, ramDamageFromFg, type Difficulty } from '../engine';
+import { DEFAULT_TUNING, ROLE_OF, ramDamageFromFg, type Difficulty } from '../engine';
 import { Rich } from '../terms';
 import { mostTouches, smartPicks, suggestHeroes } from './picks';
 import { PICK_WEIGHTS } from './picks';
@@ -409,7 +409,7 @@ export function EncounterScreen(props: {
                 {e === 'crypt' ? (
                   <>
                     <span className="small">
-                      Boss: {enemyInfo('lich', e).icon} <strong>Lich</strong> and its ⚱️ Phylactery · the Ritual and three open graves
+                      Boss: {enemyInfo('lich', e).icon} <strong>Lich</strong> · the Ritual and three open graves
                     </span>
                     <span className="small muted">
                       <Rich>
@@ -592,7 +592,7 @@ export function GamesScreen(props: { state: SetupState; onChange: (s: SetupState
   const picks = playing.filter((c) => state.gamePicks[c]).map((c) => ({ heroClass: c, playerId: state.slots[c]!, gameId: state.gamePicks[c]! }));
   const crypt = state.encounter === 'crypt';
   const enc = state.encounter as Encounter;
-  const minion = (pts: number, goblinsAt40: number) => (crypt ? Math.floor(pts / 45) : goblinsAt40);
+  const minion = (pts: number, goblinsAt40: number) => (crypt ? Math.floor(pts / DEFAULT_TUNING.skeletonPer) : goblinsAt40);
   const horde = picks.length ? buildHorde(picks, full, rules, state.encounter) : null;
   const teams = picks.map((p) => teamOf(full, p.playerId, p.gameId));
   const goblins = teams.reduce((s, t) => s + minion(t.pts, t.goblins), 0);
@@ -691,7 +691,8 @@ export function GamesScreen(props: { state: SetupState; onChange: (s: SetupState
           <span className="small">
             {crypt ? (
               <>
-                💀 {goblins} skeletons (1 per 45 opposing points), plus one a quarter from each open grave · 🕯 the Ritual grows by 1 per skeleton and bone pile
+                💀 {goblins} skeletons (1 per {DEFAULT_TUNING.skeletonPer} opposing points), plus one a quarter from each open grave · 🕯 the Ritual grows by 1
+                per skeleton and bone pile
               </>
             ) : (
               <>
