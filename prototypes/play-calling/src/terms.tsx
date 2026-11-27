@@ -6,7 +6,10 @@ export const TERMS: Record<string, { name: string; def: string }> = {
   sure: { name: 'Sure', def: 'Can’t be evaded by Quick or cancelled by Block. As a buff, the finisher’s hits are Sure.' },
   crit: { name: 'Crit', def: 'A buff for the finisher: +50% damage on its hits.' },
   pierce: { name: 'Pierce', def: 'Ignores Armor. As a buff, the finisher’s hits Pierce.' },
-  guided: { name: 'Guided', def: 'A buff from the Cleric’s Guiding Light: the finisher ignores Taunt and hits whoever you aim at.' },
+  guided: {
+    name: 'Guided',
+    def: 'A buff from the Cleric’s Guiding Light: the finisher ignores Taunt and hits whoever you aim at. In the Crypt it is Blessed too: its damage is holy.',
+  },
   armor: {
     name: 'Armor',
     def: 'Each hit on this target deals that much less. Pierce ignores it. As a buff, Armor protects the finisher through the enemy turn.',
@@ -55,7 +58,7 @@ export const TERMS: Record<string, { name: string; def: string }> = {
   },
   blessed: {
     name: 'Blessed',
-    def: 'In the Crypt, a finisher the Cleric helped (any Cleric pass) deals holy damage: it destroys the dead for good, touches the Wraith, and consecrates graves. The Cleric’s own hits are holy too.',
+    def: 'In the Crypt, a finisher the Cleric’s Guiding Light passed to deals holy damage (as well as being Guided): it destroys the dead for good, touches the Wraith, and consecrates graves. The Cleric’s own hits are holy too.',
   },
   holy: {
     name: 'Holy damage',

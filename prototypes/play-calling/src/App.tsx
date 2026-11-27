@@ -51,6 +51,7 @@ import {
   piles,
   ritualGain,
   ritualFeeders,
+  graveForecast,
   shamanCast,
   warDrum,
   quarterOf,
@@ -128,7 +129,7 @@ interface Saved {
 }
 const KEY = 'play-calling-prototype-v1';
 /** Bump when DEFAULT_TUNING changes, so players' saved tuning (which stores every value) picks up the new defaults. */
-const TUNING_VERSION = 3;
+const TUNING_VERSION = 4;
 function load(): Saved {
   try {
     return JSON.parse(localStorage.getItem(KEY) ?? '{}') as Saved;
@@ -982,18 +983,21 @@ function simulateBuild(g: Game, slots: (BuildStep | null)[], defense?: Defense):
           ? `No bucket: ${g.encounter === 'crypt' ? 'skeletons' : 'goblins'} only score their takedowns.`
           : target?.kind === 'wagon'
             ? 'No bucket: the Loot wagon is treasure, not a Champion. Breaking it scores 3 and 5 gold.'
-            : 'No bucket: the finisher doesn’t get damage through.',
+            : target?.kind === 'grave'
+              ? 'No bucket for a grave: consecrating it scores 3.'
+              : 'No bucket: the finisher doesn’t get damage through.',
       ok: false,
     });
   }
   // The Crypt: which kills stick (fire or Blessed) and which leave bone piles.
   if (g.encounter === 'crypt') {
+    if (fin && buffs.guided) notes.push({ t: 'Blessed (Guiding Light): the finisher’s damage is holy.', ok: true });
     const crumbled = piles(l.ctx.g).length - piles(g).length;
     const destroyed = l.ctx.g.enemies.filter((e) => e.undead !== undefined && e.down && !e.pile && !g.enemies.find((x) => x.id === e.id)?.down).length;
     if (destroyed > 0) notes.push({ t: `Destroys ${destroyed} of the dead for good.`, ok: true });
     if (crumbled > 0)
       notes.push({
-        t: `${crumbled} weapon kill${crumbled > 1 ? 's leave bone piles' : ' leaves a bone pile'}: ${crumbled > 1 ? 'they rise' : 'it rises'} next possession. Fire or a Blessed finisher (a Cleric pass) ends them.`,
+        t: `${crumbled} weapon kill${crumbled > 1 ? 's leave bone piles' : ' leaves a bone pile'}: ${crumbled > 1 ? 'they rise' : 'it rises'} next possession. Fire or a Blessed finisher (Guiding Light passed to it) ends them.`,
         ok: false,
       });
   }
@@ -1996,6 +2000,11 @@ function callRows(g: Game, horde: Sim['horde'] | undefined): CallRow[] {
         const saved = (horde.ramNoStrip ?? scored) - scored;
         ramRow.detail.push(`The Rogue is pinning a skeleton away from it${saved > 0 ? `, saving ${saved} point${saved === 1 ? '' : 's'}` : ''}.`);
       }
+      const f = graveForecast(g);
+      if (f && f.graves + f.wave > 0)
+        ramRow.detail.push(
+          `When Q${f.quarter} starts${f.possessionsLeft === 1 ? ' (after this possession)' : ''}, ${f.graves ? `the open graves add ${f.graves} skeleton${f.graves > 1 ? 's' : ''}` : ''}${f.graves && f.wave ? ' and ' : ''}${f.wave ? `${f.wave} more arrive` : ''}: the Ritual will grow faster.`,
+        );
       ramRow.detail.push('Destroying the dead for good sets it back 1; the Necromancer, 3.');
     }
   } else if (g.gate.breached) ramRow.detail.push('The gate is down: every goblin on the field pillages for 1 a turn.', ...ramLines.map((x) => x.t));
@@ -2076,6 +2085,18 @@ function callRows(g: Game, horde: Sim['horde'] | undefined): CallRow[] {
         ],
       });
   }
+  // The open graves' next skeletons.
+  const gf = graveForecast(g);
+  if (gf && gf.graves > 0)
+    rows.push({
+      key: 'graves',
+      label: `🪦 Graves → Q${gf.quarter}`,
+      value: `+${gf.graves} 💀`,
+      detail: [
+        `${gf.possessionsLeft === 1 ? 'After this possession' : `In ${gf.possessionsLeft} possessions`}, when Q${gf.quarter} starts, each open grave raises a skeleton: ${gf.graves} more feeding the Ritual 1 a turn each.`,
+        'Consecrate a grave with holy damage (a finisher Guiding Light passed to, or a Cleric hit) to close it for good: +3.',
+      ],
+    });
   const bolt = take((x) => /Death Bolt/.test(x.t));
   if (bolt.length)
     rows.push({
@@ -2299,7 +2320,10 @@ function Board(props: {
                 {e.player
                   ? `${e.player} · ${tierLabel(e.tier!)}`
                   : e.kind === 'grave'
-                    ? 'Raises a skeleton a quarter'
+                    ? (() => {
+                        const f = graveForecast(g);
+                        return f ? `Raises a skeleton in Q${f.quarter}` : 'Done raising';
+                      })()
                     : e.kind === 'phylactery'
                       ? 'The Lich’s soul jar'
                       : 'Treasure'}
@@ -3501,7 +3525,7 @@ function Guide(props: { onClose: () => void }) {
     ],
     [
       'The Crypt',
-      'The second encounter. Its objective is the Ritual instead of the ram: it grows with every skeleton and bone pile, and raises the Lich when it completes. Weapon kills leave bone piles that rise again; fire or a Blessed finisher (any Cleric pass) destroys the dead for good. The Wraith is Intangible, and three open graves raise skeletons until consecrated.',
+      'The second encounter. Its objective is the Ritual instead of the ram: it grows with every skeleton and bone pile, and raises the Lich when it completes. Weapon kills leave bone piles that rise again; fire or a Blessed finisher (the Cleric’s Guiding Light passed to it) destroys the dead for good. The Wraith is Intangible, and three open graves raise skeletons until consecrated.',
     ],
     ['Timeouts', 'Two per game. A timeout takes back your last possession.'],
     ['Halftime', 'A box score, the horde’s adjustment, and up to two changes to your playbook. Fallen heroes return.'],

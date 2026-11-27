@@ -61,7 +61,7 @@ export const DEFAULT_TUNING: Tuning = {
   ritualMax: 22,
   ritualPer: 2,
   ritualFill: 8,
-  skeletonPer: 40,
+  skeletonPer: 37,
 };
 export type Difficulty = 'normal' | 'hard';
 
@@ -504,6 +504,19 @@ export const ritualFeeders = (g: Game) => pushing(g).length + piles(g).length;
 /** Whether the Wight will cast Raise Dead (it needs bone piles on the floor). */
 export const wightCast = (g: Game): 'raise' | null => (wight(g) && piles(g).length ? 'raise' : null);
 export const skeletonsStand = (g: Game) => onField(g).some((e) => e.kind === 'goblin');
+/**
+ * The Crypt's next quarter: the skeletons the open graves will raise and the wave that arrives with them,
+ * and how many party possessions are left before it starts (1 = after this one).
+ */
+export function graveForecast(g: Game): { quarter: number; graves: number; wave: number; possessionsLeft: number } | null {
+  if (g.encounter !== 'crypt') return null;
+  const quarter = quarterOf(g.possession) + 1;
+  if (quarter > 4) return null;
+  const graves = onField(g).filter((e) => e.kind === 'grave').length;
+  const wave = g.enemies.filter((e) => e.kind === 'goblin' && !e.arrived && e.quarter === quarter).length;
+  if (!graves && !wave) return null;
+  return { quarter, graves, wave, possessionsLeft: 3 - (g.possession % 3) };
+}
 export const freeGoblins = (g: Game) => onField(g).filter((e) => e.kind === 'goblin' && !e.onRam);
 export const activeHeroes = (g: Game) => CLASSES.map((c) => g.heroes[c]).filter((h) => h.benched === 0 && h.hp > 0);
 const isChampion = (e: Enemy) => e.kind !== 'goblin' && e.kind !== 'wagon' && e.kind !== 'grave' && e.kind !== 'phylactery';
@@ -862,10 +875,11 @@ function doStep(ctx: StepCtx, step: PlayStep, i: number, primaryId: string, pick
     const deals = (m.damage ?? 0) > 0;
     const extra = buff.split ? 1 : 0;
     const short = (e: Enemy) => e.name.replace('Goblin ', '');
-    // The Crypt: fire (Fireball, Meteor) and holy damage (a Cleric hit, or a finisher the Cleric helped: Blessed) destroy the dead for good.
+    // The Crypt: fire (Fireball, Meteor) and holy damage (a Cleric hit, or a Blessed finisher: Guiding Light passed to it) destroy the dead for good.
     const crypt = g.encounter === 'crypt';
     const fire = m.id === 'fireball' || m.id === 'meteor';
-    const holy = crypt && deals && (h.cls === 'cleric' || (fin && buff.helpers.includes('cleric')));
+    // Holy: a Cleric hit, or a finisher Guiding Light passed to (Guided, and in the Crypt, Blessed).
+    const holy = crypt && deals && (h.cls === 'cleric' || (fin && buff.guided));
     const spell = h.cls === 'wizard';
     if (holy && h.cls !== 'cleric') parts.push('Blessed');
 

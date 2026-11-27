@@ -413,8 +413,8 @@ export function EncounterScreen(props: {
                     </span>
                     <span className="small muted">
                       <Rich>
-                        Restless Dead: weapon kills leave bone piles that rise again; fire or a Blessed finisher (any Cleric pass) destroys them for good. The
-                        Ritual grows with every skeleton and bone pile; when it completes, the Lich rises. The Wraith is Intangible.
+                        Restless Dead: weapon kills leave bone piles that rise again; fire or a Blessed finisher (the Cleric’s Guiding Light passed to it)
+                        destroys them for good. The Ritual grows with every skeleton and bone pile; when it completes, the Lich rises. The Wraith is Intangible.
                       </Rich>
                     </span>
                   </>

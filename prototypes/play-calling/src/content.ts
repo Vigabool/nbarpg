@@ -174,7 +174,7 @@ export const MOVES: Move[] = [
     targets: 'none',
     enabler: { kind: 'guided' },
     action: 'lights a lane through the defense',
-    enablerText: 'Guided (ignores Taunt)',
+    enablerText: 'Guided (ignores Taunt; in the Crypt, Blessed too)',
     note: 'The answer to a Taunting big: the finisher hits whoever you aim at.',
   }),
   M({
