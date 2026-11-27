@@ -224,6 +224,8 @@ export interface Game {
   ritual: { value: number; max: number; total: number; fills: number };
   /** The last quarter the open graves raised their skeletons. */
   graveQuarter: number;
+  /** Sanctuary: enemy turns left with the horde's objective frozen and every hero at Armor +3. */
+  sanctuary: number;
 }
 
 export interface Frame {
@@ -408,6 +410,7 @@ export function newGame(tuning: Tuning = DEFAULT_TUNING, difficulty: Difficulty 
     encounter: enc,
     ritual: { value: 0, max: tuning.ritualMax, total: 0, fills: 0 },
     graveQuarter: 1,
+    sanctuary: 0,
   };
   arrive(g);
   g.call = chooseCall(g);
@@ -832,6 +835,10 @@ function doStep(ctx: StepCtx, step: PlayStep, i: number, primaryId: string, pick
       parts.push(`heals the party ${total}`);
       break;
     }
+    case 'sanctuary':
+      g.sanctuary = 2;
+      parts.push('the horde’s objective is frozen and every hero has Armor +3, this enemy turn and the next');
+      break;
     case 'lastStand':
       h.lastStand = true;
       parts.push("can't fall for the rest of the game");
@@ -930,7 +937,8 @@ function doStep(ctx: StepCtx, step: PlayStep, i: number, primaryId: string, pick
           note(`the ${short(e)} turns solid`);
         }
       }
-      if (!sure) {
+      // Backstab is Sure against a target that's Taunted (looking at the Warrior) or Disabled.
+      if (!sure && !(m.doubleVsShaken && (e.taunted || e.disabled))) {
         if (starDoubled(g, h.cls) && !g.starBlockUsed) {
           g.starBlockUsed = true;
           note('the double-team smothers the first hit');
@@ -950,8 +958,10 @@ function doStep(ctx: StepCtx, step: PlayStep, i: number, primaryId: string, pick
       }
       e.quickUsed = true;
       let d = base * mult;
+      // The Crypt: holy damage is ×1.5 against the dead.
+      if (crypt && holy && e.undead !== undefined) d *= 1.5;
       if (e.exposed > 0) d += 3;
-      if (m.doubleVsShaken && (e.taunted || e.disabled)) d *= 2;
+      if (m.doubleVsShaken && (e.taunted || e.disabled)) d *= 2.5;
       if (buff.crit) d *= 1.5;
       if (!pierce) d -= armorOf(g, e);
       const dealt = Math.max(0, Math.min(e.hp, Math.round(d)));
@@ -996,6 +1006,26 @@ function doStep(ctx: StepCtx, step: PlayStep, i: number, primaryId: string, pick
       stopped = landed === 0;
     } else if (deals) {
       const res = targets.map((x) => ({ x, d: hit(x, m.damage!) }));
+      // The Crypt: a Smite that destroys one of the dead arcs to the next skeleton, up to 3 kills.
+      if (crypt && m.id === 'smite') {
+        let kills = res.filter((r) => r.x.undead !== undefined && r.x.hp <= 0).length;
+        let arcs = 0;
+        while (kills > 0 && kills < 3) {
+          const next = onField(g).find((e) => e.kind === 'goblin' && !res.some((r) => r.x.id === e.id));
+          if (!next) break;
+          const d = hit(next, m.damage!);
+          res.push({ x: next, d });
+          arcs += 1;
+          if (next.hp > 0) break;
+          kills += 1;
+        }
+        if (arcs) note(`Smite arcs to ${arcs} more skeleton${arcs > 1 ? 's' : ''}`);
+      }
+      if (m.effect === 'markAll') {
+        const marked = res.filter((r) => r.d >= 0 && r.x.hp > 0);
+        for (const r of marked) r.x.exposed = 2;
+        if (marked.length) note(`${marked.length > 1 ? 'both' : 'the target'} Marked`);
+      }
       connected = res.some((r) => r.x.id === primary.id && r.d >= 0);
       const landed = res.filter((r) => r.d >= 0);
       const dmg = landed.reduce((s, r) => s + r.d, 0);
@@ -1341,6 +1371,8 @@ function summon(g: Game, n: number, frames: Frame[], by: Enemy) {
 function enemyTurn(g: Game, inPlay: Set<Cls>, defense: Defense, frames: Frame[]) {
   const off = new Set(defenders(g, inPlay));
   g.blocked = false;
+  // Sanctuary: every hero has Armor +3 while it holds.
+  if (g.sanctuary > 0) for (const h of activeHeroes(g)) h.armor += 3;
   // Protect, Close Out, Ward and Strip the Ball happen first.
   if (off.has('warrior') && defense.protect && defense.protect !== 'gate') {
     g.heroes[defense.protect].armor += Math.round(4 * tm(g.heroes.warrior.defTier));
@@ -1525,8 +1557,16 @@ function enemyTurn(g: Game, inPlay: Set<Cls>, defense: Defense, frames: Frame[])
     if (target && !lich.disabled && g.chieftainTurns % 2 === 0)
       hordeHit(g, lich, target.cls, Math.round(lich.damage * 0.5), defense, off, frames, 'Death Bolt', { ignoreArmor: true });
   }
+  // Sanctuary freezes the horde's objective: no ram, no pillage, no Ritual.
+  if (g.sanctuary > 0)
+    frames.push({
+      game: clone(g),
+      text: `Sanctuary holds: ${g.encounter === 'crypt' ? 'the Ritual is' : g.gate.breached ? 'the pillage is' : 'the ram is'} frozen this turn.`,
+      side: 'party',
+      target: 'gate',
+    });
   // The Crypt's Ritual: 1 per skeleton and bone pile (pinned skeletons don't feed it), +1 for the Wight's Unholy Vigor.
-  if (g.encounter === 'crypt') ritualTurn(g, off, defense, ramBoost, frames);
+  else if (g.encounter === 'crypt') ritualTurn(g, off, defense, ramBoost, frames);
   // The ram.
   else if (!g.gate.breached) {
     const p = pushing(g);
@@ -1626,6 +1666,7 @@ function endPossession(g: Game, frames: Frame[]) {
     e.onRam = e.kind === 'goblin';
   }
   if (rising.length) frames.push({ game: clone(g), text: `${rising.length} bone pile${rising.length > 1 ? 's reassemble' : ' reassembles'}.`, side: 'info' });
+  if (g.sanctuary > 0) g.sanctuary -= 1;
   g.blockUsed = false;
   g.starBlockUsed = false;
   for (const c of CLASSES) {

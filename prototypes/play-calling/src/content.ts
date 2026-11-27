@@ -40,7 +40,21 @@ export const CLASS_INFO: Record<Cls, { name: string; role: string; icon: string;
 export type Enabler = { kind: 'armor'; amount: number } | { kind: 'sure' } | { kind: 'crit' } | { kind: 'pierce' } | { kind: 'split' } | { kind: 'guided' };
 
 export type Effect =
-  'taunt' | 'expose' | 'mark' | 'strip' | 'slow' | 'partyArmor' | 'healAlly' | 'healParty' | 'tauntAll' | 'lastStand' | 'shadow' | 'revive' | 'assassinate';
+  | 'taunt'
+  | 'expose'
+  | 'mark'
+  | 'markAll'
+  | 'strip'
+  | 'slow'
+  | 'partyArmor'
+  | 'healAlly'
+  | 'healParty'
+  | 'tauntAll'
+  | 'lastStand'
+  | 'shadow'
+  | 'revive'
+  | 'assassinate'
+  | 'sanctuary';
 
 export interface Move {
   id: string;
@@ -188,18 +202,18 @@ export const MOVES: Move[] = [
     effect: 'healAlly',
     amount: 5,
     action: '9 damage that Pierces, and heals the most injured hero 5',
-    note: 'With Split it hits a second enemy and heals a second hero.',
+    note: 'With Split it hits a second enemy and heals a second hero. In the Crypt it is holy: ×1.5 against the dead, and each kill arcs to the next skeleton (up to 3 kills).',
   }),
   M({
     id: 'sanctuary',
     cls: 'cleric',
     name: 'Sanctuary',
     kind: 'signature',
-    damage: 6,
+    damage: 8,
     targets: 'primary',
-    effect: 'healParty',
-    amount: 15,
-    action: '6 damage, and every hero heals 15',
+    effect: 'sanctuary',
+    action: '8 damage; for this and the next enemy turn the horde’s objective is frozen and every hero has Armor +3',
+    note: 'Two possessions to go all in on offense: put your defenders in the play.',
   }),
   M({
     id: 'divine',
@@ -241,10 +255,11 @@ export const MOVES: Move[] = [
     cls: 'rogue',
     name: 'Backstab',
     kind: 'finisher',
-    damage: 10,
+    damage: 9,
     targets: 'primary',
     doubleVsShaken: true,
-    action: '10 damage to one enemy, doubled if it’s Taunted or Disabled',
+    action: '9 damage to one enemy; ×2.5 and Sure if it’s Taunted or Disabled',
+    note: 'The Warrior’s Provoke (or the Rogue’s Strip) sets it up.',
   }),
   M({
     id: 'flurry',
@@ -364,24 +379,35 @@ export const MOVES: Move[] = [
     cls: 'ranger',
     name: 'Double Strike',
     kind: 'finisher',
-    damage: 6,
-    targets: 'primary',
-    hits: 2,
-    action: 'two hits of 6 (the second moves on if the first takes it down)',
+    damage: 10,
+    targets: 'multi',
+    count: 2,
+    effect: 'markAll',
+    action: '10 damage to each of two enemies, and both are Marked (Exposed through the next possession too)',
+    note: 'Sets up two takedowns for the next possession.',
   }),
-  M({ id: 'aimed', cls: 'ranger', name: 'Aimed Shot', kind: 'finisher', damage: 11, targets: 'primary', pierce: true, action: '11 damage that Pierces' }),
+  M({
+    id: 'aimed',
+    cls: 'ranger',
+    name: 'Aimed Shot',
+    kind: 'finisher',
+    damage: 18,
+    targets: 'primary',
+    pierce: true,
+    action: '18 damage that Pierces: the biggest single hit',
+  }),
   M({ id: 'volley', cls: 'ranger', name: 'Volley', kind: 'signature', damage: 6, targets: 'all', pierce: true, action: '6 damage to every enemy, Piercing' }),
   M({
     id: 'deadeye',
     cls: 'ranger',
     name: 'Deadeye',
     kind: 'legendary',
-    damage: 11,
+    damage: 18,
     targets: 'multi',
     count: 3,
     pierce: true,
     sure: true,
-    action: 'three Aimed Shots at three enemies, Sure',
+    action: 'three Aimed Shots (18, Piercing) at three enemies, Sure',
   }),
 ];
 export const MOVE: Record<string, Move> = Object.fromEntries(MOVES.map((m) => [m.id, m]));
@@ -501,6 +527,86 @@ export const TEMPLATES: Play[] = [
     ],
     tags: ['vs a big', 'vs the dead'],
     blurb: 'Guiding Light takes the Aimed Shot past any Taunt; in the Crypt it is Blessed, so what it kills stays dead.',
+  },
+  {
+    id: 'double-team',
+    name: 'Double Team',
+    steps: [
+      { cls: 'warrior', move: 'screen' },
+      { cls: 'ranger', move: 'doubleStrike' },
+    ],
+    tags: ['vs Champions', 'set up takedowns'],
+    blurb: 'Screen makes Double Strike Sure through Quick and Block; it hits two Champions and Marks both for next possession’s takedowns.',
+  },
+  {
+    id: 'twin-smite',
+    name: 'Twin Smite',
+    steps: [
+      { cls: 'ranger', move: 'hobble' },
+      { cls: 'cleric', move: 'smite' },
+    ],
+    tags: ['vs the dead', 'heal'],
+    blurb: 'Hobble Splits the Smite onto a second target and heals a second hero; in the Crypt each Smite kill arcs to the next skeleton.',
+  },
+  {
+    id: 'holy-flurry',
+    name: 'Holy Flurry',
+    steps: [
+      { cls: 'cleric', move: 'guide' },
+      { cls: 'rogue', move: 'flurry' },
+    ],
+    tags: ['vs the dead', 'vs a swarm'],
+    blurb: 'Guiding Light Blesses the Flurry: in the Crypt every hit is holy, so the skeletons it kills stay down.',
+  },
+];
+
+/**
+ * The plans each encounter should support: a playbook that commits to one way to win. Each uses all five
+ * heroes' touches (a book that leaves a hero out runs dry and falls back on Isos). Picked from a search of
+ * every four-play book (scripts/books.ts) and tested with the simulator (STRATEGY=<id>); see docs/concept-play-calling.md.
+ */
+export const PLANS: { id: string; encounter: Encounter; name: string; idea: string; playbook: string[] }[] = [
+  {
+    id: 'gh-ram',
+    encounter: 'goblin-horde',
+    name: 'Clear the Ram',
+    idea: 'No Critical Taunt: Fireball starves the ram crew, Strip and Lightning take the Champions, Smite heals.',
+    playbook: ['kick-out', 'shut-it-down', 'regroup', 'twin-smite'],
+  },
+  {
+    id: 'gh-hunt',
+    encounter: 'goblin-horde',
+    name: 'Hunt Champions',
+    idea: 'Critical Taunt and Double Team race takedowns; Kick Out keeps just enough of the crew off the ram.',
+    playbook: ['critical-taunt', 'kick-out', 'shut-it-down', 'double-team'],
+  },
+  {
+    id: 'gh-lockdown',
+    encounter: 'goblin-horde',
+    name: 'Lockdown',
+    idea: 'The Warrior and Rogue never touch the ball: they defend every turn.',
+    playbook: ['kick-out', 'frost-bolt', 'light-the-way', 'twin-smite'],
+  },
+  {
+    id: 'cr-fire',
+    encounter: 'crypt',
+    name: 'Fire Volume',
+    idea: 'The shooter carries it: Fireball and Flurry keep the Ritual starved, Critical Taunt takes the Champions.',
+    playbook: ['critical-taunt', 'kick-out', 'shut-it-down', 'spread-the-floor'],
+  },
+  {
+    id: 'cr-holy',
+    encounter: 'crypt',
+    name: 'Holy Chain',
+    idea: 'The Cleric carries it: Smite arcs and Blessed Flurries make the dead stay down. No Fireball.',
+    playbook: ['critical-taunt', 'shut-it-down', 'twin-smite', 'holy-flurry'],
+  },
+  {
+    id: 'cr-champs',
+    encounter: 'crypt',
+    name: 'Champion Race',
+    idea: 'Double Team and Pick and Pop pile damage on the Champions; one Fireball play keeps the Ritual in reach.',
+    playbook: ['critical-taunt', 'kick-out', 'pick-and-pop', 'double-team'],
   },
 ];
 export const DEFAULT_PLAYBOOK = ['critical-taunt', 'kick-out', 'frost-bolt', 'spread-the-floor'];

@@ -1984,7 +1984,8 @@ function callRows(g: Game, horde: Sim['horde'] | undefined): CallRow[] {
     value: val(ramLines),
     detail: [],
   };
-  if (crypt) {
+  if (ramLines.some((x) => /Sanctuary holds/.test(x.t))) ramRow.detail.push('Sanctuary holds: the horde’s objective is frozen this turn.');
+  else if (crypt) {
     const grow = ramLines.find((x) => /Ritual grows/.test(x.t));
     if (!horde) ramRow.detail.push('Each skeleton and bone pile adds 1 to the Ritual each turn, and the Wight 1 more.');
     else if (!grow) ramRow.detail.push('Nothing feeds the Ritual this turn.');
@@ -2364,6 +2365,7 @@ function Board(props: {
             <strong>🕯 Ritual</strong>
             <span className="small muted">
               {(() => {
+                if (g.sanctuary > 0) return 'frozen by Sanctuary';
                 const d = props.ram ? props.ram.d : ritualGain(g, ritualFeeders(g));
                 if (d <= 0) return 'stalled';
                 const pts = props.ram ? props.ram.pts : Math.floor((g.ritual.total + d) / g.tuning.ritualPer) - Math.floor(g.ritual.total / g.tuning.ritualPer);
@@ -2403,6 +2405,7 @@ function Board(props: {
               <span className="small muted">
                 {(() => {
                   // The projection for your play and defense; in a replay, the ram as the board stands.
+                  if (g.sanctuary > 0) return 'frozen by Sanctuary';
                   const d = props.ram ? props.ram.d : Math.min(ramHit(g, pushing(g).length), g.gate.hp);
                   if (d <= 0) return 'stalled';
                   const pts = props.ram ? props.ram.pts : Math.floor((g.gate.dmg + d) / 2) - Math.floor(g.gate.dmg / 2) + (d >= g.gate.hp ? 10 : 0);

@@ -157,6 +157,20 @@ For a wider test beyond close friends, who send feedback by text.
 
 **Finding (Oct 30).** GitHub's servers can't reach stats.nba.com: the **Probe hustle stats** workflow (`scripts/probe-hustle.ts`) timed out on every request, the plain game log included. So hustle stats can't ride the Monday refresh. Options: a script on Nick's Mac each week, or a self-hosted GitHub runner on that Mac so the Monday job runs there. Counts are small and noisy, so a bonus or trait fits better than a class's main stat; calibrate before it touches balance.
 
+## Play-calling prototype: ideas to come back to
+
+Parked from design discussions (see `docs/concept-play-calling.md` and the Play Calling Strategy Tracker artifact, https://claude.ai/artifact/Edp1qkTxp68y8mNRUidMYH). Each one supports "several ways to win" and "scoring versus defending".
+
+1. **Stops score.** A defensive stop (a fully stopped hit, or a goblin stripped or skeleton pinned) earns +1, like a steal into a fast break, so resting a star has a small offensive upside.
+2. **Full-court press.** Choose to run with all five heroes and no defenders for one possession: big offense, an unopposed horde turn. Sanctuary is the safe version.
+3. **Specials as plans.** Each double-double/triple-double special should unlock a plan, not just hit harder: Volley as the Ranger's own crew clear, Chain Lightning Exposing every Champion, and so on (Sanctuary now freezes the objective).
+4. **A Lich that matters.** It falls to one Fireball without firing; more HP, or a rise that's likelier to come early.
+5. **A cold shooter in the Crypt.** Answered by Holy Chain: with a cold Wizard on the sample week it wins 56–28 (Normal) and 56–46 (Hard), where the default book loses 52–76 and 50–86. Keep checking with `OFFNIGHT=wizard`.
+6. **Objectives for the other encounters:** the Dragon's Lair's Hoard (push your luck: a Steal step and a Wake meter) and the Giant's Hall's Hearth (a tug-of-war that scores at the end of each quarter).
+7. **Possession time.** Playtests run 80–120 seconds a possession against a target of about 20.
+8. **Critical Taunt is in five of six plans.** With Backstab ×2.5 against a Taunt, the Rogue scores 22–29 a game in every book that has it. Without it, the best Goblin Horde book is +13 on Normal and +1 on Hard. Consider ×2 or other strong Goblin Horde finishers.
+9. **An untended Ritual runs away.** A book with no area play let it score 143 in one game. Cap what one Ritual can score, or slow it after each fill.
+
 ## Later / parked
 
 - **Play Calling (concept, exploration only):** a possible pivot where battles become basketball games: a scoreboard and quarters, and a pre-game playbook of set plays (moves that pass a bonus to the next hero, ending in a finisher), called during the game with one tap. See [concept-play-calling.md](concept-play-calling.md). Next step if pursued: a paper prototype, then a standalone simulator.

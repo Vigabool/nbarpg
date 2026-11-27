@@ -561,3 +561,33 @@ Buttons, numbers and rules stay the same in both. It's stored per browser, like 
   - **Built rosters** with the Ritual-aware bots, rules unchanged: Normal, the expert wins 30 of 32 (+18.3), the smart bot +12.0; Hard, the expert 18 of 32 (+0.5), the smart bot −4.8. That's level with the Goblin Horde on Normal (+17.4/+11.7) and slightly harder on Hard (+5.6/+2.0), so no re-tune.
   - **Off-night check** (`OFFNIGHT=wizard`: the sample week's Wizard on a Cold night with 60% of the usage). Goblin Horde, smart bot: 52–47 Normal, 52–49 Hard (the expert bot collapses to 26–88 there, a bot quirk). Crypt: expert 42–82 and 36–92, smart 47–79 and 30–87 (old bots: as bad or worse, up to 38–143). The Crypt without a hot shooter is a different, much harder encounter: nothing else in the kit clears three or four skeletons at once, and adding a Guiding Light play ("Light the Way", Guiding Light → Aimed Shot, now in the library) didn't change it.
 
+- **More ways to win, and three plans per encounter (Nov 27).** Fireball stays as it is; the other heroes got stronger answers instead.
+  - **Moves:**
+    - **Aimed Shot** is now 18 Pierce, the biggest single hit.
+    - **Double Strike** hits two enemies for 10 each and Marks both, to set up takedowns.
+    - **Backstab** does 9 damage, and ×2.5 and Sure against a Taunted or Disabled target.
+    - **Smite in the Crypt:** holy damage is ×1.5 against the dead, and a kill arcs to the next skeleton, up to 3.
+    - **Sanctuary** (8 damage) freezes the horde's objective for this enemy turn and the next, and gives every hero Armor +3.
+    - New library plays: Light the Way (Guiding Light → Aimed Shot), Double Team (Screen → Double Strike), Twin Smite (Hobble → Smite) and Holy Flurry (Guiding Light → Flurry).
+  - **Plans** (`PLANS` in `content.ts`; `STRATEGY=<id>` in `sim.ts`; `PLAYBOOK=a,b,c,d` tries any book). The first drafts were single-minded, and every one lost on built rosters. A plan that never clears the crew can't stop the ram, and a book that leaves a hero out runs dry and falls back on Isos. Hunt Champions lost 52–81 on the sample week; Decapitation let the Ritual score 143.
+  - **The search** (`scripts/books.ts`): the smart bot played every four-play book that uses all five heroes, on the sample week, then the best on 32 built rosters (`EXCLUDE=` leaves plays out; `BENCH=` keeps heroes off the ball). The plans were picked from those results.
+  - **Smart bot results** (32 built rosters, average margin, Normal / Hard; the expert bot is in brackets):
+
+    | Encounter | Plan | Margin | Result |
+    | --- | --- | --- | --- |
+    | Goblin Horde | Default book | +14.7 / +7.4 | |
+    | Goblin Horde | Clear the Ram (Kick Out, Shut It Down, Regroup, Twin Smite) | +13.3 / +1.1 (+18.3 / +9.6) | The only good book without Critical Taunt |
+    | Goblin Horde | Hunt Champions (Critical Taunt, Kick Out, Shut It Down, Double Team) | +22.3 / +9.9 (+27.2 / +16.3) | |
+    | Goblin Horde | Lockdown (Warrior and Rogue only defend) | −7.8 / −21.5 (−2.8 / −16.5) | Defending isn't worth two heroes' touches |
+    | Crypt | Default book | +18.3 / +5.8 | |
+    | Crypt | Fire Volume (Critical Taunt, Kick Out, Shut It Down, Spread the Floor) | +21.8 / +4.9 (+27.8 / +20.3) | |
+    | Crypt | Holy Chain (Critical Taunt, Shut It Down, Twin Smite, Holy Flurry) | +30.8 / +13.6 (+39.8 / +26.0) | Best plan; the Cleric scores 29.5 a game |
+    | Crypt | Champion Race (Critical Taunt, Kick Out, Pick and Pop, Double Team) | +18.8 / +3.4 (+26.4 / +18.2) | |
+
+    The best book found in both encounters is Critical Taunt, Kick Out, Shut It Down, Twin Smite: +22.7 / +15.7 in the Goblin Horde and +31.5 / +19.7 in the Crypt.
+  - **Cold shooter, answered:** on the sample week with a cold Wizard (smart bot), the default book loses 52–76 on Normal and 50–86 on Hard. Holy Chain wins 56–28 and 56–46.
+  - **Open:**
+    - Critical Taunt is in five of the six plans. With Backstab ×2.5 against a Taunt, the Rogue scores 22–29 a game in every book that has it.
+    - Defending can't yet beat scoring (see Stops score in the backlog).
+    - An untended Ritual runs away.
+  - The **Play Calling Strategy Tracker** artifact tracks these plans and the ideas to come back to.

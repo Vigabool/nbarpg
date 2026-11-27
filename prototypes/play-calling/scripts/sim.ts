@@ -4,7 +4,7 @@
  * A cold night for one hero on the sample week: OFFNIGHT=wizard (with or without ENC=crypt).
  * Rosters a player might build (auto-draft, suggested heroes, Smart pick) for the first N weeks: ROSTERS=6 npx tsx …/sim.ts
  */
-import { DEFAULT_PLAYBOOK, TEMPLATES, type Play } from '../src/content';
+import { DEFAULT_PLAYBOOK, PLANS, TEMPLATES, type Play } from '../src/content';
 import {
   DEFAULT_TUNING,
   activeHeroes,
@@ -27,9 +27,14 @@ import {
 import { CLASSES, type Cls } from '../src/content';
 
 const isoOrHold = { iso: 0, hold: 0 };
-const book: Play[] = DEFAULT_PLAYBOOK.map((id) => TEMPLATES.find((t) => t.id === id)!);
-/** The expert bot's book: every saved play, plus each hero's Iso. */
-const fullBook: Play[] = [...TEMPLATES, ...CLASSES.map(isoPlay)];
+// STRATEGY=<plan id> (see PLANS in content.ts): both bots commit to that plan's playbook (the expert can still fall back on an Iso).
+const plan = process.env.STRATEGY ? PLANS.find((p) => p.id === process.env.STRATEGY) : undefined;
+if (process.env.STRATEGY && !plan) throw new Error(`No plan ${process.env.STRATEGY}`);
+// PLAYBOOK=a,b,c,d tries a playbook that isn't a plan yet.
+const custom = process.env.PLAYBOOK?.split(',');
+const book: Play[] = (custom ?? plan?.playbook ?? DEFAULT_PLAYBOOK).map((id) => TEMPLATES.find((t) => t.id === id)!);
+/** The expert bot's book: every saved play (or the plan's), plus each hero's Iso. */
+const fullBook: Play[] = [...(plan || custom ? book : TEMPLATES), ...CLASSES.map(isoPlay)];
 
 /** Every defense the free heroes could set. */
 function defenseOptions(g: Game, inPlay: Set<Cls>): Defense[] {
