@@ -144,3 +144,22 @@ export function teamOf(data: SeasonData, playerId: number, gameId: string) {
   const fga = ls.reduce((s, x) => s + x.fga, 0);
   return { team: opp, pts, fgPct: Math.round((fgm / Math.max(1, fga)) * 1000) / 1000, goblins: Math.floor(pts / rules.horde.minions.teamPointsPerGoblin) };
 }
+
+/**
+ * The sample week (week.json) played as another encounter: the same heroes and games, with that
+ * encounter's horde. The Goblin Horde is the fixed week itself.
+ */
+export function sampleWeek(data: SeasonData, encounter: string): WeekData {
+  if (encounter === ENCOUNTER) return FIXED_WEEK;
+  const week = data.weeks.find((w) => w.index === FIXED_WEEK.week.index)!;
+  const assignments: Partial<Record<HeroClass, number>> = {};
+  const picks: Partial<Record<HeroClass, string>> = {};
+  for (const h of FIXED_WEEK.heroes) {
+    const p = Object.values(data.players).find((x) => x.name === h.player);
+    const gid = p && week.gameIds.find((g) => data.games[g].date === h.date && data.games[g].lines.some((l) => l.playerId === p.id));
+    if (!p || !gid) continue;
+    assignments[h.cls as HeroClass] = p.id;
+    picks[h.cls as HeroClass] = gid;
+  }
+  return buildWeek(data, week.index, assignments, picks, encounter);
+}

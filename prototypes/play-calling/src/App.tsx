@@ -70,7 +70,7 @@ import {
 import { Rich, TermLayer } from './terms';
 import { FIXED_WEEK, getWeek, setWeek, type WeekLine } from './week';
 import { AssignScreen, EncounterScreen, GamesScreen, RosterScreen, emptySetup, seasonData, type SetupState } from './setup/Setup';
-import { buildWeek } from './setup/buildWeek';
+import { buildWeek, sampleWeek } from './setup/buildWeek';
 
 type Screen = 'intro' | 'roster' | 'encounter' | 'assign' | 'games' | 'plan' | 'game' | 'halftime' | 'final';
 type Modal =
@@ -123,6 +123,8 @@ interface Saved {
   tuningVersion?: number;
   /** The setup flow's choices: roster, encounter, heroes and games. */
   setup?: SetupState;
+  /** The encounter the sample week is played as. */
+  sampleEncounter?: string;
 }
 const KEY = 'play-calling-prototype-v1';
 /** Bump when DEFAULT_TUNING changes, so players' saved tuning (which stores every value) picks up the new defaults. */
@@ -235,6 +237,7 @@ export function App() {
   const [lastReplay, setLastReplay] = useState<Replay | null>(null);
   const [speed, setSpeed] = useState<Speed>(saved.pace ?? 'step');
   const [callsClosed, setCallsClosed] = useState(saved.callsClosed ?? false);
+  const [sampleEncounter, setSampleEncounter] = useState<string>(saved.sampleEncounter ?? 'goblin-horde');
   const [setup, setSetup] = useState<SetupState>(saved.setup ?? emptySetup(FIXED_WEEK.week.index));
   const frames = replay?.frames ?? null;
   const [override, setOverride] = useState<Defense>({});
@@ -246,8 +249,8 @@ export function App() {
   const startedAt = useRef<number>(0);
 
   useEffect(() => {
-    store({ custom, active, difficulty, manual, tuning, tuningVersion: TUNING_VERSION, pace: speed, callsClosed, setup });
-  }, [custom, active, difficulty, manual, tuning, speed, callsClosed, setup]);
+    store({ custom, active, difficulty, manual, tuning, tuningVersion: TUNING_VERSION, pace: speed, callsClosed, setup, sampleEncounter });
+  }, [custom, active, difficulty, manual, tuning, speed, callsClosed, setup, sampleEncounter]);
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [screen]);
@@ -430,8 +433,10 @@ export function App() {
           manual={manual}
           setManual={setManual}
           onBuild={() => setScreen('roster')}
+          sampleEncounter={sampleEncounter}
+          setSampleEncounter={setSampleEncounter}
           onSample={() => {
-            setWeek(FIXED_WEEK);
+            setWeek(sampleWeek(seasonData(), sampleEncounter));
             startGame();
           }}
           onGuide={() => setModal({ kind: 'guide' })}
@@ -776,6 +781,8 @@ function Intro(props: {
   setManual: (m: boolean) => void;
   onBuild: () => void;
   onSample: () => void;
+  sampleEncounter: string;
+  setSampleEncounter: (e: string) => void;
   onGuide: () => void;
 }) {
   return (
@@ -786,8 +793,8 @@ function Intro(props: {
           Play <span>Calling</span>
         </h1>
         <p>
-          The Goblin Horde, played as a basketball game: four quarters, twelve possessions. Read the horde’s call, build your possession around one big finish,
-          and outscore them.
+          The Goblin Horde and the Crypt, played as a basketball game: four quarters, twelve possessions. Read the horde’s call, build your possession around
+          one big finish, and outscore them.
         </p>
         <p className="muted small">
           Build a roster from the 2025–26 season, pick the week’s games, and play the horde they bring. Or jump straight in with the sample week (
@@ -808,9 +815,32 @@ function Intro(props: {
       <button className="btn primary big" onClick={props.onBuild}>
         Build your roster
       </button>
-      <button className="btn big" onClick={props.onSample}>
-        Play the sample week
-      </button>
+      <div className="panel">
+        <span className="eyebrow">Sample week</span>
+        <span className="small muted">The same five heroes and games, against the encounter you pick.</span>
+        <div className="opt-group" role="radiogroup" aria-label="Sample week encounter">
+          {(
+            [
+              ['goblin-horde', '👺 Goblin Horde'],
+              ['crypt', '💀 The Crypt'],
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              className="opt"
+              role="radio"
+              aria-checked={props.sampleEncounter === id}
+              aria-pressed={props.sampleEncounter === id}
+              onClick={() => props.setSampleEncounter(id)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <button className="btn big" onClick={props.onSample}>
+          Play the sample week
+        </button>
+      </div>
       <button className="btn quiet" onClick={props.onGuide}>
         How it works
       </button>

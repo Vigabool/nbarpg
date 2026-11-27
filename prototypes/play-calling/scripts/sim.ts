@@ -179,6 +179,14 @@ if (process.env.ROSTERS) {
   process.exit(0);
 }
 
+// ENC=crypt plays the sample week as that encounter (the same heroes and games, that encounter's horde).
+if (process.env.ENC && process.env.ENC !== 'goblin-horde') {
+  const { loadSeasonFile } = await import('../../../scripts/load-season');
+  const { sampleWeek } = await import('../src/setup/buildWeek');
+  const { setWeek } = await import('../src/week');
+  setWeek(sampleWeek(loadSeasonFile('2025-26'), process.env.ENC));
+}
+
 for (const difficulty of ['normal', 'hard'] as Difficulty[]) {
   const expert = play(difficulty, 'expert', 1);
   console.log(`${difficulty} expert (every saved play and Iso, best defense): ${expert.party}-${expert.horde} breach@${expert.breachAt}`);
