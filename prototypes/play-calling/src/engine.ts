@@ -1657,7 +1657,11 @@ export function halftimeAdjustment(g: Game, playbook: Play[]): Adjustment {
       name: 'Protect the lead',
       text: `Every Champion gains Armor +1${mild ? ' in the third quarter' : ''}.`,
     };
-  if (!g.gate.breached && g.gate.hp > g.gate.max / 2)
+  if (g.encounter === 'crypt') {
+    // The Crypt's version: the dead chant harder when the Ritual is behind.
+    if (g.ritual.fills === 0 && g.ritual.value < g.ritual.max / 2)
+      return { id: 'allHands', name: 'The dead chant louder', text: `The Ritual grows ${mild ? 1 : 2} more each enemy turn in the second half.` };
+  } else if (!g.gate.breached && g.gate.hp > g.gate.max / 2)
     return { id: 'allHands', name: 'All hands on the ram', text: `The second half's goblins push harder: the ram hits for +${mild ? 1 : 2}.` };
   const total = Math.max(
     1,
