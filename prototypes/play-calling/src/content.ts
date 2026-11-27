@@ -492,6 +492,16 @@ export const TEMPLATES: Play[] = [
     tags: ['protect the lead'],
     blurb: 'Armor for everyone, then a Sure Smite that heals the most injured hero.',
   },
+  {
+    id: 'light-the-way',
+    name: 'Light the Way',
+    steps: [
+      { cls: 'cleric', move: 'guide' },
+      { cls: 'ranger', move: 'aimed' },
+    ],
+    tags: ['vs a big', 'vs the dead'],
+    blurb: 'Guiding Light takes the Aimed Shot past any Taunt; in the Crypt it is Blessed, so what it kills stays dead.',
+  },
 ];
 export const DEFAULT_PLAYBOOK = ['critical-taunt', 'kick-out', 'frost-bolt', 'spread-the-floor'];
 

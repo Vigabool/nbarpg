@@ -1,6 +1,7 @@
 /**
  * Plays the prototype's Goblin Horde with simple bots and prints the numbers the concept doc asks for.
  * Run: npx tsx prototypes/play-calling/scripts/sim.ts
+ * A cold night for one hero on the sample week: OFFNIGHT=wizard (with or without ENC=crypt).
  * Rosters a player might build (auto-draft, suggested heroes, Smart pick) for the first N weeks: ROSTERS=6 npx tsx …/sim.ts
  */
 import { DEFAULT_PLAYBOOK, TEMPLATES, type Play } from '../src/content';
@@ -185,6 +186,19 @@ if (process.env.ENC && process.env.ENC !== 'goblin-horde') {
   const { sampleWeek } = await import('../src/setup/buildWeek');
   const { setWeek } = await import('../src/week');
   setWeek(sampleWeek(loadSeasonFile('2025-26'), process.env.ENC));
+}
+// OFFNIGHT=wizard (or any class): that hero has a cold night: Cold tier, 60% of the usage (fewer touches), no special.
+if (process.env.OFFNIGHT) {
+  const { getWeek, setWeek } = await import('../src/week');
+  const w = structuredClone(getWeek());
+  for (const h of w.heroes)
+    if (h.cls === process.env.OFFNIGHT) {
+      h.tier = 'cold';
+      h.trueUsage = Math.round(h.trueUsage * 0.6 * 10) / 10;
+      h.doubleDouble = false;
+      h.tripleDouble = false;
+    }
+  setWeek(w);
 }
 
 for (const difficulty of ['normal', 'hard'] as Difficulty[]) {

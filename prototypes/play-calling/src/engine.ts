@@ -1732,6 +1732,9 @@ export interface Projection {
 }
 
 /** Project a play on a target without the enemy turn. */
+/** How many turns ahead the bots count a dead skeleton's missing Ritual points (RITUAL_HORIZON env to test). */
+const RITUAL_HORIZON = Number((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.RITUAL_HORIZON ?? 3);
+
 export function project(g: Game, play: Play, targetId: string): Projection {
   const { game } = runPossession(g, play, targetId, {}, { preview: true });
   const before = new Map(g.enemies.map((e) => [e.id, e.hp]));
@@ -1756,7 +1759,21 @@ export function project(g: Game, play: Play, targetId: string): Projection {
   const broke = fin && (fin.hp <= 0 || fin.disabled) ? 1 : 0;
   // Points the horde scores during your possession (off a turnover) count against the play.
   const given = game.score.horde - g.score.horde;
-  const value = points - given + damage * 0.12 + crewBroken * 4 + broke * 3;
+  // The objective. Goblin Horde: clearing the ram's crew. The Crypt: what the play does to the Ritual,
+  // looking a few turns ahead: dead that stay down stop feeding it (a weapon kill only leaves a bone pile that
+  // still feeds it and rises again), setbacks now, and closed graves that raise no more skeletons.
+  let objective = crewBroken * 4;
+  if (g.encounter === 'crypt') {
+    const perPoint = 1 / g.tuning.ritualPer + g.tuning.ritualFill / g.tuning.ritualMax;
+    const horizon = Math.min(RITUAL_HORIZON, 12 - g.possession);
+    const removed = ritualFeeders(g) - ritualFeeders(game);
+    const setback = g.ritual.value - game.ritual.value;
+    const openGraves = (x: Game) => onField(x).filter((e) => e.kind === 'grave').length;
+    const closed = openGraves(g) - openGraves(game);
+    const quartersLeft = Math.max(0, 4 - quarterOf(g.possession));
+    objective = (removed * horizon + setback + closed * quartersLeft * horizon) * perPoint;
+  }
+  const value = points - given + damage * 0.12 + objective + broke * 3;
   return { playId: play.id, targetId, points, damage, kills, open, value };
 }
 
