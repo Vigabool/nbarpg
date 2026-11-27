@@ -1352,7 +1352,11 @@ function PlanScreen(props: {
       return plays >= 3 || n > h.touchesMax / 2 ? `${CLASS_INFO[c].name} is in ${plays} of ${props.playbook.length} plays with ${h.touchesMax} touches.` : null;
     })
     .filter(Boolean) as string[];
-  const champs = g.enemies.filter((e) => e.kind !== 'goblin' && e.kind !== 'wagon').sort((a, b) => a.quarter - b.quarter);
+  // Champions and the boss: everything with a player behind it (not the goblins, the wagon, graves or the Phylactery).
+  const champs = g.enemies
+    .filter((e) => e.kind !== 'goblin' && e.kind !== 'wagon' && e.kind !== 'grave' && e.kind !== 'phylactery')
+    .sort((a, b) => a.quarter - b.quarter);
+  const crypt = g.encounter === 'crypt';
   const goblins = g.enemies.filter((e) => e.kind === 'goblin');
   const openChamp = champs.find((e) => e.id === open);
   const openHero = CLASSES.find((c) => `hero-${c}` === open);
@@ -1363,7 +1367,7 @@ function PlanScreen(props: {
       <div className="tabbar">
         <div className="tabbar-inner">
           <div className="row" style={{ justifyContent: 'space-between' }}>
-            <span className="eyebrow">Game plan · Goblin Horde</span>
+            <span className="eyebrow">Game plan · {g.encounter === 'crypt' ? 'The Crypt' : 'Goblin Horde'}</span>
             <button className="btn quiet small" onClick={props.onMenu}>
               Menu
             </button>
@@ -1398,11 +1402,11 @@ function PlanScreen(props: {
                 ))}
                 <button className={`mini ${open === 'goblins' ? 'on' : ''}`} aria-expanded={open === 'goblins'} onClick={() => toggle('goblins')}>
                   <span className="mini-top">
-                    <span>👺</span>
+                    <span>{enemyInfo('goblin', g.encounter).icon}</span>
                     <span className="tier">×{goblins.length}</span>
                   </span>
-                  <strong>Goblins</strong>
-                  <span className="small muted">crew the ram</span>
+                  <strong>{crypt ? 'Skeletons' : 'Goblins'}</strong>
+                  <span className="small muted">{crypt ? 'feed the Ritual' : 'crew the ram'}</span>
                 </button>
               </div>
               {openChamp && (
@@ -1424,9 +1428,11 @@ function PlanScreen(props: {
               )}
               {open === 'goblins' && (
                 <div className="panel detail">
-                  <strong>{goblins.length} goblins</strong>
+                  <strong>
+                    {goblins.length} {crypt ? 'skeletons' : 'goblins'}
+                  </strong>
                   <span className="small muted">
-                    1 per 40 opposing points (
+                    1 per {crypt ? '45' : '40'} opposing points{crypt ? ', plus one a quarter from each open grave' : ''} (
                     {getWeek()
                       .teams.map((t) => `${t.team} ${t.pts}`)
                       .join(', ')}
@@ -1441,43 +1447,99 @@ function PlanScreen(props: {
               )}
             </section>
 
-            <section className="stack">
-              <span className="eyebrow">Objectives</span>
-              <div className="mini-grid">
-                <button className={`mini ${open === 'gate' ? 'on' : ''}`} aria-expanded={open === 'gate'} onClick={() => toggle('gate')}>
-                  <span>🚪</span>
-                  <strong>Storm the Gate</strong>
-                  <span className="small muted">theirs · ram hits {g.ramBase}</span>
-                </button>
-                <button className={`mini ${open === 'bounty' ? 'on' : ''}`} aria-expanded={open === 'bounty'} onClick={() => toggle('bounty')}>
-                  <span>🎯</span>
-                  <strong>Shaman bounty</strong>
-                  <span className="small muted">+{g.tuning.bountyPoints} by end of Q1</span>
-                </button>
-                <button className={`mini ${open === 'wagon' ? 'on' : ''}`} aria-expanded={open === 'wagon'} onClick={() => toggle('wagon')}>
-                  <span>📦</span>
-                  <strong>Loot wagon</strong>
-                  <span className="small muted">Q2 · points and gold</span>
-                </button>
-              </div>
-              {open === 'gate' && (
-                <div className="panel detail small">
-                  Each goblin pushing the ram adds a quarter of its hit: with 4 pushing it hits the {g.gate.max}-HP gate for {g.ramBase} each enemy turn, +1 per
-                  extra goblin (the opponents shot {(opponentsFg() * 100).toFixed(1)}% this week). The horde scores 1 per 2 gate damage and 10 when it falls;
-                  after that, every goblin on the field pillages for 1 a turn.
+            {crypt ? (
+              <section className="stack">
+                <span className="eyebrow">Objectives</span>
+                <div className="mini-grid">
+                  <button className={`mini ${open === 'ritual' ? 'on' : ''}`} aria-expanded={open === 'ritual'} onClick={() => toggle('ritual')}>
+                    <span>🕯</span>
+                    <strong>The Ritual</strong>
+                    <span className="small muted">theirs · {g.ritual.max} to raise the Lich</span>
+                  </button>
+                  <button className={`mini ${open === 'bounty' ? 'on' : ''}`} aria-expanded={open === 'bounty'} onClick={() => toggle('bounty')}>
+                    <span>🎯</span>
+                    <strong>Wight bounty</strong>
+                    <span className="small muted">+{g.tuning.bountyPoints} by end of Q1</span>
+                  </button>
+                  <button className={`mini ${open === 'graves' ? 'on' : ''}`} aria-expanded={open === 'graves'} onClick={() => toggle('graves')}>
+                    <span>🪦</span>
+                    <strong>Consecrate the graves</strong>
+                    <span className="small muted">3 graves · +3 each</span>
+                  </button>
+                  <button className={`mini ${open === 'phylactery' ? 'on' : ''}`} aria-expanded={open === 'phylactery'} onClick={() => toggle('phylactery')}>
+                    <span>⚱️</span>
+                    <strong>Phylactery</strong>
+                    <span className="small muted">with the Lich · +3</span>
+                  </button>
                 </div>
-              )}
-              {open === 'bounty' && (
-                <div className="panel detail small">
-                  Take down the Goblin Shaman before the end of the first quarter for +{g.tuning.bountyPoints} on top of its takedown. It also stops the
-                  reinforcements at the source.
+                {open === 'ritual' && (
+                  <div className="panel detail small">
+                    <Rich>
+                      {`The Ritual grows each enemy turn by 1 per skeleton and bone pile, and 1 more while the Wight stands. The horde scores 1 per ${g.tuning.ritualPer} Ritual points. At ${g.ritual.max} it completes: +${g.tuning.ritualFill}, the Lich rises at once (or rises again, or is restored), and it starts over. Destroying the dead for good sets it back 1; the Necromancer, 3. Strip the Ball pins a skeleton away from it, and the Warrior can guard the circle to halve it.`}
+                    </Rich>
+                  </div>
+                )}
+                {open === 'bounty' && (
+                  <div className="panel detail small">
+                    Take down the Wight before the end of the first quarter for +{g.tuning.bountyPoints} on top of its takedown. It also stops Raise Dead and
+                    Unholy Vigor.
+                  </div>
+                )}
+                {open === 'graves' && (
+                  <div className="panel detail small">
+                    <Rich>
+                      Three open graves raise a skeleton each at the start of every quarter. Only holy damage (a Cleric hit, or a Blessed finisher) consecrates
+                      one, closing it for good: +3 each. Hitting one without holy damage is a turnover.
+                    </Rich>
+                  </div>
+                )}
+                {open === 'phylactery' && (
+                  <div className="panel detail small">
+                    <Rich>
+                      The Lich’s soul jar arrives with it. While it stands the Lich takes half damage, and the skeletons shield it (moves that hit every enemy
+                      still land). Breaking it scores 3; it shatters if the Lich falls first.
+                    </Rich>
+                  </div>
+                )}
+              </section>
+            ) : (
+              <section className="stack">
+                <span className="eyebrow">Objectives</span>
+                <div className="mini-grid">
+                  <button className={`mini ${open === 'gate' ? 'on' : ''}`} aria-expanded={open === 'gate'} onClick={() => toggle('gate')}>
+                    <span>🚪</span>
+                    <strong>Storm the Gate</strong>
+                    <span className="small muted">theirs · ram hits {g.ramBase}</span>
+                  </button>
+                  <button className={`mini ${open === 'bounty' ? 'on' : ''}`} aria-expanded={open === 'bounty'} onClick={() => toggle('bounty')}>
+                    <span>🎯</span>
+                    <strong>Shaman bounty</strong>
+                    <span className="small muted">+{g.tuning.bountyPoints} by end of Q1</span>
+                  </button>
+                  <button className={`mini ${open === 'wagon' ? 'on' : ''}`} aria-expanded={open === 'wagon'} onClick={() => toggle('wagon')}>
+                    <span>📦</span>
+                    <strong>Loot wagon</strong>
+                    <span className="small muted">Q2 · points and gold</span>
+                  </button>
                 </div>
-              )}
-              {open === 'wagon' && (
-                <div className="panel detail small">Arrives in Q2 with 15 HP. Armor 2. Breaking it scores 3 and 5 gold, but hitting it makes no bucket.</div>
-              )}
-            </section>
-
+                {open === 'gate' && (
+                  <div className="panel detail small">
+                    Each goblin pushing the ram adds a quarter of its hit: with 4 pushing it hits the {g.gate.max}-HP gate for {g.ramBase} each enemy turn, +1
+                    per extra goblin (the opponents shot {(opponentsFg() * 100).toFixed(1)}% this week). The horde scores 1 per 2 gate damage and 10 when it
+                    falls; after that, every goblin on the field pillages for 1 a turn.
+                  </div>
+                )}
+                {open === 'bounty' && (
+                  <div className="panel detail small">
+                    Take down the Goblin Shaman before the end of the first quarter for +{g.tuning.bountyPoints} on top of its takedown. It also stops the
+                    reinforcements at the source.
+                  </div>
+                )}
+                {open === 'wagon' && (
+                  <div className="panel detail small">Arrives in Q2 with 15 HP. Armor 2. Breaking it scores 3 and 5 gold, but hitting it makes no bucket.</div>
+                )}
+              </section>
+            )}
             <section className="stack">
               <span className="eyebrow">Their playbook</span>
               <div className="stack" style={{ gap: 4 }}>
@@ -2822,7 +2884,7 @@ function Halftime(props: {
     const pts = props.playbook.map((p) => g.stats.plays[p.id]?.pts ?? 0);
     return pts.indexOf(Math.min(...pts));
   })();
-  const arrivals = g.enemies.filter((e) => e.quarter === 3 && e.kind !== 'goblin');
+  const arrivals = g.enemies.filter((e) => e.quarter === 3 && e.kind !== 'goblin' && !e.arrived);
   return (
     <div className="wrap">
       <span className="eyebrow">Halftime</span>
@@ -2898,9 +2960,13 @@ function Halftime(props: {
         <p className="small">Fallen heroes return at half HP; everyone else heals 25% of their max. Touches don’t reset.</p>
         <span className="eyebrow">Second half</span>
         <p className="small">
-          Q3 brings {arrivals.map((e) => `the ${e.name} (${e.player})`).join(', ')} and {g.enemies.filter((e) => e.kind === 'goblin' && e.quarter === 3).length}{' '}
-          more goblins.
-          {g.gate.breached ? ' The gate is down.' : ` The gate is at ${g.gate.hp}/${g.gate.max}.`}
+          Q3 brings {arrivals.map((e) => (e.player ? `the ${e.name} (${e.player})` : `the ${e.name}`)).join(', ')} and{' '}
+          {g.enemies.filter((e) => e.kind === 'goblin' && e.quarter === 3).length} more {g.encounter === 'crypt' ? 'skeletons' : 'goblins'}.
+          {g.encounter === 'crypt'
+            ? ` The Ritual is at ${g.ritual.value}/${g.ritual.max}.`
+            : g.gate.breached
+              ? ' The gate is down.'
+              : ` The gate is at ${g.gate.hp}/${g.gate.max}.`}
         </p>
       </div>
       <button className="btn primary big" onClick={props.onStart}>
