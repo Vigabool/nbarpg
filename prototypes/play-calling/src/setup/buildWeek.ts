@@ -77,6 +77,7 @@ export function buildWeek(
   weekIndex: number,
   assignments: Partial<Record<HeroClass, number>>,
   gamePicks: Partial<Record<HeroClass, string>>,
+  encounter: string = ENCOUNTER,
 ): WeekData {
   const week = data.weeks.find((w) => w.index === weekIndex)!;
   const picks: HeroGamePick[] = SETUP_CLASSES.filter((c) => assignments[c] !== undefined && gamePicks[c]).map((c) => ({
@@ -84,7 +85,7 @@ export function buildWeek(
     playerId: assignments[c]!,
     gameId: gamePicks[c]!,
   }));
-  const horde = buildHorde(picks, data, rules, ENCOUNTER);
+  const horde = buildHorde(picks, data, rules, encounter);
   const heroes: WeekHero[] = SETUP_CLASSES.map((c) => {
     const pick = picks.find((p) => p.heroClass === c);
     if (pick) return heroFromGame(data, c, pick.playerId, pick.gameId);
@@ -123,6 +124,7 @@ export function buildWeek(
   const teams = picks.map((p) => teamOf(data, p.playerId, p.gameId));
   return {
     season: data.season,
+    ...(encounter !== ENCOUNTER ? { encounter } : {}),
     week: { index: week.index, start: week.start, end: week.end },
     heroes,
     champions,

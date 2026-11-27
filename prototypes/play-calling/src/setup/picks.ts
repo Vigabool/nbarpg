@@ -62,24 +62,41 @@ export function heroValue(data: SeasonData, cls: HeroClass, playerId: number, ga
 }
 
 /** How much the horde these picks bring is worth to the horde: Champions by role and tier, the boss, goblins. */
-export function hordeThreat(data: SeasonData, assignments: Partial<Record<HeroClass, number>>, picks: Picks, w: PickWeights = PICK_WEIGHTS): number {
+export function hordeThreat(
+  data: SeasonData,
+  assignments: Partial<Record<HeroClass, number>>,
+  picks: Picks,
+  w: PickWeights = PICK_WEIGHTS,
+  encounter: string = ENCOUNTER,
+): number {
   const list = SETUP_CLASSES.filter((c) => picks[c] && assignments[c] !== undefined).map((c) => ({
     heroClass: c,
     playerId: assignments[c]!,
     gameId: picks[c]!,
   }));
   if (!list.length) return 0;
-  const h = buildHorde(list, data, rules, ENCOUNTER);
+  const h = buildHorde(list, data, rules, encounter);
   const champs = h.champions.reduce((s, m) => s + (w.threat[ROLE_OF[m.kind]] ?? 0.8) * tierStep(m.tier ?? 'average'), 0);
-  const goblins = list.reduce((s, p) => s + teamOf(data, p.playerId, p.gameId).goblins, 0);
+  // The Crypt raises 1 skeleton per 45 opposing points (the Goblin Horde, 1 goblin per 40).
+  const goblins = list.reduce((s, p) => {
+    const t = teamOf(data, p.playerId, p.gameId);
+    return s + (encounter === 'crypt' ? Math.floor(t.pts / 45) : t.goblins);
+  }, 0);
   return champs + w.boss * tierStep(h.warlord.tier ?? 'average') + w.goblin * goblins;
 }
 
-const totalValue = (data: SeasonData, a: Partial<Record<HeroClass, number>>, picks: Picks, w: PickWeights) =>
-  SETUP_CLASSES.reduce((s, c) => s + (picks[c] && a[c] !== undefined ? heroValue(data, c, a[c]!, picks[c]!, w) : 0), 0) - hordeThreat(data, a, picks, w);
+const totalValue = (data: SeasonData, a: Partial<Record<HeroClass, number>>, picks: Picks, w: PickWeights, encounter: string) =>
+  SETUP_CLASSES.reduce((s, c) => s + (picks[c] && a[c] !== undefined ? heroValue(data, c, a[c]!, picks[c]!, w) : 0), 0) -
+  hordeThreat(data, a, picks, w, encounter);
 
 /** Smart pick: the best game for each hero, then two passes that also weigh the horde the games bring together. */
-export function smartPicks(data: SeasonData, weekIndex: number, assignments: Partial<Record<HeroClass, number>>, w: PickWeights = PICK_WEIGHTS): Picks {
+export function smartPicks(
+  data: SeasonData,
+  weekIndex: number,
+  assignments: Partial<Record<HeroClass, number>>,
+  w: PickWeights = PICK_WEIGHTS,
+  encounter: string = ENCOUNTER,
+): Picks {
   const week = data.weeks.find((x) => x.index === weekIndex)!;
   const options = (c: HeroClass) => (assignments[c] === undefined ? [] : playerGamesInWeek(data, week, assignments[c]!));
   const picks: Picks = {};
@@ -87,13 +104,13 @@ export function smartPicks(data: SeasonData, weekIndex: number, assignments: Par
     const best = options(c).sort((a, b) => heroValue(data, c, assignments[c]!, b, w) - heroValue(data, c, assignments[c]!, a, w))[0];
     if (best) picks[c] = best;
   }
-  let best = totalValue(data, assignments, picks, w);
+  let best = totalValue(data, assignments, picks, w, encounter);
   for (let pass = 0; pass < 2; pass++) {
     for (const c of SETUP_CLASSES) {
       for (const gid of options(c)) {
         if (gid === picks[c]) continue;
         const trial = { ...picks, [c]: gid };
-        const v = totalValue(data, assignments, trial, w);
+        const v = totalValue(data, assignments, trial, w, encounter);
         if (v > best) {
           best = v;
           Object.assign(picks, trial);

@@ -374,6 +374,13 @@ body::before {
 .bar.gate > i {
   background: var(--gold);
 }
+.bar.ritual > i {
+  background: linear-gradient(90deg, #6d4bb3, var(--horde));
+}
+.gob.pile {
+  opacity: 0.75;
+  border-style: dashed;
+}
 .crewpips {
   display: flex;
   gap: 3px;

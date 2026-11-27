@@ -5,20 +5,21 @@
 import {
   CLASS_INFO,
   CLASSES,
-  ENEMY_INFO,
-  HORDE_PLAYS,
   MOVE,
   TIER_MULT,
   isFinisher,
   tierIndex,
   type Cls,
   type Enabler,
+  type Encounter,
   type EnemyKind,
   type HordePlay,
   type Move,
   type Play,
   type PlayStep,
   type Tier,
+  enemyInfo,
+  hordePlays,
 } from './content';
 import { getWeek, type WeekLine } from './week';
 
@@ -35,6 +36,14 @@ export interface Tuning {
   hordeHitPoints: number;
   /** The horde's fast break when your finisher is stopped. */
   turnoverPoints: number;
+  /** The Crypt: Ritual points that raise the Lich (then it starts over). */
+  ritualMax: number;
+  /** The horde scores 1 per this many Ritual points. */
+  ritualPer: number;
+  /** The horde's bonus when the Ritual completes. */
+  ritualFill: number;
+  /** The Wraith's drain on each hero, at Average tier (Great and Elite add 1). */
+  drain: number;
 }
 export const DEFAULT_TUNING: Tuning = {
   gateHp: 70,
@@ -49,6 +58,10 @@ export const DEFAULT_TUNING: Tuning = {
   championHp: 1.25,
   hordeHitPoints: 2,
   turnoverPoints: 2,
+  ritualMax: 28,
+  ritualPer: 4,
+  ritualFill: 6,
+  drain: 1,
 };
 export type Difficulty = 'normal' | 'hard';
 
@@ -110,6 +123,21 @@ export interface Enemy {
   summonedThisTurn: boolean;
   /** Taken down and already scored. */
   down: boolean;
+  /** The Crypt's Restless Dead: how many more times a weapon kill leaves a bone pile instead of ending it. */
+  undead?: number;
+  /** A bone pile: crumbled by a weapon kill, it rises next possession with this enemy's (halved) max HP. */
+  pile?: boolean;
+  /** Its max HP before it last crumbled (Raise Dead brings it back at this). */
+  prevMax?: number;
+  /** The last hit on it was fire or holy (so a kill destroys the dead for good). */
+  pureHit?: boolean;
+  /** The Wraith: only spells and holy hits touch it, and the first one makes it solid for the possession. */
+  intangible?: boolean;
+  solid?: boolean;
+  /** The Wight: Unholy Vigor feeds the Ritual; it casts Raise Dead or Bone Shield. */
+  wight?: boolean;
+  /** The Lich after the Ritual raised it: Death Bolt every enemy turn. */
+  enraged?: boolean;
 }
 
 export interface HordeCall {
@@ -141,6 +169,7 @@ export interface Stats {
   heroes: Record<Cls, { pts: number; ast: number; stops: number; touches: number; dmg: number }>;
   plays: Record<string, { calls: number; pts: number }>;
   party: { shots: number; takedowns: number; objectives: number };
+  /** gate: the objective's points (the ram on the gate, or the Crypt's Ritual). */
   horde: { hits: number; takedowns: number; gate: number; pillage: number; turnovers: number };
 }
 
@@ -190,6 +219,13 @@ export interface Game {
   starBlockUsed: boolean;
   /** The Shaman's Barrier stands in front of the whole horde until a hit breaks it. */
   barrierUp: boolean;
+  encounter: Encounter;
+  /** The Crypt's Ritual: fills by 1 per skeleton and bone pile each enemy turn; full, it raises the Lich. */
+  ritual: { value: number; max: number; total: number; fills: number };
+  /** The Wight's Bone Shield: +2 Armor on the horde through the party's next possession. */
+  boneShield: boolean;
+  /** The last quarter the open graves raised their skeletons. */
+  graveQuarter: number;
 }
 
 export interface Frame {
@@ -223,6 +259,7 @@ export const ROLE_OF: Record<string, EnemyKind> = {
   assassin: 'cutthroat',
   shaman: 'shaman',
   chieftain: 'chieftain',
+  lich: 'lich',
 };
 
 export function ramDamageFromFg(pct: number): number {
@@ -239,6 +276,8 @@ export const opponentsFg = () => {
 
 export function newGame(tuning: Tuning = DEFAULT_TUNING, difficulty: Difficulty = 'normal'): Game {
   const week = getWeek();
+  const enc: Encounter = week.encounter === 'crypt' ? 'crypt' : 'goblin-horde';
+  const crypt = enc === 'crypt';
   const heroes = {} as Record<Cls, Hero>;
   for (const h of week.heroes) {
     const cls = h.cls as Cls;
@@ -276,7 +315,7 @@ export function newGame(tuning: Tuning = DEFAULT_TUNING, difficulty: Difficulty 
     return {
       id: `e${id++}`,
       kind,
-      name: ENEMY_INFO[kind].name,
+      name: enemyInfo(kind, enc).name,
       player: c.player,
       team: c.team,
       tier: c.tier as Tier,
@@ -295,13 +334,16 @@ export function newGame(tuning: Tuning = DEFAULT_TUNING, difficulty: Difficulty 
       stripped: false,
       slowed: false,
       taunts: kind === 'ogre',
-      quick: kind === 'cutthroat' || kind === 'sharpshooter',
+      quick: (kind === 'cutthroat' && !crypt) || kind === 'sharpshooter',
       quickUsed: false,
-      barrier: kind === 'shaman',
+      barrier: kind === 'shaman' && !crypt,
       block: kind === 'chieftain',
       summonedThisTurn: false,
       down: false,
-    } satisfies Enemy;
+      ...(crypt && kind === 'shaman' ? { wight: true } : {}),
+      ...(crypt && kind === 'cutthroat' ? { intangible: true, solid: false } : {}),
+      ...(crypt && kind === 'sharpshooter' ? { undead: 1 } : {}),
+    } as Enemy;
   });
   // Quarter script: Shaman and Hexer open; the two weaker of the rest arrive in Q2; the strongest and the Chieftain in Q3.
   const tierStrength = (e: Enemy) => tierIndex(e.tier ?? 'cold') * 1000 + e.maxHp;
@@ -310,21 +352,28 @@ export function newGame(tuning: Tuning = DEFAULT_TUNING, difficulty: Difficulty 
   rest.forEach((e, i) => (e.quarter = i < 2 ? 2 : 3));
   for (const e of champs) if (e.boss) e.quarter = 3;
 
-  const goblins = week.teams.reduce((s, t) => s + t.goblins, 0);
+  // Goblins: 1 per 40 opposing points; the Crypt raises fewer, tougher dead (1 per 45).
+  const goblins = crypt ? week.teams.reduce((s, t) => s + Math.floor(t.pts / 45), 0) : week.teams.reduce((s, t) => s + t.goblins, 0);
   const q1 = Math.round(goblins * 0.3);
   const q2 = Math.round(goblins * 0.35);
   const enemies: Enemy[] = [...champs];
-  for (let i = 0; i < goblins; i++) enemies.push(goblin(`e${id++}`, tuning, i < q1 ? 1 : i < q1 + q2 ? 2 : 3));
-  enemies.push({
-    ...goblin(`e${id++}`, tuning, 2),
-    kind: 'wagon',
-    name: ENEMY_INFO.wagon.name,
-    maxHp: 15,
-    hp: 15,
+  for (let i = 0; i < goblins; i++) enemies.push(goblin(`e${id++}`, tuning, i < q1 ? 1 : i < q1 + q2 ? 2 : 3, enc));
+  const object = (kind: EnemyKind, quarter: number, hp: number, armor: number, points: number): Enemy => ({
+    ...goblin(`e${id++}`, tuning, quarter, enc),
+    kind,
+    name: enemyInfo(kind, enc).name,
+    maxHp: hp,
+    hp,
     damage: 0,
-    armor: 2,
-    points: 3,
+    armor,
+    points,
+    undead: undefined,
   });
+  if (crypt) {
+    // The Phylactery arrives with the Lich; three open graves raise skeletons each quarter until consecrated.
+    enemies.push(object('phylactery', 3, 8, 0, 3));
+    for (let i = 0; i < 3; i++) enemies.push(object('grave', 1, 6, 0, 3));
+  } else enemies.push(object('wagon', 2, 15, 2, 3));
 
   const stats: Stats = {
     heroes: Object.fromEntries(CLASSES.map((c) => [c, { pts: 0, ast: 0, stops: 0, touches: 0, dmg: 0 }])) as Stats['heroes'],
@@ -358,17 +407,22 @@ export function newGame(tuning: Tuning = DEFAULT_TUNING, difficulty: Difficulty 
     blockUsed: false,
     starBlockUsed: false,
     barrierUp: false,
+    encounter: enc,
+    ritual: { value: 0, max: tuning.ritualMax, total: 0, fills: 0 },
+    boneShield: false,
+    graveQuarter: 1,
   };
   arrive(g);
   g.call = chooseCall(g);
   return g;
 }
 
-function goblin(id: string, tuning: Tuning, quarter: number): Enemy {
+function goblin(id: string, tuning: Tuning, quarter: number, enc: Encounter = 'goblin-horde'): Enemy {
   return {
     id,
     kind: 'goblin',
-    name: 'Goblin',
+    name: enemyInfo('goblin', enc).name,
+    ...(enc === 'crypt' ? { undead: 99 } : {}),
     maxHp: tuning.goblinHp,
     hp: tuning.goblinHp,
     damage: 3,
@@ -401,8 +455,19 @@ function arrive(g: Game) {
     if (!e.arrived && e.quarter <= q && e.hp > 0) {
       e.arrived = true;
       came.push(e);
-      if (e.kind === 'goblin' && !g.gate.breached && crew(g).length < 4) e.onRam = true;
+      if (e.kind === 'goblin' && (g.encounter === 'crypt' || (!g.gate.breached && crew(g).length < 4))) e.onRam = true;
     }
+  if (g.encounter === 'crypt' && q > g.graveQuarter) {
+    g.graveQuarter = q;
+    for (const grave of onField(g).filter((x) => x.kind === 'grave')) {
+      const sk = goblin(`e${g.nextId++}`, g.tuning, q, 'crypt');
+      sk.arrived = true;
+      sk.onRam = true;
+      g.enemies.push(sk);
+      came.push(sk);
+      void grave;
+    }
+  }
   g.wave = null;
   if (came.length && g.possession > 0) {
     g.log.push({ t: `Quarter ${q}: new arrivals take the floor.`, side: 'info' });
@@ -428,9 +493,24 @@ export function ramHit(g: Game, pushers: number, boost = 0): number {
   const full = g.ramBase + boost + g.ramBonus + warDrum(g);
   return Math.max(1, Math.round((full * Math.min(pushers, 4)) / 4)) + Math.max(0, pushers - 4);
 }
+/** The Crypt's bone piles: crumbled skeletons waiting to rise. */
+export const piles = (g: Game) => g.enemies.filter((e) => e.arrived && e.pile);
+/** The Wight standing (and not Disabled). */
+export const wight = (g: Game) => onField(g).find((e) => e.wight && !e.disabled);
+/** What the Ritual gains this enemy turn with this many skeletons and piles feeding it. */
+export function ritualGain(g: Game, feeders: number, boost = 0): number {
+  if (g.encounter !== 'crypt') return 0;
+  return feeders + (wight(g) ? 1 : 0) + boost + g.ramBonus;
+}
+/** Skeletons and bone piles feeding the Ritual (pinned skeletons don't). */
+export const ritualFeeders = (g: Game) => pushing(g).length + piles(g).length;
+/** What the Wight will cast: Raise Dead with bone piles on the floor, otherwise Bone Shield. */
+export const wightCast = (g: Game): 'raise' | 'shield' | null => (wight(g) ? (piles(g).length ? 'raise' : 'shield') : null);
+export const phylacteryStands = (g: Game) => onField(g).some((e) => e.kind === 'phylactery');
+export const skeletonsStand = (g: Game) => onField(g).some((e) => e.kind === 'goblin');
 export const freeGoblins = (g: Game) => onField(g).filter((e) => e.kind === 'goblin' && !e.onRam);
 export const activeHeroes = (g: Game) => CLASSES.map((c) => g.heroes[c]).filter((h) => h.benched === 0 && h.hp > 0);
-const isChampion = (e: Enemy) => e.kind !== 'goblin' && e.kind !== 'wagon';
+const isChampion = (e: Enemy) => e.kind !== 'goblin' && e.kind !== 'wagon' && e.kind !== 'grave' && e.kind !== 'phylactery';
 
 const adjusting = (g: Game, id: Adjustment['id']) => g.adjustment?.id === id && (g.difficulty === 'hard' || quarterOf(g.possession) === 3);
 
@@ -452,7 +532,8 @@ export function shamanCast(g: Game): 'pack' | 'barrier' | null {
 /** Whether the horde's Block is still up this possession. */
 export const blockUp = (g: Game) => !g.blockUsed && onField(g).some((e) => e.block);
 /** Everything that reduces a hit on this enemy. */
-export const armorOf = (g: Game, e: Enemy) => e.armor + (adjusting(g, 'lead') && isChampion(e) ? 1 : 0);
+export const armorOf = (g: Game, e: Enemy) =>
+  e.armor + (adjusting(g, 'lead') && isChampion(e) ? 1 : 0) + (g.boneShield && e.kind !== 'grave' && e.kind !== 'phylactery' ? 2 : 0);
 
 function starDoubled(g: Game, cls: Cls) {
   return adjusting(g, 'double') && g.adjustment?.star === cls;
@@ -543,7 +624,7 @@ function triggered(g: Game, p: HordePlay): boolean {
 }
 
 export function chooseCall(g: Game): HordeCall | null {
-  for (const p of HORDE_PLAYS) {
+  for (const p of hordePlays(g.encounter)) {
     if (!triggered(g, p)) continue;
     // Each step takes the first actor on the floor who isn't already in the play.
     const taken = new Set<string>();
@@ -590,7 +671,7 @@ function addBuff(c0: Carry, e: Enabler | undefined, mult: number, from: Cls): Ca
 
 function pickTargets(g: Game, primary: Enemy, n: number): Enemy[] {
   const others = onField(g)
-    .filter((e) => e.id !== primary.id && e.kind !== 'wagon')
+    .filter((e) => e.id !== primary.id && e.kind !== 'wagon' && e.kind !== 'grave' && e.kind !== 'phylactery')
     .sort((a, b) => Number(b.onRam) - Number(a.onRam) || a.hp - b.hp);
   return [primary, ...others].slice(0, n);
 }
@@ -599,6 +680,23 @@ function takedown(g: Game, e: Enemy, by: Cls, frames: Frame[], rec: boolean, pla
   if (e.hp > 0 || e.down) return;
   e.hp = 0;
   e.down = true;
+  // Restless Dead: a weapon kill leaves a bone pile that rises next possession with half the HP. No points.
+  if (e.undead && !e.pureHit && e.maxHp > 2) {
+    e.pile = true;
+    e.undead -= 1;
+    e.prevMax = e.maxHp;
+    e.maxHp = Math.max(2, Math.floor(e.maxHp / 2));
+    e.onRam = false;
+    let text = `${e.name} crumbles into a bone pile (rises next possession with ${e.maxHp} HP)`;
+    const giant = onField(g).find((x) => x.kind === 'ogre');
+    if (giant && giant.hp < giant.maxHp) {
+      const healed = Math.min(2, giant.maxHp - giant.hp);
+      giant.hp += healed;
+      text += `; Bone Harvest heals the ${giant.name} ${healed}`;
+    }
+    if (rec) frames.push({ game: clone(g), text, side: 'info', actor: by, target: e.id, kind: 'ko' });
+    return;
+  }
   const wasCrew = e.kind === 'goblin' && e.onRam;
   e.onRam = false;
   let pts = e.points;
@@ -607,12 +705,36 @@ function takedown(g: Game, e: Enemy, by: Cls, frames: Frame[], rec: boolean, pla
     g.gold += 5;
     g.stats.party.objectives += pts;
     text = `The loot wagon breaks open: +${pts} and 5 gold`;
+  } else if (e.kind === 'grave') {
+    g.stats.party.objectives += pts;
+    text = `The grave is consecrated and closes for good: +${pts}`;
+  } else if (e.kind === 'phylactery') {
+    g.stats.party.objectives += pts;
+    text = `The Phylactery shatters: +${pts}, and the Lich takes full damage`;
   } else g.stats.party.takedowns += pts;
+  if (e.undead !== undefined && g.encounter === 'crypt') text = `${e.name} is destroyed for good: +${pts}`;
+  // The Crypt: destroying the dead for good, or the Necromancer, sets the Ritual back.
+  if (g.encounter === 'crypt') {
+    const back = e.kind === 'hexer' ? 3 : e.undead !== undefined ? 1 : 0;
+    if (back && g.ritual.value > 0) {
+      const b = Math.min(back, g.ritual.value);
+      g.ritual.value -= b;
+      text += `; the Ritual falls back ${b}`;
+    }
+    if (e.kind === 'lich') {
+      const ph = onField(g).find((x) => x.kind === 'phylactery');
+      if (ph) {
+        ph.hp = 0;
+        ph.down = true;
+        text += '; its Phylactery shatters';
+      }
+    }
+  }
   if (e.kind === 'shaman' && g.bounty === 'open') {
     g.bounty = 'won';
     pts += g.tuning.bountyPoints;
     g.stats.party.objectives += g.tuning.bountyPoints;
-    text += `, and the Shaman bounty: +${g.tuning.bountyPoints}`;
+    text += `, and the ${e.name.replace('Goblin ', '')} bounty: +${g.tuning.bountyPoints}`;
   }
   // Crew takedowns provoke the horde's Hunt.
   if (wasCrew) g.last.crewDowns[by] = (g.last.crewDowns[by] ?? 0) + 1;
@@ -751,6 +873,12 @@ function doStep(ctx: StepCtx, step: PlayStep, i: number, primaryId: string, pick
     const deals = (m.damage ?? 0) > 0;
     const extra = buff.split ? 1 : 0;
     const short = (e: Enemy) => e.name.replace('Goblin ', '');
+    // The Crypt: fire (Fireball, Meteor) and holy damage (a Cleric hit, or a finisher the Cleric helped: Blessed) destroy the dead for good.
+    const crypt = g.encounter === 'crypt';
+    const fire = m.id === 'fireball' || m.id === 'meteor';
+    const holy = crypt && deals && (h.cls === 'cleric' || (fin && buff.helpers.includes('cleric')));
+    const spell = h.cls === 'wizard';
+    if (holy && h.cls !== 'cleric') parts.push('Blessed');
 
     // Taunt: a single-target hit must go to the taunter; a wider one must include it.
     const t = deals && !buff.guided ? taunter(g) : undefined;
@@ -785,6 +913,24 @@ function doStep(ctx: StepCtx, step: PlayStep, i: number, primaryId: string, pick
     /** One hit. Returns the damage dealt, or -1 if it was cancelled or evaded. */
     const hit = (e: Enemy, base: number): number => {
       if (e.hp <= 0) return 0;
+      if (crypt) {
+        if (e.kind === 'grave' && !holy) {
+          note('only holy damage consecrates a grave');
+          return -1;
+        }
+        if (e.kind === 'phylactery' && m.targets !== 'all' && skeletonsStand(g)) {
+          note('the skeletons shield the Phylactery');
+          return -1;
+        }
+        if (e.intangible && !e.solid) {
+          if (!spell && !holy) {
+            note(`passes through the ${short(e)}`);
+            return -1;
+          }
+          e.solid = true;
+          note(`the ${short(e)} turns solid`);
+        }
+      }
       if (!sure) {
         if (starDoubled(g, h.cls) && !g.starBlockUsed) {
           g.starBlockUsed = true;
@@ -809,8 +955,13 @@ function doStep(ctx: StepCtx, step: PlayStep, i: number, primaryId: string, pick
       if (m.doubleVsShaken && (e.taunted || e.disabled)) d *= 2;
       if (buff.crit) d *= 1.5;
       if (!pierce) d -= armorOf(g, e);
+      if (crypt && e.kind === 'lich' && phylacteryStands(g)) {
+        d /= 2;
+        note('the Phylactery halves it');
+      }
       const dealt = Math.max(0, Math.min(e.hp, Math.round(d)));
       e.hp -= dealt;
+      if (crypt) e.pureHit = fire || holy;
       g.stats.heroes[h.cls].dmg += dealt;
       if (dealt > 0 && isChampion(e)) champDamaged = true;
       return dealt;
@@ -1111,7 +1262,17 @@ export function autoDefense(g: Game, inPlay: Set<Cls>): Defense {
 
 // ---------- The enemy turn ----------
 
-function hordeHit(g: Game, actor: Enemy, targetCls: Cls, bonus: number, defense: Defense, off: Set<Cls>, frames: Frame[], label: string) {
+function hordeHit(
+  g: Game,
+  actor: Enemy,
+  targetCls: Cls,
+  bonus: number,
+  defense: Defense,
+  off: Set<Cls>,
+  frames: Frame[],
+  label: string,
+  opts: { ignoreArmor?: boolean } = {},
+) {
   let cls = targetCls;
   const w = g.heroes.warrior;
   if (actor.taunted && w.benched === 0 && w.hp > 0) cls = 'warrior';
@@ -1137,8 +1298,12 @@ function hordeHit(g: Game, actor: Enemy, targetCls: Cls, bonus: number, defense:
     notes.push('the Warrior takes half');
   }
   const before = d;
-  d = Math.max(0, d - h.armor);
-  if (h.armor > 0 && before > 0) notes.push(`Armor ${h.armor}`);
+  if (opts.ignoreArmor) {
+    if (h.armor > 0) notes.push('ignores Armor');
+  } else {
+    d = Math.max(0, d - h.armor);
+    if (h.armor > 0 && before > 0) notes.push(`Armor ${h.armor}`);
+  }
   h.hp -= d;
   let pts = 0;
   if (d > 0) {
@@ -1169,7 +1334,7 @@ function hordeHit(g: Game, actor: Enemy, targetCls: Cls, bonus: number, defense:
 function summon(g: Game, n: number, frames: Frame[], by: Enemy) {
   const who = by.name;
   for (let i = 0; i < n; i++) {
-    const e = goblin(`e${g.nextId++}`, g.tuning, quarterOf(g.possession));
+    const e = goblin(`e${g.nextId++}`, g.tuning, quarterOf(g.possession), g.encounter);
     e.arrived = true;
     e.summonedThisTurn = true;
     e.onRam = !g.gate.breached && crew(g).length < 6;
@@ -1181,6 +1346,8 @@ function summon(g: Game, n: number, frames: Frame[], by: Enemy) {
 function enemyTurn(g: Game, inPlay: Set<Cls>, defense: Defense, frames: Frame[]) {
   const off = new Set(defenders(g, inPlay));
   g.blocked = false;
+  // Bone Shield lasted through the party's possession.
+  g.boneShield = false;
   // Protect, Close Out, Ward and Strip the Ball happen first.
   if (off.has('warrior') && defense.protect && defense.protect !== 'gate') {
     g.heroes[defense.protect].armor += Math.round(4 * tm(g.heroes.warrior.defTier));
@@ -1205,7 +1372,10 @@ function enemyTurn(g: Game, inPlay: Set<Cls>, defense: Defense, frames: Frame[])
       g.stats.heroes.rogue.stops += ps.length;
       frames.push({
         game: clone(g),
-        text: `Rogue · Strip the Ball: ${ps.length} goblin${ps.length > 1 ? 's' : ''} knocked off the ram.`,
+        text:
+          g.encounter === 'crypt'
+            ? `Rogue · Strip the Ball: ${ps.length} skeleton${ps.length > 1 ? 's' : ''} pinned away from the Ritual.`
+            : `Rogue · Strip the Ball: ${ps.length} goblin${ps.length > 1 ? 's' : ''} knocked off the ram.`,
         side: 'party',
         actor: 'rogue',
       });
@@ -1229,6 +1399,33 @@ function enemyTurn(g: Game, inPlay: Set<Cls>, defense: Defense, frames: Frame[])
   } else if (shaman?.disabled)
     frames.push({ game: clone(g), text: `${shaman.name} is Disabled: no cast and no War Drum this turn.`, side: 'party', actor: shaman.id });
 
+  // The Wight casts: Raise Dead with bone piles on the floor, otherwise Bone Shield.
+  const w = onField(g).find((e) => e.wight);
+  if (w && w.disabled) frames.push({ game: clone(g), text: `${w.name} is Disabled: no cast and no Unholy Vigor this turn.`, side: 'party', actor: w.id });
+  else if (w) {
+    const ps = piles(g);
+    if (ps.length) {
+      for (const e of ps) {
+        e.pile = false;
+        e.down = false;
+        e.maxHp = e.prevMax ?? e.maxHp;
+        e.hp = e.maxHp;
+        e.undead = (e.undead ?? 0) + 1;
+        e.onRam = e.kind === 'goblin';
+        e.summonedThisTurn = true;
+      }
+      frames.push({
+        game: clone(g),
+        text: `${w.name} · Raise Dead: ${ps.length} bone pile${ps.length > 1 ? 's rise' : ' rises'} at full strength.`,
+        side: 'horde',
+        actor: w.id,
+      });
+    } else {
+      g.boneShield = true;
+      frames.push({ game: clone(g), text: `${w.name} · Bone Shield: the horde has +2 Armor through your next possession.`, side: 'horde', actor: w.id });
+    }
+  }
+
   // The called play, or a new one if its actors are gone.
   let call = g.call;
   const alive = (id: string | null) => !!id && g.enemies.some((e) => e.id === id && e.hp > 0 && e.arrived);
@@ -1239,7 +1436,7 @@ function enemyTurn(g: Game, inPlay: Set<Cls>, defense: Defense, frames: Frame[])
   }
   let ramBoost = 0;
   if (call) {
-    const play = HORDE_PLAYS.find((p) => p.id === call!.playId)!;
+    const play = hordePlays(g.encounter).find((p) => p.id === call!.playId)!;
     let bonus = 0;
     play.steps.forEach((s, i) => {
       const actor = g.enemies.find((e) => e.id === call!.actors[i]);
@@ -1265,8 +1462,27 @@ function enemyTurn(g: Game, inPlay: Set<Cls>, defense: Defense, frames: Frame[])
         case 'command':
           ramBoost += 3;
           bonus = 3;
-          frames.push({ game: clone(g), text: `${actor.name} · Command: the ram and the next hit +3.`, side: 'horde', actor: actor.id });
+          frames.push({
+            game: clone(g),
+            text: `${actor.name} · ${g.encounter === 'crypt' ? 'Dark Command: the Ritual' : 'Command: the ram'} and the next hit +3.`,
+            side: 'horde',
+            actor: actor.id,
+          });
           break;
+        case 'enervate': {
+          const t = call!.target ? g.heroes[call!.target] : undefined;
+          const drained = !!t && t.benched === 0 && t.touches > 0;
+          if (drained) t!.touches -= 1;
+          bonus = 2;
+          frames.push({
+            game: clone(g),
+            text: `${actor.name} · Enervate: the ${t ? CLASS_INFO[t.cls].name : 'party'} ${drained ? 'loses a touch' : 'has no touch to lose'}, and the next hit +2.`,
+            side: 'horde',
+            actor: actor.id,
+            target: t?.cls,
+          });
+          break;
+        }
         case 'hex': {
           const t = call!.target ? g.heroes[call!.target] : undefined;
           if (t && t.benched === 0) t.exposed = true;
@@ -1309,9 +1525,41 @@ function enemyTurn(g: Game, inPlay: Set<Cls>, defense: Defense, frames: Frame[])
     g.chieftainTurns += 1;
     if (g.chieftainTurns % 2 === 0 && !chief.disabled) summon(g, 2, frames, chief);
   }
+  // The Lich: Death Bolt every other enemy turn: 1.5× to the lowest-HP hero, ignoring Armor.
+  const lich = onField(g).find((e) => e.kind === 'lich');
+  if (lich) {
+    g.chieftainTurns += 1;
+    const target = activeHeroes(g)
+      .filter((x) => !x.untargetable)
+      .sort((a, b) => a.hp - b.hp)[0];
+    if (target && !lich.disabled && g.chieftainTurns % 2 === 0)
+      hordeHit(g, lich, target.cls, Math.round(lich.damage * 0.5), defense, off, frames, 'Death Bolt', { ignoreArmor: true });
+  }
+  // The Wraith drains every hero (never the last HP), ignoring Armor, and heals itself by half of it.
+  const wraith = onField(g).find((e) => e.intangible && !e.disabled);
+  if (wraith) {
+    const per = g.tuning.drain + (tierIndex(wraith.tier ?? 'average') >= tierIndex('great') ? 1 : 0);
+    let total = 0;
+    for (const h of activeHeroes(g)) {
+      const d = Math.min(per, h.hp - 1);
+      h.hp -= d;
+      total += d;
+    }
+    const healed = Math.min(Math.floor(total / 2), wraith.maxHp - wraith.hp);
+    wraith.hp += healed;
+    if (total)
+      frames.push({
+        game: clone(g),
+        text: `${wraith.name} · Drain: ${total} HP across the party (never the last), and it heals ${healed}.`,
+        side: 'horde',
+        actor: wraith.id,
+      });
+  }
 
+  // The Crypt's Ritual: 1 per skeleton and bone pile (pinned skeletons don't feed it), +1 for the Wight's Unholy Vigor.
+  if (g.encounter === 'crypt') ritualTurn(g, off, defense, ramBoost, frames);
   // The ram.
-  if (!g.gate.breached) {
+  else if (!g.gate.breached) {
     const p = pushing(g);
     if (p.length > 0) {
       let d = ramHit(g, p.length, ramBoost);
@@ -1358,6 +1606,50 @@ function enemyTurn(g: Game, inPlay: Set<Cls>, defense: Defense, frames: Frame[])
   }
 }
 
+function ritualTurn(g: Game, off: Set<Cls>, defense: Defense, boost: number, frames: Frame[]) {
+  const feeders = ritualFeeders(g);
+  let gain = ritualGain(g, feeders, boost);
+  if (gain <= 0) {
+    frames.push({ game: clone(g), text: 'The Ritual stalls: nothing feeds it.', side: 'info', target: 'gate' });
+    return;
+  }
+  const guarded = off.has('warrior') && defense.protect === 'gate';
+  if (guarded) {
+    gain = Math.ceil(gain / 2);
+    g.stats.heroes.warrior.stops += 1;
+  }
+  const r = g.ritual;
+  let pts = Math.floor((r.total + gain) / g.tuning.ritualPer) - Math.floor(r.total / g.tuning.ritualPer);
+  r.total += gain;
+  r.value += gain;
+  let text = `The Ritual grows ${gain} (${feeders} dead feeding it${wight(g) ? ', Unholy Vigor +1' : ''}${boost ? `, Dark Command +${boost}` : ''}${guarded ? ', the Warrior guards the circle' : ''}): ${Math.min(r.value, r.max)}/${r.max}`;
+  if (r.value >= r.max) {
+    r.value = 0;
+    r.fills += 1;
+    pts += g.tuning.ritualFill;
+    const lich = g.enemies.find((e) => e.kind === 'lich');
+    if (lich && !lich.arrived) {
+      lich.arrived = true;
+      lich.enraged = true;
+      const ph = g.enemies.find((e) => e.kind === 'phylactery' && !e.arrived);
+      if (ph) ph.arrived = true;
+      text += `. The Ritual completes: +${g.tuning.ritualFill}, and the Lich rises early, enraged`;
+    } else if (lich && lich.hp <= 0) {
+      lich.hp = Math.ceil(lich.maxHp / 2);
+      lich.down = false;
+      lich.enraged = true;
+      text += `. The Ritual completes: +${g.tuning.ritualFill}, and the Lich rises again at half HP, enraged`;
+    } else if (lich) {
+      lich.hp = lich.maxHp;
+      lich.enraged = true;
+      text += `. The Ritual completes: +${g.tuning.ritualFill}, and the Lich is restored, enraged`;
+    } else text += `. The Ritual completes: +${g.tuning.ritualFill}`;
+  }
+  g.score.horde += pts;
+  g.stats.horde.gate += pts;
+  frames.push({ game: clone(g), text: `${text}${pts ? `: +${pts}` : ''}.`, side: 'horde', target: 'gate', pts: pts || undefined });
+}
+
 function endPossession(g: Game, frames: Frame[]) {
   for (const e of g.enemies) {
     e.taunted = false;
@@ -1366,7 +1658,17 @@ function endPossession(g: Game, frames: Frame[]) {
     e.slowed = false;
     e.quickUsed = false;
     e.summonedThisTurn = false;
+    if (e.intangible) e.solid = false;
   }
+  // Restless Dead: bone piles rise at their halved HP.
+  const rising = piles(g);
+  for (const e of rising) {
+    e.pile = false;
+    e.down = false;
+    e.hp = e.maxHp;
+    e.onRam = e.kind === 'goblin';
+  }
+  if (rising.length) frames.push({ game: clone(g), text: `${rising.length} bone pile${rising.length > 1 ? 's reassemble' : ' reassembles'}.`, side: 'info' });
   g.blockUsed = false;
   g.starBlockUsed = false;
   for (const c of CLASSES) {
@@ -1378,7 +1680,7 @@ function endPossession(g: Game, frames: Frame[]) {
   // The Shaman bounty runs out at the end of Q1.
   if (g.bounty === 'open' && g.possession === 2) {
     g.bounty = 'lost';
-    g.log.push({ t: 'The Shaman bounty expires.', side: 'info' });
+    g.log.push({ t: `The ${g.encounter === 'crypt' ? 'Wight' : 'Shaman'} bounty expires.`, side: 'info' });
   }
   g.possession += 1;
   // Benched heroes count down; they return at half HP.

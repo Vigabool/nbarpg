@@ -4,7 +4,8 @@ import {
   CLASSES,
   DEFAULT_PLAYBOOK,
   ENEMY_INFO,
-  HORDE_PLAYS,
+  hordePlays,
+  enemyInfo,
   MOVE,
   MOVES,
   TEMPLATES,
@@ -45,6 +46,11 @@ import {
   project,
   pushing,
   ramHit,
+  piles,
+  ritualGain,
+  ritualFeeders,
+  phylacteryStands,
+  skeletonsStand,
   shamanCast,
   warDrum,
   quarterOf,
@@ -442,7 +448,7 @@ export function App() {
           onChange={setSetup}
           onBack={() => setScreen('assign')}
           onNext={() => {
-            setWeek(buildWeek(seasonData(), setup.weekIndex, setup.slots, setup.gamePicks));
+            setWeek(buildWeek(seasonData(), setup.weekIndex, setup.slots, setup.gamePicks, setup.encounter));
             startGame();
           }}
         />
@@ -471,7 +477,7 @@ export function App() {
           />
           <div className="wrap">
             {!replay && game.phase === 'party' && game.wave && waveClosed !== game.possession && (
-              <WaveBanner wave={game.wave} onClose={() => setWaveClosed(game.possession)} />
+              <WaveBanner wave={game.wave} crypt={game.encounter === 'crypt'} onClose={() => setWaveClosed(game.possession)} />
             )}
             <Objectives game={shown} />
             <CallBanner
@@ -709,13 +715,29 @@ export function App() {
               [
                 ['+2 for a hit on a hero', 'When the horde’s finisher damages a hero. A hit fully stopped by Armor or a Slow scores nothing.'],
                 ['+4 for a takedown', 'When the horde takes a hero down.'],
-                ['+2 on a turnover', 'When your finisher is Blocked, evaded or swallowed by the Barrier, the horde scores on the fast break.'],
                 [
-                  '+1 for every 2 gate damage',
-                  'The ram hits the gate each turn. Each goblin pushing adds a quarter of its hit, so knocking goblins off the ram slows it.',
+                  '+2 on a turnover',
+                  'When your finisher is Blocked, evaded, swallowed by the Barrier or passes through the Wraith, the horde scores on the fast break.',
                 ],
-                ['+10 when the gate falls', 'Then the goblins pour into the city.'],
-                ['+1 per goblin, pillaging', 'After the gate falls, every goblin on the field scores 1 each turn.'],
+                ...((game.encounter === 'crypt'
+                  ? [
+                      [
+                        `+1 for every ${tuning.ritualPer} Ritual points`,
+                        'The Ritual grows each turn by 1 per skeleton and bone pile, and 1 more while the Wight stands. Destroying the dead for good sets it back 1, the Necromancer 3.',
+                      ],
+                      [
+                        `+${tuning.ritualFill} when the Ritual completes`,
+                        `At ${tuning.ritualMax}: the Lich rises at once (or rises again, or is restored), and the Ritual starts over.`,
+                      ],
+                    ]
+                  : [
+                      [
+                        '+1 for every 2 gate damage',
+                        'The ram hits the gate each turn. Each goblin pushing adds a quarter of its hit, so knocking goblins off the ram slows it.',
+                      ],
+                      ['+10 when the gate falls', 'Then the goblins pour into the city.'],
+                      ['+1 per goblin, pillaging', 'After the gate falls, every goblin on the field scores 1 each turn.'],
+                    ]) as [string, string][]),
               ] as [string, string][]
             ).map(([k, v]) => (
               <div className="li" key={k} style={{ gridTemplateColumns: '1fr' }}>
@@ -932,6 +954,17 @@ function simulateBuild(g: Game, slots: (BuildStep | null)[], defense?: Defense):
             : 'No bucket: the finisher doesn’t get damage through.',
       ok: false,
     });
+  }
+  // The Crypt: which kills stick (fire or Blessed) and which leave bone piles.
+  if (g.encounter === 'crypt') {
+    const crumbled = piles(l.ctx.g).length - piles(g).length;
+    const destroyed = l.ctx.g.enemies.filter((e) => e.undead !== undefined && e.down && !e.pile && !g.enemies.find((x) => x.id === e.id)?.down).length;
+    if (destroyed > 0) notes.push({ t: `Destroys ${destroyed} of the dead for good.`, ok: true });
+    if (crumbled > 0)
+      notes.push({
+        t: `${crumbled} weapon kill${crumbled > 1 ? 's leave bone piles' : ' leaves a bone pile'}: ${crumbled > 1 ? 'they rise' : 'it rises'} next possession. Fire or a Blessed finisher (a Cleric pass) ends them.`,
+        ok: false,
+      });
   }
   if (l.ctx.g.stats.horde.turnovers > g.stats.horde.turnovers)
     notes.push({ t: `Turnover: your finisher is stopped, and the horde scores ${g.tuning.turnoverPoints} on the fast break.`, ok: false });
@@ -1323,7 +1356,7 @@ function PlanScreen(props: {
   const goblins = g.enemies.filter((e) => e.kind === 'goblin');
   const openChamp = champs.find((e) => e.id === open);
   const openHero = CLASSES.find((c) => `hero-${c}` === open);
-  const openPlay = HORDE_PLAYS.find((p) => `hp-${p.id}` === open);
+  const openPlay = hordePlays(g.encounter).find((p) => `hp-${p.id}` === open);
 
   return (
     <>
@@ -1354,7 +1387,7 @@ function PlanScreen(props: {
                 {champs.map((e) => (
                   <button key={e.id} className={`mini ${open === e.id ? 'on' : ''}`} aria-expanded={open === e.id} onClick={() => toggle(e.id)}>
                     <span className="mini-top">
-                      <span>{ENEMY_INFO[e.kind].icon}</span>
+                      <span>{enemyInfo(e.kind, g.encounter).icon}</span>
                       <span className={`tier ${e.tier}`}>{tierLabel(e.tier!)}</span>
                     </span>
                     <strong>{e.name.replace('Goblin ', '')}</strong>
@@ -1379,13 +1412,13 @@ function PlanScreen(props: {
                     {openChamp.boss ? ' · boss' : ''}
                   </strong>
                   <span className="small muted">
-                    {openChamp.player} ({openChamp.team}) · mirrors your {ENEMY_INFO[openChamp.kind].mirrors} · arrives in Q{openChamp.quarter}
+                    {openChamp.player} ({openChamp.team}) · mirrors your {enemyInfo(openChamp.kind, g.encounter).mirrors} · arrives in Q{openChamp.quarter}
                   </span>
                   <span className="small num">
                     {openChamp.maxHp} HP · hits for {openChamp.damage} · worth 🏀 {openChamp.points}
                   </span>
                   <span className="small">
-                    <Rich>{ENEMY_INFO[openChamp.kind].job}</Rich>
+                    <Rich>{enemyInfo(openChamp.kind, g.encounter).job}</Rich>
                   </span>
                 </div>
               )}
@@ -1402,7 +1435,7 @@ function PlanScreen(props: {
                   </span>
                   <span className="small num">{g.tuning.goblinHp} HP · worth 🏀 1</span>
                   <span className="small">
-                    <Rich>{ENEMY_INFO.goblin.job}</Rich>
+                    <Rich>{enemyInfo('goblin', g.encounter).job}</Rich>
                   </span>
                 </div>
               )}
@@ -1448,7 +1481,7 @@ function PlanScreen(props: {
             <section className="stack">
               <span className="eyebrow">Their playbook</span>
               <div className="stack" style={{ gap: 4 }}>
-                {HORDE_PLAYS.map((p, i) => (
+                {hordePlays(g.encounter).map((p, i) => (
                   <button
                     key={p.id}
                     className={`linerow ${open === `hp-${p.id}` ? 'on' : ''}`}
@@ -1464,8 +1497,8 @@ function PlanScreen(props: {
               {openPlay && (
                 <div className="panel detail small">
                   Called {openPlay.when === 'otherwise' ? 'when nothing else fits' : `when ${openPlay.when}`}:{' '}
-                  {openPlay.steps.map((s) => s.actors.map((a) => ENEMY_INFO[a].name.replace('Goblin ', '')).join(' or ')).join(' → ')}. Only their call shows
-                  during the game; if your play breaks it, they switch to the next play that fits, in this order.
+                  {openPlay.steps.map((s) => s.actors.map((a) => enemyInfo(a, g.encounter).name.replace('Goblin ', '')).join(' or ')).join(' → ')}. Only their
+                  call shows during the game; if your play breaks it, they switch to the next play that fits, in this order.
                 </div>
               )}
             </section>
@@ -1730,6 +1763,33 @@ function Scoreboard(props: {
 function Objectives(props: { game: Game }) {
   const g = props.game;
   const wagon = g.enemies.find((e) => e.kind === 'wagon');
+  if (g.encounter === 'crypt') {
+    const graves = g.enemies.filter((e) => e.kind === 'grave');
+    const open = graves.filter((e) => e.hp > 0).length;
+    const ph = g.enemies.find((e) => e.kind === 'phylactery');
+    return (
+      <div className="panel objectives">
+        <div className="gate">
+          <span title="The Necromancer's ritual to raise the Lich">🕯 Ritual</span>
+          <div className="bar ritual" role="meter" aria-valuenow={g.ritual.value} aria-valuemin={0} aria-valuemax={g.ritual.max} aria-label="Ritual">
+            <i style={{ width: `${(g.ritual.value / g.ritual.max) * 100}%` }} />
+          </div>
+          <span className="num small">
+            {g.ritual.value}/{g.ritual.max}
+          </span>
+        </div>
+        <div className="objline">
+          <span>
+            🎯 Wight bounty:{' '}
+            {g.bounty === 'open' ? (g.possession <= 2 ? `open until Q1 ends (+${g.tuning.bountyPoints})` : 'open') : g.bounty === 'won' ? 'won ✓' : 'expired'}
+          </span>
+          <span>🪦 Graves: {open ? `${open} open` : 'all consecrated ✓'}</span>
+          <span>⚱️ Phylactery: {!ph?.arrived ? 'comes with the Lich' : ph.hp > 0 ? `${ph.hp}/${ph.maxHp} HP` : 'shattered ✓'}</span>
+          {g.ritual.fills > 0 && <span>☠️ Ritual completed ×{g.ritual.fills}</span>}
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="panel objectives">
       <div className="gate">
@@ -1769,13 +1829,19 @@ interface CallRow {
 }
 
 /** What a horde helper's step adds to the attack that follows. */
-const HORDE_BUFF: Partial<Record<string, string>> = { hex: 'Hex +3', command: 'Command +3', warDrum: 'War Drum +2', callPack: 'Pack +3' };
+const HORDE_BUFF: Partial<Record<string, string>> = {
+  hex: 'Hex +3',
+  enervate: 'Enervate +2',
+  command: 'Command +3',
+  warDrum: 'War Drum +2',
+  callPack: 'Pack +3',
+};
 
 /** The called play as helpers (with their buff) passing to the attacker, who hits a hero: "Hexer [Hex +3] → Cutthroat ⚔ Wizard". */
 function CallChain(props: { game: Game }) {
   const g = props.game;
   const call = g.call;
-  const play = call && HORDE_PLAYS.find((x) => x.id === call.playId);
+  const play = call && hordePlays(g.encounter).find((x) => x.id === call.playId);
   if (!call || !play) return null;
   const name = (id: string) => g.enemies.find((e) => e.id === id)?.name.replace('Goblin ', '') ?? '';
   const steps = play.steps.map((st, i) => ({ st, id: call.actors[i] })).filter((x): x is { st: (typeof play.steps)[number]; id: string } => !!x.id);
@@ -1785,7 +1851,7 @@ function CallChain(props: { game: Game }) {
     <span className="chain">
       {helpers.map(({ st, id }) => (
         <span key={id} className="chelper">
-          {name(id)} <span className="cbuff">{HORDE_BUFF[st.kind] ?? 'buff'}</span>
+          {name(id)} <span className="cbuff">{st.kind === 'command' && g.encounter === 'crypt' ? 'Dark Command +3' : (HORDE_BUFF[st.kind] ?? 'buff')}</span>
           <span className="carrow" aria-hidden="true">
             {' '}
             →{' '}
@@ -1816,12 +1882,42 @@ function callRows(g: Game, horde: Sim['horde'] | undefined): CallRow[] {
   const val = (ls: HordeLine[]) => (horde ? `+${pts(ls)}` : undefined);
   const name = (id?: string) => g.enemies.find((e) => e.id === id)?.name.replace('Goblin ', '') ?? 'The horde';
   const pound = g.call?.playId === 'pound';
+  const crypt = g.encounter === 'crypt';
 
   // The ram (or, once the gate is down, the pillage).
   const ramLines = take((x) => x.target === 'gate' || /pillage/i.test(x.t));
   const strip = lines.find((x) => x.actor === 'rogue' && /Strip the Ball/.test(x.t));
-  const ramRow: CallRow = { key: 'ram', label: g.gate.breached ? 'Pillage' : pound ? 'Pound the Gate' : 'Ram → Gate', value: val(ramLines), detail: [] };
-  if (g.gate.breached) ramRow.detail.push('The gate is down: every goblin on the field pillages for 1 a turn.', ...ramLines.map((x) => x.t));
+  const ramRow: CallRow = {
+    key: 'ram',
+    label: crypt ? (pound ? 'Feed the Ritual' : 'Ritual') : g.gate.breached ? 'Pillage' : pound ? 'Pound the Gate' : 'Ram → Gate',
+    value: val(ramLines),
+    detail: [],
+  };
+  if (crypt) {
+    const grow = ramLines.find((x) => /Ritual grows/.test(x.t));
+    if (!horde) ramRow.detail.push('Each skeleton and bone pile adds 1 to the Ritual each turn, and the Wight 1 more.');
+    else if (!grow) ramRow.detail.push('Nothing feeds the Ritual this turn.');
+    else {
+      const d = Number(/grows (\d+)/.exec(grow.t)?.[1] ?? 0);
+      const scored = pts(ramLines);
+      const after = grow.game.ritual;
+      ramRow.detail.push(
+        `The Ritual grows ${d} and scores ${scored} point${scored === 1 ? '' : 's'} (1 per ${g.tuning.ritualPer} Ritual points): ${after.fills > g.ritual.fills ? 'it completes' : `${after.value}/${after.max} after this turn`}.`,
+      );
+      const why = /\(([^)]*)\)/.exec(grow.t)?.[1];
+      if (why) ramRow.detail.push(`${why[0].toUpperCase()}${why.slice(1)}.`);
+      if (after.fills > g.ritual.fills) ramRow.detail.push(`The Ritual completes: +${g.tuning.ritualFill}, and the Lich rises (or is restored).`);
+      else {
+        const per = Math.max(1, d);
+        ramRow.detail.push(`At this pace it completes in about ${Math.ceil((after.max - after.value) / per)} more turns.`);
+      }
+      if (strip) {
+        const saved = (horde.ramNoStrip ?? scored) - scored;
+        ramRow.detail.push(`The Rogue is pinning a skeleton away from it${saved > 0 ? `, saving ${saved} point${saved === 1 ? '' : 's'}` : ''}.`);
+      }
+      ramRow.detail.push('Destroying the dead for good sets it back 1; the Necromancer, 3.');
+    }
+  } else if (g.gate.breached) ramRow.detail.push('The gate is down: every goblin on the field pillages for 1 a turn.', ...ramLines.map((x) => x.t));
   else if (!horde) ramRow.detail.push('Each goblin pushing the ram adds a quarter of its hit on the gate.');
   else {
     const hitLine = ramLines.find((x) => /hits the gate/.test(x.t));
@@ -1881,6 +1977,42 @@ function callRows(g: Game, horde: Sim['horde'] | undefined): CallRow[] {
   }
   const chief = take((x) => /calls the pack/.test(x.t));
   if (chief.length) rows.push({ key: 'chief', label: `${name(chief[0].actor)} →`, value: 'PACK', detail: chief.map((x) => x.t) });
+
+  // The Crypt: the Wight's cast, the Lich's Death Bolt and the Wraith's drain.
+  const w = onField(g).find((e) => e.wight);
+  if (w) {
+    const ls = take((x) => x.actor === w.id && /Raise Dead|Bone Shield/.test(x.t));
+    const cast = horde ? (ls.some((x) => /Raise Dead/.test(x.t)) ? 'raise' : ls.length ? 'shield' : null) : piles(g).length ? 'raise' : 'shield';
+    if (w.disabled) rows.push({ key: 'wight', label: `${w.name} is Disabled`, value: '—', detail: ['No cast and no Unholy Vigor this turn.'] });
+    else if (cast)
+      rows.push({
+        key: 'wight',
+        label: `${w.name} →`,
+        value: cast === 'raise' ? 'RAISE DEAD' : 'BONE SHIELD',
+        detail: [
+          cast === 'raise'
+            ? 'Raise Dead: every bone pile rises now, at the HP it had before it crumbled.'
+            : 'Bone Shield: +2 Armor on the horde through your next possession (no bone piles to raise).',
+          'Disable the Wight or take it down to stop it; it also adds 1 to the Ritual each turn.',
+        ],
+      });
+  }
+  const bolt = take((x) => /Death Bolt/.test(x.t));
+  if (bolt.length)
+    rows.push({
+      key: 'bolt',
+      label: `${name(bolt[0].actor)} → Death Bolt`,
+      value: val(bolt),
+      detail: [...bolt.map((x) => x.t), 'Death Bolt ignores Armor and hits the lowest-HP hero, every other turn.'],
+    });
+  const drain = take((x) => /Drain:/.test(x.t));
+  if (drain.length)
+    rows.push({
+      key: 'drain',
+      label: `${name(drain[0].actor)} → Drain`,
+      value: 'DRAIN',
+      detail: [...drain.map((x) => x.t), 'It scores nothing, but leaves heroes low for the hits that follow.'],
+    });
 
   // A turnover during your possession.
   const to = take((x) => /^Turnover/.test(x.t));
@@ -1962,6 +2094,12 @@ function statusChips(g: Game, e: Enemy) {
   if (hasQuick(e)) out.push({ t: '💨 Quick', c: 'cont' });
   if (e.barrier && !e.disabled) out.push({ t: '🥁 War Drum', c: 'cont' }, { t: '✨ Barrier or Pack', c: 'cont' });
   if (e.block && blockUp(g)) out.push({ t: '✋ Block', c: 'cont' });
+  if (e.intangible) out.push(e.solid ? { t: 'Solid', c: 'ball' } : { t: '👻 Intangible', c: 'cont' });
+  if (e.undead !== undefined && e.kind !== 'goblin') out.push({ t: '💀 Restless', c: 'cont' });
+  if (e.wight && !e.disabled) out.push({ t: '🧟 Unholy Vigor', c: 'cont' });
+  if (e.kind === 'phylactery' && skeletonsStand(g)) out.push({ t: '🛡 Shielded', c: 'cont' });
+  if (e.kind === 'lich' && phylacteryStands(g)) out.push({ t: '⚱️ Half damage', c: 'cont' });
+  if (e.kind === 'grave') out.push({ t: 'Holy only', c: 'cont' });
   if (e.taunted) out.push({ t: 'Taunted', c: 'ball' });
   if (e.disabled) out.push({ t: 'Disabled', c: 'ball' });
   if (e.exposed > 1) out.push({ t: 'Marked', c: 'ball' });
@@ -1979,9 +2117,13 @@ function projText(p: Proj | undefined) {
 }
 
 /** The quarter's new arrivals, shown on the possession they land until closed. */
-function WaveBanner({ wave, onClose }: { wave: Wave; onClose: () => void }) {
+function WaveBanner({ wave, crypt, onClose }: { wave: Wave; crypt?: boolean; onClose: () => void }) {
   const parts = [
-    wave.goblins ? `${wave.goblins} goblin${wave.goblins > 1 ? 's' : ''}${wave.onRam ? ` (${wave.onRam} to the ram)` : ''}` : '',
+    wave.goblins
+      ? crypt
+        ? `${wave.goblins} skeleton${wave.goblins > 1 ? 's' : ''}`
+        : `${wave.goblins} goblin${wave.goblins > 1 ? 's' : ''}${wave.onRam ? ` (${wave.onRam} to the ram)` : ''}`
+      : '',
     ...wave.others,
   ].filter(Boolean);
   return (
@@ -2001,8 +2143,8 @@ function WaveBanner({ wave, onClose }: { wave: Wave; onClose: () => void }) {
 function ramProjection(horde: Sim['horde'] | undefined): { d: number; pts: number } | undefined {
   if (!horde) return undefined;
   const gate = horde.lines.filter((x) => x.target === 'gate');
-  const hit = gate.find((x) => /hits the gate/.test(x.t));
-  return { d: hit ? Number(/for (\d+)/.exec(hit.t)?.[1] ?? 0) : 0, pts: gate.reduce((s2, x) => s2 + (x.pts ?? 0), 0) };
+  const hit = gate.find((x) => /hits the gate|Ritual grows/.test(x.t));
+  return { d: hit ? Number(/(?:for|grows) (\d+)/.exec(hit.t)?.[1] ?? 0) : 0, pts: gate.reduce((s2, x) => s2 + (x.pts ?? 0), 0) };
 }
 
 function Board(props: {
@@ -2036,7 +2178,7 @@ function Board(props: {
       aria-label={`Goblin, ${e.hp} HP${e.onRam ? ', on the ram' : ''}`}
     >
       {pickNo(e.id) > 0 && <span className="pickno">{pickNo(e.id)}</span>}
-      👺 <span className="num">{e.hp}</span>
+      {enemyInfo('goblin', g.encounter).icon} <span className="num">{e.hp}</span>
       {e.stripped && <span className="chip ball">Stripped</span>}
       {e.exposed > 0 && <span className="chip ball">Exp</span>}
       {props.picking && !props.picks && <span className="proj">{shielded ? '✨' : `+${props.projections.get(e.id)?.points ?? 0}`}</span>}
@@ -2082,9 +2224,17 @@ function Board(props: {
               {pickNo(e.id) > 0 && <span className="pickno corner">{pickNo(e.id)}</span>}
               {ci >= 0 && <span className="callstep">{ci + 1}</span>}
               <span className="nm">
-                {ENEMY_INFO[e.kind].icon} {e.name.replace('Goblin ', '')}
+                {enemyInfo(e.kind, g.encounter).icon} {e.name.replace('Goblin ', '')}
               </span>
-              <span className="who">{e.player ? `${e.player} · ${tierLabel(e.tier!)}` : 'Treasure'}</span>
+              <span className="who">
+                {e.player
+                  ? `${e.player} · ${tierLabel(e.tier!)}`
+                  : e.kind === 'grave'
+                    ? 'Raises a skeleton a quarter'
+                    : e.kind === 'phylactery'
+                      ? 'The Lich’s soul jar'
+                      : 'Treasure'}
+              </span>
               <div className={`bar ${e.kind === 'wagon' ? 'gate' : 'horde'}`}>
                 <i style={{ width: `${(e.hp / e.maxHp) * 100}%` }} />
               </div>
@@ -2106,49 +2256,88 @@ function Board(props: {
           );
         })}
       </div>
-      <div className="panel goblins">
-        <div className="gob-head">
-          <strong>{g.gate.breached ? '🔥 Pillage' : '🪵 Ram'}</strong>
-          {!g.gate.breached && (
+      {g.encounter === 'crypt' ? (
+        <div className="panel goblins">
+          <div className="gob-head">
+            <strong>🕯 Ritual</strong>
             <span className="small muted">
               {(() => {
-                // The projection for your play and defense; in a replay, the ram as the board stands.
-                const d = props.ram ? props.ram.d : Math.min(ramHit(g, pushing(g).length), g.gate.hp);
+                const d = props.ram ? props.ram.d : ritualGain(g, ritualFeeders(g));
                 if (d <= 0) return 'stalled';
-                const pts = props.ram ? props.ram.pts : Math.floor((g.gate.dmg + d) / 2) - Math.floor(g.gate.dmg / 2) + (d >= g.gate.hp ? 10 : 0);
-                return `hits the gate for ${d} (${pts} point${pts === 1 ? '' : 's'})`;
+                const pts = props.ram ? props.ram.pts : Math.floor((g.ritual.total + d) / g.tuning.ritualPer) - Math.floor(g.ritual.total / g.tuning.ritualPer);
+                return `grows ${d} (${pts} point${pts === 1 ? '' : 's'}) · ${g.ritual.value}/${g.ritual.max}`;
               })()}
             </span>
-          )}
-        </div>
-        {!g.gate.breached && (
+          </div>
           <div className="gob-row">
             <span className="small" style={{ minWidth: 70 }}>
-              On the ram
+              Skeletons
             </span>
             {ram.length ? ram.map(gob) : <span className="small muted">none</span>}
           </div>
-        )}
-        <div className="gob-row">
-          <span className="small" style={{ minWidth: 70 }}>
-            {g.gate.breached ? 'Pillaging' : 'Off the ram'}
-          </span>
-          {free.length ? free.map(gob) : <span className="small muted">none</span>}
-        </div>
-        {(() => {
-          const t = taunter(g);
-          const b = blockUp(g);
-          const bits = [
-            t ? `The ${t.name.replace('Goblin ', '')} Taunts: single-target hits go to it.` : '',
-            b ? 'The Chieftain’s Block cancels the first hit this possession.' : '',
-          ].filter(Boolean);
-          return bits.length ? (
-            <span className="small muted">
-              <Rich>{bits.join(' ')}</Rich>
+          <div className="gob-row">
+            <span className="small" style={{ minWidth: 70 }}>
+              Bone piles
             </span>
-          ) : null;
-        })()}
-      </div>
+            {piles(g).length ? (
+              piles(g).map((e) => (
+                <span key={e.id} className="gob pile" title="Rises next possession">
+                  🦴 <span className="num">rises {e.maxHp}</span>
+                </span>
+              ))
+            ) : (
+              <span className="small muted">none</span>
+            )}
+          </div>
+          <span className="small muted">
+            <Rich>Weapon kills leave a bone pile; fire or a Blessed finisher destroys the dead for good.</Rich>
+          </span>
+        </div>
+      ) : (
+        <div className="panel goblins">
+          <div className="gob-head">
+            <strong>{g.gate.breached ? '🔥 Pillage' : '🪵 Ram'}</strong>
+            {!g.gate.breached && (
+              <span className="small muted">
+                {(() => {
+                  // The projection for your play and defense; in a replay, the ram as the board stands.
+                  const d = props.ram ? props.ram.d : Math.min(ramHit(g, pushing(g).length), g.gate.hp);
+                  if (d <= 0) return 'stalled';
+                  const pts = props.ram ? props.ram.pts : Math.floor((g.gate.dmg + d) / 2) - Math.floor(g.gate.dmg / 2) + (d >= g.gate.hp ? 10 : 0);
+                  return `hits the gate for ${d} (${pts} point${pts === 1 ? '' : 's'})`;
+                })()}
+              </span>
+            )}
+          </div>
+          {!g.gate.breached && (
+            <div className="gob-row">
+              <span className="small" style={{ minWidth: 70 }}>
+                On the ram
+              </span>
+              {ram.length ? ram.map(gob) : <span className="small muted">none</span>}
+            </div>
+          )}
+          <div className="gob-row">
+            <span className="small" style={{ minWidth: 70 }}>
+              {g.gate.breached ? 'Pillaging' : 'Off the ram'}
+            </span>
+            {free.length ? free.map(gob) : <span className="small muted">none</span>}
+          </div>
+          {(() => {
+            const t = taunter(g);
+            const b = blockUp(g);
+            const bits = [
+              t ? `The ${t.name.replace('Goblin ', '')} Taunts: single-target hits go to it.` : '',
+              b ? 'The Chieftain’s Block cancels the first hit this possession.' : '',
+            ].filter(Boolean);
+            return bits.length ? (
+              <span className="small muted">
+                <Rich>{bits.join(' ')}</Rich>
+              </span>
+            ) : null;
+          })()}
+        </div>
+      )}
     </div>
   );
 }
@@ -2194,7 +2383,8 @@ function HeroRow(props: { game: Game; inPlay: Set<Cls>; defense: Defense | null;
   const g = props.game;
   const d = props.defense;
   const off = d ? new Set(defenders(g, props.inPlay)) : new Set<Cls>();
-  const short = (x?: string) => (x === 'gate' ? 'Gate' : x ? (SHORT[x] ?? SHORT[g.enemies.find((e) => e.id === x)?.kind ?? ''] ?? '?') : '?');
+  const short = (x?: string) =>
+    x === 'gate' ? (g.encounter === 'crypt' ? 'Circle' : 'Gate') : x ? (SHORT[x] ?? SHORT[g.enemies.find((e) => e.id === x)?.kind ?? ''] ?? '?') : '?';
   /** The defense chip: short text, and the full words for screen readers and the tooltip. */
   const role = (c: Cls): { t: string; full: string } | null => {
     if (!d || !off.has(c)) return null;
@@ -2273,7 +2463,17 @@ function DefenseLine(props: {
     );
   const heroOpts = props.heroes.map((h) => ({ v: h, t: CLASS_INFO[h].name }));
   let body: ReactNode;
-  if (cls === 'warrior') body = sel(d.protect, [...heroOpts, ...(props.game.gate.breached ? [] : [{ v: 'gate', t: 'the gate (halves the ram)' }])], 'protect');
+  if (cls === 'warrior')
+    body = sel(
+      d.protect,
+      [
+        ...heroOpts,
+        ...(props.game.gate.breached
+          ? []
+          : [{ v: 'gate', t: props.game.encounter === 'crypt' ? 'the circle (halves the Ritual)' : 'the gate (halves the ram)' }]),
+      ],
+      'protect',
+    );
   else if (cls === 'ranger')
     body = sel(
       d.closeOut,
@@ -3214,11 +3414,11 @@ function EnemyDetail(props: { game: Game; id: string; onClose: () => void }) {
   return (
     <ModalShell title={e.name} onClose={props.onClose}>
       <p>
-        <Rich>{ENEMY_INFO[e.kind].job}</Rich>
+        <Rich>{enemyInfo(e.kind, props.game.encounter).job}</Rich>
       </p>
       {e.player && (
         <p className="small muted">
-          {e.player} ({e.team}) · {tierLabel(e.tier!)} · mirrors your {ENEMY_INFO[e.kind].mirrors}
+          {e.player} ({e.team}) · {tierLabel(e.tier!)} · mirrors your {enemyInfo(e.kind, props.game.encounter).mirrors}
         </p>
       )}
       <p className="num">

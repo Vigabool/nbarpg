@@ -18,10 +18,11 @@ import { buildHorde, playerLine } from '../../../../src/engine/horde';
 import { encounterIds, encounterOf } from '../../../../src/engine/encounter';
 import { teamName } from '../../../../src/data/teams';
 import { rules, tierIndex, type HeroClass } from '../../../../src/rules';
-import { CLASS_INFO, ENEMY_INFO, type Cls } from '../content';
+import { CLASS_INFO, enemyInfo, type Cls, type Encounter, type EnemyKind } from '../content';
 import { ROLE_OF, ramDamageFromFg, type Difficulty } from '../engine';
 import { Rich } from '../terms';
 import { mostTouches, smartPicks, suggestHeroes } from './picks';
+import { PICK_WEIGHTS } from './picks';
 import { ENCOUNTER, SETUP_CLASSES, defRating, defTierOf, heroFromGame, teamOf, touchesOf } from './buildWeek';
 
 export const SEASON = '2025-26';
@@ -356,7 +357,9 @@ export function RosterScreen(props: { state: SetupState; onChange: (s: SetupStat
 
 // ---------- Choose your encounter ----------
 
-const HORDE_FOES: (keyof typeof ENEMY_INFO)[] = ['shaman', 'hexer', 'ogre', 'cutthroat', 'sharpshooter'];
+const HORDE_FOES: EnemyKind[] = ['shaman', 'hexer', 'ogre', 'cutthroat', 'sharpshooter'];
+/** The encounters the play-calling game can play so far. */
+const PLAYABLE = ['goblin-horde', 'crypt'];
 
 export function EncounterScreen(props: {
   state: SetupState;
@@ -374,11 +377,12 @@ export function EncounterScreen(props: {
         <span className="tier">{props.difficulty === 'hard' ? 'Hard' : 'Normal'}</span>
       </div>
       <p className="small muted">
-        Where the party plays this week. Your players’ opponents shape the horde: their box scores decide how strong each Champion is and how many goblins come.
+        Where the party plays this week. Your players’ opponents shape the horde: their box scores decide how strong each Champion is and how big the horde is.
       </p>
       {encounterIds().map((id) => {
         const enc = encounterOf(id);
-        const playable = id === ENCOUNTER;
+        const playable = PLAYABLE.includes(id);
+        const e = id as Encounter;
         const chosen = state.encounter === id;
         return (
           <button
@@ -398,16 +402,32 @@ export function EncounterScreen(props: {
                 <span className="small">
                   {HORDE_FOES.map((k) => (
                     <span key={k} className="foe">
-                      {ENEMY_INFO[k].icon} {ENEMY_INFO[k].name.replace('Goblin ', '')}
+                      {enemyInfo(k, e).icon} {enemyInfo(k, e).name.replace('Goblin ', '')}
                     </span>
                   ))}
                 </span>
-                <span className="small">
-                  Boss: {ENEMY_INFO.chieftain.icon} <strong>{ENEMY_INFO.chieftain.name}</strong> · the ram, the gate and a loot wagon
-                </span>
-                <span className="small muted">
-                  <Rich>Four quarters, twelve possessions. The Shaman casts the Barrier or Calls the Pack; the Ogre Taunts; the Chieftain Blocks.</Rich>
-                </span>
+                {e === 'crypt' ? (
+                  <>
+                    <span className="small">
+                      Boss: {enemyInfo('lich', e).icon} <strong>Lich</strong> and its ⚱️ Phylactery · the Ritual and three open graves
+                    </span>
+                    <span className="small muted">
+                      <Rich>
+                        Restless Dead: weapon kills leave bone piles that rise again; fire or a Blessed finisher (any Cleric pass) destroys them for good. The
+                        Ritual grows with every skeleton and bone pile; when it completes, the Lich rises. The Wraith is Intangible.
+                      </Rich>
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className="small">
+                      Boss: {enemyInfo('chieftain', e).icon} <strong>{enemyInfo('chieftain', e).name}</strong> · the ram, the gate and a loot wagon
+                    </span>
+                    <span className="small muted">
+                      <Rich>Four quarters, twelve possessions. The Shaman casts the Barrier or Calls the Pack; the Ogre Taunts; the Chieftain Blocks.</Rich>
+                    </span>
+                  </>
+                )}
               </>
             ) : (
               <span className="small muted">Plays in the main game. The play-calling version comes later.</span>
@@ -418,7 +438,7 @@ export function EncounterScreen(props: {
       <Footer
         back={{ label: 'Roster', onClick: props.onBack }}
         status={encounterOf(state.encounter).name}
-        next={{ label: 'Assign heroes', onClick: props.onNext, disabled: state.encounter !== ENCOUNTER }}
+        next={{ label: 'Assign heroes', onClick: props.onNext, disabled: !PLAYABLE.includes(state.encounter) }}
       />
     </div>
   );
@@ -560,7 +580,7 @@ export function GamesScreen(props: { state: SetupState; onChange: (s: SetupState
     return (c: HeroClass, pid: number, gid: string) => {
       const k = `${c}:${pid}:${gid}`;
       if (!cache.has(k)) {
-        const h = buildHorde([{ heroClass: c, playerId: pid, gameId: gid }], full, rules, ENCOUNTER);
+        const h = buildHorde([{ heroClass: c, playerId: pid, gameId: gid }], full, rules, state.encounter);
         cache.set(
           k,
           [...h.champions, h.warlord].find((m) => m.source?.mirrorOf === c),
@@ -568,11 +588,14 @@ export function GamesScreen(props: { state: SetupState; onChange: (s: SetupState
       }
       return cache.get(k);
     };
-  }, [full]);
+  }, [full, state.encounter]);
   const picks = playing.filter((c) => state.gamePicks[c]).map((c) => ({ heroClass: c, playerId: state.slots[c]!, gameId: state.gamePicks[c]! }));
-  const horde = picks.length ? buildHorde(picks, full, rules, ENCOUNTER) : null;
+  const crypt = state.encounter === 'crypt';
+  const enc = state.encounter as Encounter;
+  const minion = (pts: number, goblinsAt40: number) => (crypt ? Math.floor(pts / 45) : goblinsAt40);
+  const horde = picks.length ? buildHorde(picks, full, rules, state.encounter) : null;
   const teams = picks.map((p) => teamOf(full, p.playerId, p.gameId));
-  const goblins = teams.reduce((s, t) => s + t.goblins, 0);
+  const goblins = teams.reduce((s, t) => s + minion(t.pts, t.goblins), 0);
   const fg = teams.length ? teams.reduce((s, t) => s + t.fgPct, 0) / teams.length : 0;
 
   return (
@@ -581,12 +604,14 @@ export function GamesScreen(props: { state: SetupState; onChange: (s: SetupState
       <h1>Pick games</h1>
       <p className="small muted">
         Each hero plays from one game this week: it sets their tier, <Rich>touches</Rich> and defense, and a double-double or triple-double unlocks a special.
-        Every game also sends the player they faced into the horde as a Champion, and the opponent’s points become goblins.
+        Every game also sends the player they faced into the horde as a Champion, and the opponent’s points become {crypt ? 'skeletons' : 'goblins'}.
       </p>
       <div className="row">
         <button
           className="btn small"
-          onClick={() => props.onChange({ ...state, gamePicks: { ...state.gamePicks, ...smartPicks(full, state.weekIndex, state.slots) } })}
+          onClick={() =>
+            props.onChange({ ...state, gamePicks: { ...state.gamePicks, ...smartPicks(full, state.weekIndex, state.slots, PICK_WEIGHTS, state.encounter) } })
+          }
           title="Weighs each game's tier, touches, defense and special against the Champions, boss and goblins the games bring together"
         >
           🧠 Smart pick
@@ -637,8 +662,9 @@ export function GamesScreen(props: { state: SetupState; onChange: (s: SetupState
                   </span>
                   {m && kind && (
                     <span className="small brings">
-                      Brings {ENEMY_INFO[kind].icon} <strong>{ENEMY_INFO[kind].name.replace('Goblin ', '')}</strong> ({full.players[m.source!.playerId]?.name})
-                      · {tierLabel(m.tier ?? 'average')} · {m.hp} HP · {t.team} scored {t.pts}: {t.goblins} goblins
+                      Brings {enemyInfo(kind, enc).icon} <strong>{enemyInfo(kind, enc).name.replace('Goblin ', '')}</strong> (
+                      {full.players[m.source!.playerId]?.name}) · {tierLabel(m.tier ?? 'average')} · {m.hp} HP · {t.team} scored {t.pts}:{' '}
+                      {minion(t.pts, t.goblins)} {crypt ? 'skeletons' : 'goblins'}
                     </span>
                   )}
                 </button>
@@ -656,15 +682,23 @@ export function GamesScreen(props: { state: SetupState; onChange: (s: SetupState
               if (!kind) return null;
               return (
                 <span key={m.id} className={`chip ${m.isWarlord ? 'ball' : ''}`}>
-                  {ENEMY_INFO[kind].icon} {ENEMY_INFO[kind].name.replace('Goblin ', '')} · {tierLabel(m.tier ?? 'average')}
+                  {enemyInfo(kind, enc).icon} {enemyInfo(kind, enc).name.replace('Goblin ', '')} · {tierLabel(m.tier ?? 'average')}
                   {m.isWarlord ? ' · boss' : ''}
                 </span>
               );
             })}
           </span>
           <span className="small">
-            👺 {goblins} goblins (1 per {rules.horde.minions.teamPointsPerGoblin} opposing points) · 🪵 the ram hits for {ramDamageFromFg(fg)} (opponents shot{' '}
-            {(fg * 100).toFixed(1)}%)
+            {crypt ? (
+              <>
+                💀 {goblins} skeletons (1 per 45 opposing points), plus one a quarter from each open grave · 🕯 the Ritual grows by 1 per skeleton and bone pile
+              </>
+            ) : (
+              <>
+                👺 {goblins} goblins (1 per {rules.horde.minions.teamPointsPerGoblin} opposing points) · 🪵 the ram hits for {ramDamageFromFg(fg)} (opponents
+                shot {(fg * 100).toFixed(1)}%)
+              </>
+            )}
           </span>
         </section>
       )}

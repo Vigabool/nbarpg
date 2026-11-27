@@ -113,6 +113,7 @@ function play(difficulty: Difficulty, bot: 'smart' | 'naive' | 'expert', seed: n
     changes: changes / Math.max(1, bestIds.length - 1),
     possessions: g.possession,
     stats: g.stats,
+    ritual: g.ritual,
   };
 }
 
@@ -145,10 +146,10 @@ if (process.env.ROSTERS) {
       const d = autoDraft(view, w, mode);
       if (!d) continue;
       games++;
-      const save = { ...newSave('2025-26', w.index), roster: [...Object.values(d.slots), ...d.reserves], encounter: 'goblin-horde' };
+      const save = { ...newSave('2025-26', w.index), roster: [...Object.values(d.slots), ...d.reserves], encounter: process.env.ENC ?? 'goblin-horde' };
       save.assignments = mainPicks ? autoAssign(save, view) : suggestHeroes(view, full, w.index, save.roster, pw);
-      save.gamePicks = mainPicks ? smartGames(save, view) : smartPicks(full, w.index, save.assignments, pw);
-      const week = buildWeek(full, w.index, save.assignments, save.gamePicks);
+      save.gamePicks = mainPicks ? smartGames(save, view) : smartPicks(full, w.index, save.assignments, pw, process.env.ENC ?? 'goblin-horde');
+      const week = buildWeek(full, w.index, save.assignments, save.gamePicks, process.env.ENC ?? 'goblin-horde');
       setWeek(week);
       const tuning = { ...DEFAULT_TUNING, ...JSON.parse(process.env.TUNE ?? '{}') };
       const touches = week.heroes.reduce((s2, h) => s2 + (h.out ? 0 : Math.max(2, Math.round(h.trueUsage / tuning.usagePerTouch))), 0);
@@ -156,6 +157,10 @@ if (process.env.ROSTERS) {
       for (const difficulty of ['normal', 'hard'] as Difficulty[]) {
         const e = play(difficulty, 'expert', 1);
         const sm = play(difficulty, 'smart', 1);
+        if (process.env.DEBUG)
+          console.log(
+            `  ${difficulty} expert horde ${JSON.stringify(e.stats.horde)} ritual ${JSON.stringify(e.ritual)} party ${JSON.stringify(e.stats.party)} | smart horde ${JSON.stringify(sm.stats.horde)} ritual fills ${sm.ritual.fills}`,
+          );
         totals[difficulty][0] += e.party - e.horde;
         totals[difficulty][1] += sm.party - sm.horde;
         totals[difficulty][2] += e.party > e.horde ? 1 : 0;

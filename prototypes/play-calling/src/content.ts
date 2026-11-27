@@ -496,8 +496,11 @@ export const TEMPLATES: Play[] = [
 export const DEFAULT_PLAYBOOK = ['critical-taunt', 'kick-out', 'frost-bolt', 'spread-the-floor'];
 
 /** The Goblin Horde's playbook, in priority order. */
-export type EnemyKind = 'goblin' | 'shaman' | 'hexer' | 'sharpshooter' | 'cutthroat' | 'ogre' | 'chieftain' | 'wagon';
-export const ENEMY_INFO: Record<EnemyKind, { name: string; icon: string; mirrors?: string; job: string }> = {
+export type EnemyKind = 'goblin' | 'shaman' | 'hexer' | 'sharpshooter' | 'cutthroat' | 'ogre' | 'chieftain' | 'wagon' | 'lich' | 'phylactery' | 'grave';
+/** The encounters this prototype can play. */
+export type Encounter = 'goblin-horde' | 'crypt';
+export type EnemyInfo = { name: string; icon: string; mirrors?: string; job: string };
+export const ENEMY_INFO: Record<EnemyKind, EnemyInfo> = {
   goblin: {
     name: 'Goblin',
     icon: '👺',
@@ -535,11 +538,73 @@ export const ENEMY_INFO: Record<EnemyKind, { name: string; icon: string; mirrors
     job: 'The boss. Command boosts the ram; calls two goblins every other enemy turn. Block: the first hit on any enemy each possession is cancelled. Armor 2.',
   },
   wagon: { name: 'Loot wagon', icon: '📦', job: 'A treasure chest: 3 points and 5 gold when broken. Armor 2. No bucket for hitting it.' },
+  lich: { name: 'Lich', icon: '☠️', mirrors: 'best opposing performance', job: 'The Crypt’s boss.' },
+  phylactery: { name: 'Phylactery', icon: '⚱️', job: 'The Lich’s soul jar.' },
+  grave: { name: 'Open grave', icon: '🪦', job: 'Raises a skeleton each quarter.' },
 };
+
+/** The Crypt's cast: the same roles as the Goblin Horde, with the dead's own rules. */
+export const CRYPT_INFO: Partial<Record<EnemyKind, EnemyInfo>> = {
+  goblin: {
+    name: 'Skeleton',
+    icon: '💀',
+    job: 'Feeds the Ritual: each skeleton (and each bone pile) adds 1 a turn. Restless: a weapon kill leaves a bone pile that rises next possession with half its HP; fire or a Blessed finisher destroys it for good, and only then does it score.',
+  },
+  shaman: {
+    name: 'Wight',
+    icon: '🧟',
+    mirrors: 'assists leader',
+    job: 'Unholy Vigor (automatic): the Ritual gains 1 more each turn while it stands. Each enemy turn it casts Raise Dead (every bone pile rises at once, at full strength) or, with no piles, Bone Shield (+2 Armor on the horde through your next possession).',
+  },
+  hexer: {
+    name: 'Necromancer',
+    icon: '🧙',
+    mirrors: 'top scorer',
+    job: 'Setup: Enervate drains a touch from a hero and adds 2 to the next hit. Taking it down sets the Ritual back 3.',
+  },
+  sharpshooter: {
+    name: 'Skeletal Archer',
+    icon: '🏹',
+    mirrors: 'second scorer',
+    job: 'Ranged finisher. Quick: the first hit on it each possession misses. Restless: a weapon kill leaves a bone pile that rises once at half HP; fire or a Blessed finisher ends it.',
+  },
+  cutthroat: {
+    name: 'Wraith',
+    icon: '👻',
+    mirrors: 'steals leader',
+    job: 'Intangible: only Wizard spells and Blessed hits touch it, and the first one makes it solid for the possession; other hits pass through. Drain: each enemy turn it takes 2–4 HP from every hero, ignoring Armor (never the last HP), and heals itself.',
+  },
+  ogre: {
+    name: 'Bone Giant',
+    icon: '🦴',
+    mirrors: 'leading rebounder',
+    job: 'Bone Toss: throws a skeleton at a wounded hero. Taunt: single-target hits must go to it. Armor 3. Bone Harvest: heals 2 whenever a skeleton crumbles from a weapon kill.',
+  },
+  lich: {
+    name: 'Lich',
+    icon: '☠️',
+    mirrors: 'best opposing performance',
+    job: 'The boss. Rises in Q3, or as soon as the Ritual fills. Death Bolt every other enemy turn: 1.5× damage to the lowest-HP hero, ignoring Armor. Takes half damage while its Phylactery stands.',
+  },
+  phylactery: {
+    name: 'Phylactery',
+    icon: '⚱️',
+    job: 'Arrives with the Lich. While it stands the Lich takes half damage. Skeletons shield it: it can’t be hit while any skeleton stands (moves that hit every enemy still land). Breaking it scores 3; it shatters if the Lich falls.',
+  },
+  grave: {
+    name: 'Open grave',
+    icon: '🪦',
+    job: 'Raises a skeleton at the start of each quarter. Only holy damage (a Blessed finisher or a Cleric hit) consecrates it, closing it for good: +3.',
+  },
+};
+
+/** An enemy kind's name, icon and description in an encounter. */
+export const enemyInfo = (kind: EnemyKind, encounter: Encounter = 'goblin-horde'): EnemyInfo =>
+  (encounter === 'crypt' ? CRYPT_INFO[kind] : undefined) ?? ENEMY_INFO[kind];
 
 export interface HordeStep {
   actors: EnemyKind[];
-  kind: 'callPack' | 'warDrum' | 'command' | 'hex' | 'hit' | 'toss';
+  kind: 'callPack' | 'warDrum' | 'command' | 'hex' | 'enervate' | 'hit' | 'toss';
   /** A pass the play can do without: with no one to make it, the finisher acts alone. */
   optional?: boolean;
 }
@@ -598,3 +663,52 @@ export const HORDE_PLAYS: HordePlay[] = [
     ],
   },
 ];
+
+/** The Crypt's playbook, in priority order: the Goblin Horde's plays with the dead's own moves. */
+export const CRYPT_PLAYS: HordePlay[] = [
+  {
+    id: 'hunt',
+    short: 'you destroy 2+ dead',
+    name: 'Hunt the Light',
+    when: 'a hero destroyed 2 or more of the dead for good last possession',
+    target: 'disruptor',
+    steps: [
+      { actors: ['hexer'], kind: 'enervate' },
+      { actors: ['cutthroat', 'sharpshooter', 'ogre'], kind: 'hit' },
+    ],
+  },
+  {
+    id: 'healer',
+    short: 'Cleric heals 10+',
+    name: 'Cut Off the Healer',
+    when: 'the Cleric healed 10 or more last possession',
+    target: 'cleric',
+    steps: [
+      { actors: ['hexer'], kind: 'enervate' },
+      { actors: ['sharpshooter', 'cutthroat'], kind: 'hit' },
+    ],
+  },
+  {
+    id: 'toss',
+    short: 'a hero under ⅓ HP',
+    name: 'Bone Toss',
+    when: 'a hero is below a third of their HP',
+    target: 'wounded',
+    steps: [
+      { actors: ['lich', 'hexer'], kind: 'command', optional: true },
+      { actors: ['ogre'], kind: 'toss' },
+    ],
+  },
+  {
+    id: 'pound',
+    short: 'default',
+    name: 'Feed the Ritual',
+    when: 'otherwise',
+    target: 'lowest',
+    steps: [
+      { actors: ['lich'], kind: 'command', optional: true },
+      { actors: ['ogre', 'cutthroat', 'sharpshooter', 'hexer'], kind: 'hit' },
+    ],
+  },
+];
+export const hordePlays = (encounter: Encounter = 'goblin-horde') => (encounter === 'crypt' ? CRYPT_PLAYS : HORDE_PLAYS);

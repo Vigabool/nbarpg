@@ -63,6 +63,8 @@ export interface WeekTeam {
 
 export interface WeekData {
   season: string;
+  /** The encounter this week is played as (the Goblin Horde when absent). */
+  encounter?: string;
   week: { index: number; start: string; end: string };
   heroes: WeekHero[];
   champions: WeekChampion[];
