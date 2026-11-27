@@ -82,7 +82,8 @@ type Modal =
   | { kind: 'enemy'; id: string }
   | { kind: 'hero'; cls: Cls }
   | { kind: 'recap' }
-  | { kind: 'horde' };
+  | { kind: 'horde' }
+  | { kind: 'log' };
 
 /** Step: wait for Next at every beat. Auto and Fast advance on a timer. */
 type Speed = 'step' | 'auto' | 'fast';
@@ -484,6 +485,7 @@ export function App() {
             canTimeout={!!history.length && game.timeouts > 0 && !frames}
             onMenu={() => setModal({ kind: 'menu' })}
             onLast={lastReplay && !frames ? () => setModal({ kind: 'recap' }) : undefined}
+            onLog={!frames ? () => setModal({ kind: 'log' }) : undefined}
             next={!replay && game.phase === 'party' ? { party: sim.shot.points, horde: sim.horde?.points ?? 0 } : undefined}
           />
           <div className="wrap">
@@ -695,7 +697,7 @@ export function App() {
           manual={manual}
           setManual={setManual}
           tuning={tuning}
-          log={log}
+          onLog={() => setModal({ kind: 'log' })}
           onApplyTuning={(t) => {
             setTuning(t);
             setModal(null);
@@ -761,6 +763,11 @@ export function App() {
               {`Heroes who aren’t in your play defend: the Warrior Protects, the Ranger Closes Out, the Wizard Wards, the Cleric heals (Triage) and the Rogue Strips the Ball ${game.encounter === 'crypt' ? '(pinning a skeleton away from the Ritual)' : 'off the ram'}.`}
             </Rich>
           </p>
+        </ModalShell>
+      )}
+      {modal?.kind === 'log' && (
+        <ModalShell title={`Play log · ${game.score.party}–${game.score.horde}`} onClose={() => setModal(null)}>
+          <LogView text={logText(game, log, secs, game.phase === 'final')} empty={!log.length} />
         </ModalShell>
       )}
       {modal?.kind === 'recap' && lastReplay && (
@@ -1789,6 +1796,7 @@ function Scoreboard(props: {
   canTimeout: boolean;
   onMenu: () => void;
   onLast?: () => void;
+  onLog?: () => void;
   /** What each side scores if the play you're building runs. */ next?: { party: number; horde: number };
 }) {
   const g = props.game;
@@ -1836,6 +1844,7 @@ function Scoreboard(props: {
           Timeouts: {g.timeouts}
         </button>
         <span className="row" style={{ gap: 6 }}>
+          {props.onLog && <button onClick={props.onLog}>Log</button>}
           {props.onLast && <button onClick={props.onLast}>Recap</button>}
           <button onClick={props.onMenu}>Menu</button>
         </span>
@@ -2716,7 +2725,7 @@ function ReplayBody(props: { replay: Replay; beats: Beat[]; beat: number }) {
       )}
       {props.beat >= beats.length && (
         <div className="recapline num">
-          This possession: Heroes +{partyPts}, Goblins +{hordePts} · Score {replay.after.score.party}–{replay.after.score.horde}
+          This possession: Heroes +{partyPts}, Horde +{hordePts} · Score {replay.after.score.party}–{replay.after.score.horde}
         </div>
       )}
     </div>
@@ -2952,7 +2961,7 @@ function Halftime(props: {
         <h1 className="num">
           {g.score.party}–{g.score.horde}
         </h1>
-        <span className="muted">{g.score.party >= g.score.horde ? 'Heroes lead' : 'Goblins lead'}</span>
+        <span className="muted">{g.score.party >= g.score.horde ? 'Heroes lead' : 'Horde leads'}</span>
       </div>
       <BoxScore game={g} names={{ ...Object.fromEntries(props.library.map((p) => [p.id, p.name])), live: 'Live possessions' }} />
       <div className="panel adj">
@@ -3036,16 +3045,47 @@ function Halftime(props: {
   );
 }
 
+/** The game's log as text: a header (encounter, difficulty, score, seconds per possession) and every possession so far. */
+function logText(g: Game, log: string[], secs: number[], final: boolean): string {
+  const avg = secs.length ? secs.reduce((s, x) => s + x, 0) / secs.length : 0;
+  const enc = g.encounter === 'crypt' ? 'the Crypt' : 'Goblin Horde';
+  return [
+    `Play Calling prototype · ${enc} · ${g.difficulty} · ${final ? 'final' : `after ${g.possession} of 12`} ${g.score.party}–${g.score.horde}`,
+    `Average seconds per possession: ${avg.toFixed(1)}`,
+    ...log,
+  ].join('\n');
+}
+
+/** The log so far, with a copy button. */
+function LogView(props: { text: string; empty?: boolean }) {
+  const [copied, setCopied] = useState('');
+  return (
+    <div className="panel">
+      <div className="row" style={{ justifyContent: 'space-between' }}>
+        <span className="eyebrow">Play log</span>
+        <button
+          className="btn"
+          onClick={() => {
+            navigator.clipboard
+              ?.writeText(props.text)
+              .then(() => setCopied('Copied'))
+              .catch(() => setCopied('Copy failed: select the text below'));
+          }}
+        >
+          Copy log
+        </button>
+      </div>
+      {copied && <span className="small">{copied}</span>}
+      <pre className="logbox">{props.empty ? 'No possessions yet.' : props.text}</pre>
+    </div>
+  );
+}
+
 function Final(props: { game: Game; log: string[]; secs: number[]; names: Record<string, string>; onAgain: () => void; onTitle: () => void }) {
   const g = props.game;
   const won = g.score.party > g.score.horde;
   const avg = props.secs.length ? props.secs.reduce((s, x) => s + x, 0) / props.secs.length : 0;
-  const [copied, setCopied] = useState('');
-  const text = [
-    `Play Calling prototype · ${g.difficulty} · final ${g.score.party}–${g.score.horde}`,
-    `Average seconds per possession: ${avg.toFixed(1)}`,
-    ...props.log,
-  ].join('\n');
+  const text = logText(g, props.log, props.secs, true);
   return (
     <div className="wrap">
       <span className="eyebrow">Final</span>
@@ -3065,24 +3105,7 @@ function Final(props: { game: Game; log: string[]; secs: number[]; names: Record
         Average {avg.toFixed(1)} seconds per possession (target: about 20). {g.gold ? `${g.gold} gold from the loot wagon.` : ''}
       </p>
       <BoxScore game={g} names={props.names} />
-      <div className="panel">
-        <div className="row" style={{ justifyContent: 'space-between' }}>
-          <span className="eyebrow">Play log</span>
-          <button
-            className="btn"
-            onClick={() => {
-              navigator.clipboard
-                ?.writeText(text)
-                .then(() => setCopied('Copied'))
-                .catch(() => setCopied('Copy failed: select the text below'));
-            }}
-          >
-            Copy log
-          </button>
-        </div>
-        {copied && <span className="small">{copied}</span>}
-        <pre className="logbox">{text}</pre>
-      </div>
+      <LogView text={text} />
       <button className="btn primary big" onClick={props.onAgain}>
         Play again
       </button>
@@ -3401,7 +3424,7 @@ function Menu(props: {
   manual: boolean;
   setManual: (m: boolean) => void;
   tuning: Tuning;
-  log: string[];
+  onLog: () => void;
   onApplyTuning: (t: Tuning) => void;
   onRestart: () => void;
   onGuide: () => void;
@@ -3409,7 +3432,6 @@ function Menu(props: {
   onClose: () => void;
 }) {
   const [t, setT] = useState<Tuning>(props.tuning);
-  const [copied, setCopied] = useState('');
   const fields: { k: keyof Tuning; label: string; step: number }[] = [
     { k: 'gateHp', label: 'Gate HP', step: 5 },
     { k: 'goblinHp', label: 'Goblin HP', step: 1 },
@@ -3439,6 +3461,9 @@ function Menu(props: {
         <button className="btn" onClick={props.onGuide}>
           How it works
         </button>
+        <button className="btn" onClick={props.onLog}>
+          Play log
+        </button>
         <button className="btn" onClick={props.onRestart}>
           Restart the game
         </button>
@@ -3465,22 +3490,6 @@ function Menu(props: {
             Defaults
           </button>
         </div>
-      </details>
-      <details className="panel">
-        <summary>Play log</summary>
-        <button
-          className="btn"
-          onClick={() =>
-            navigator.clipboard
-              ?.writeText(props.log.join('\n'))
-              .then(() => setCopied('Copied'))
-              .catch(() => setCopied('Copy failed: select the text below'))
-          }
-        >
-          Copy log
-        </button>
-        {copied && <span className="small">{copied}</span>}
-        <pre className="logbox">{props.log.join('\n') || 'No possessions yet.'}</pre>
       </details>
     </ModalShell>
   );
