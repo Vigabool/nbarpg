@@ -599,6 +599,18 @@ export const CRYPT_INFO: Partial<Record<EnemyKind, EnemyInfo>> = {
 };
 
 /** An enemy kind's name, icon and description in an encounter. */
+/** A hero's off-ball defense, in the words of the encounter (the Warrior and Rogue defend its objective). */
+export function defenseText(cls: Cls, encounter: Encounter = 'goblin-horde'): string {
+  const crypt = encounter === 'crypt';
+  if (cls === 'warrior')
+    return `Gives one ally Armor against the horde’s hit, or ${crypt ? 'guards the circle (halves the Ritual’s growth)' : 'braces the gate (halves the ram)'}.`;
+  if (cls === 'rogue')
+    return crypt
+      ? 'Pins a skeleton away from the Ritual so it doesn’t feed it this turn (two at Elite).'
+      : 'Knocks the ball loose from a goblin on the ram (two at Elite).';
+  return CLASS_INFO[cls].defenseText;
+}
+
 export const enemyInfo = (kind: EnemyKind, encounter: Encounter = 'goblin-horde'): EnemyInfo =>
   (encounter === 'crypt' ? CRYPT_INFO[kind] : undefined) ?? ENEMY_INFO[kind];
 

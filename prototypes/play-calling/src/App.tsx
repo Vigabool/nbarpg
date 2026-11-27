@@ -6,6 +6,8 @@ import {
   ENEMY_INFO,
   hordePlays,
   enemyInfo,
+  defenseText,
+  type Encounter,
   MOVE,
   MOVES,
   TEMPLATES,
@@ -168,19 +170,24 @@ function SpecialChip(props: { m: Move }) {
 }
 /** The extra effect a top defensive tier adds. */
 const ELITE_DEFENSE: Partial<Record<Cls, string>> = {
-  rogue: 'At Elite, two goblins are knocked off the ram.',
+  // (The Rogue's Elite note is encounter-specific: see eliteDefense.)
 };
 /** What a hero does on the horde's turn when they don't touch the ball. */
-function OffBallCard(props: { cls: Cls; defTier: Tier; line: StatLine }) {
+function OffBallCard(props: { cls: Cls; defTier: Tier; line: StatLine; encounter: Encounter }) {
   const c = CLASS_INFO[props.cls];
-  const elite = ELITE_DEFENSE[props.cls];
+  const elite =
+    props.cls === 'rogue'
+      ? props.encounter === 'crypt'
+        ? 'At Elite, two skeletons are pinned.'
+        : 'At Elite, two goblins are knocked off the ram.'
+      : ELITE_DEFENSE[props.cls];
   return (
     <div className="offball">
       <span className="row" style={{ justifyContent: 'space-between' }}>
         <strong>Off the ball: {c.defense}</strong>
         <span className={`tier ${props.defTier}`}>Defense {tierLabel(props.defTier)}</span>
       </span>
-      <span className="small">{c.defenseText}</span>
+      <span className="small">{defenseText(props.cls, props.encounter)}</span>
       <span className="small muted">
         Automatic when this hero doesn’t touch the ball this possession. Defense rating from {props.line.stl} stl, {props.line.blk} blk, {props.line.dreb} dreb.
         {elite && props.defTier === 'elite' ? ` ${elite}` : ''}
@@ -755,8 +762,7 @@ export function App() {
           </div>
           <p className="small muted">
             <Rich>
-              Heroes who aren’t in your play defend: the Warrior Protects, the Ranger Closes Out, the Wizard Wards, the Cleric heals (Triage) and the Rogue
-              Strips the Ball off the ram.
+              {`Heroes who aren’t in your play defend: the Warrior Protects, the Ranger Closes Out, the Wizard Wards, the Cleric heals (Triage) and the Rogue Strips the Ball ${game.encounter === 'crypt' ? '(pinning a skeleton away from the Ritual)' : 'off the ram'}.`}
             </Rich>
           </p>
         </ModalShell>
@@ -978,7 +984,7 @@ function simulateBuild(g: Game, slots: (BuildStep | null)[], defense?: Defense):
     notes.push({
       t:
         target?.kind === 'goblin'
-          ? 'No bucket: goblins only score their takedowns.'
+          ? `No bucket: ${g.encounter === 'crypt' ? 'skeletons' : 'goblins'} only score their takedowns.`
           : target?.kind === 'wagon'
             ? 'No bucket: the Loot wagon is treasure, not a Champion. Breaking it scores 3 and 5 gold.'
             : 'No bucket: the finisher doesn’t get damage through.',
@@ -2267,7 +2273,7 @@ function Board(props: {
       key={e.id}
       className={`gob ${shielded ? 'shielded' : ''} ${e.onRam ? 'ram' : ''} ${props.picking ? 'target' : ''} ${isPicked(e.id) ? 'picked' : ''} ${hit(e.id) ? 'hit' : ''}`}
       onClick={() => props.onPick(e.id)}
-      aria-label={`Goblin, ${e.hp} HP${e.onRam ? ', on the ram' : ''}`}
+      aria-label={`${e.name}, ${e.hp} HP${e.onRam && g.encounter !== 'crypt' ? ', on the ram' : ''}`}
     >
       {pickNo(e.id) > 0 && <span className="pickno">{pickNo(e.id)}</span>}
       {enemyInfo('goblin', g.encounter).icon} <span className="num">{e.hp}</span>
@@ -2450,6 +2456,18 @@ const SHORT: Record<string, string> = {
   goblin: 'Gob',
   wagon: 'Wagon',
 };
+/** The Crypt's short names, by role. */
+const SHORT_CRYPT: Record<string, string> = {
+  shaman: 'Wight',
+  hexer: 'Necro',
+  ogre: 'Giant',
+  cutthroat: 'Wraith',
+  sharpshooter: 'Archer',
+  lich: 'Lich',
+  goblin: 'Skel.',
+  grave: 'Grave',
+  phylactery: 'Phyl.',
+};
 
 /** A hero's HP as a bar with the number on it (or "Bench N"), and touches left. */
 function HeroVitals(props: { hero: Hero; touchesLabel?: string }) {
@@ -2476,15 +2494,32 @@ function HeroRow(props: { game: Game; inPlay: Set<Cls>; defense: Defense | null;
   const d = props.defense;
   const off = d ? new Set(defenders(g, props.inPlay)) : new Set<Cls>();
   const short = (x?: string) =>
-    x === 'gate' ? (g.encounter === 'crypt' ? 'Circle' : 'Gate') : x ? (SHORT[x] ?? SHORT[g.enemies.find((e) => e.id === x)?.kind ?? ''] ?? '?') : '?';
+    x === 'gate'
+      ? g.encounter === 'crypt'
+        ? 'Circle'
+        : 'Gate'
+      : x
+        ? (SHORT[x] ??
+          (() => {
+            const kind = g.enemies.find((e) => e.id === x)?.kind ?? '';
+            return (g.encounter === 'crypt' ? SHORT_CRYPT[kind] : undefined) ?? SHORT[kind] ?? '?';
+          })())
+        : '?';
   /** The defense chip: short text, and the full words for screen readers and the tooltip. */
   const role = (c: Cls): { t: string; full: string } | null => {
     if (!d || !off.has(c)) return null;
-    if (c === 'warrior') return { t: `→ ${short(d.protect)}`, full: `Protect → ${d.protect === 'gate' ? 'the gate' : short(d.protect)}` };
+    if (c === 'warrior')
+      return {
+        t: `→ ${short(d.protect)}`,
+        full: `Protect → ${d.protect === 'gate' ? (g.encounter === 'crypt' ? 'the circle' : 'the gate') : short(d.protect)}`,
+      };
     if (c === 'ranger') return { t: `→ ${short(d.closeOut)}`, full: `Close Out → ${short(d.closeOut)}` };
     if (c === 'wizard') return { t: `→ ${short(d.ward)}`, full: `Ward → ${short(d.ward)}` };
     if (c === 'cleric') return { t: 'Heal', full: 'Triage: heals the most injured hero' };
-    return { t: 'Strip', full: 'Strip the Ball: knocks a goblin off the ram' };
+    return {
+      t: 'Strip',
+      full: g.encounter === 'crypt' ? 'Strip the Ball: pins a skeleton away from the Ritual' : 'Strip the Ball: knocks a goblin off the ram',
+    };
   };
   return (
     <div className="heroes">
@@ -2573,7 +2608,7 @@ function DefenseLine(props: {
       'closeOut',
     );
   else if (cls === 'wizard') body = sel(d.ward, heroOpts, 'ward');
-  else body = <span className="muted">{CLASS_INFO[cls].defenseText}</span>;
+  else body = <span className="muted">{defenseText(cls, props.game.encounter)}</span>;
   return (
     <>
       <label htmlFor={`def-${cls}`}>{label}</label>
@@ -2783,7 +2818,7 @@ function BoxScore(props: { game: Game; names: Record<string, string> }) {
               <tr>
                 <th>Points from</th>
                 <th>Heroes</th>
-                <th>Goblins</th>
+                <th>Horde</th>
               </tr>
             </thead>
             <tbody>
@@ -3022,7 +3057,15 @@ function Final(props: { game: Game; log: string[]; secs: number[]; names: Record
       <div className="final-score">
         {g.score.party}–{g.score.horde}
       </div>
-      <h2>{won ? 'The heroes hold the city.' : g.score.party === g.score.horde ? 'A tie at the buzzer.' : 'The goblins take the city.'}</h2>
+      <h2>
+        {won
+          ? 'The heroes hold the city.'
+          : g.score.party === g.score.horde
+            ? 'A tie at the buzzer.'
+            : g.encounter === 'crypt'
+              ? 'The dead take the city.'
+              : 'The goblins take the city.'}
+      </h2>
       <p className="muted">
         Average {avg.toFixed(1)} seconds per possession (target: about 20). {g.gold ? `${g.gold} gold from the loot wagon.` : ''}
       </p>
@@ -3461,11 +3504,11 @@ function Guide(props: { onClose: () => void }) {
     ['Start', 'The Start slot hits first, so it takes the Barrier or the Block. The Shot panel shows what each defense will do to your play.'],
     [
       'Scoring',
-      'Only finishers score: 2 if the finisher damages a Champion or the boss after their defenses (goblins make no bucket). Takedowns add each enemy’s value (🏀). Enablers break defenses and set up takedowns.',
+      'Only finishers score: 2 if the finisher damages a Champion or the boss after their defenses (goblins and skeletons make no bucket). Takedowns add each enemy’s value (🏀). Enablers break defenses and set up takedowns.',
     ],
     [
       'Defenses',
-      'Taunt (the Ogre): single-target hits must go to it, unless the Cleric’s Guiding Light guides the finisher past it. Armor: each hit deals less. Quick: the first hit on it each possession misses. Barrier (the Shaman’s cast on the horde’s turn, when the ram has its 4 goblins): a wall in front of the whole horde for your next possession. Aim at any enemy and the Barrier takes the hit instead; the first damaging move breaks it. War Drum (automatic): the ram hits +2 while the Shaman stands. Block (the Chieftain): the first hit on any enemy each possession is cancelled.',
+      'Taunt (the Ogre, or the Crypt’s Bone Giant): single-target hits must go to it, unless the Cleric’s Guiding Light guides the finisher past it. Armor: each hit deals less. Quick: the first hit on it each possession misses. Barrier (the Shaman’s cast on the horde’s turn, when the ram has its 4 goblins): a wall in front of the whole horde for your next possession. Aim at any enemy and the Barrier takes the hit instead; the first damaging move breaks it. War Drum (automatic): the ram hits +2 while the Shaman stands. Block (the Chieftain): the first hit on any enemy each possession is cancelled.',
     ],
     [
       'Passes',
@@ -3475,15 +3518,19 @@ function Guide(props: { onClose: () => void }) {
     ['Touches', 'From each player’s true usage this week (shots, free throws, turnovers and assists). Out of touches, a hero can’t be in a play.'],
     [
       'Defense',
-      'Heroes not in the play defend: the Warrior Protects, the Ranger Closes Out, the Wizard Wards, the Cleric heals (Triage), and the Rogue Strips the Ball off the ram. Protect and Ward add Armor; Close Out Slows an enemy (half damage).',
+      'Heroes not in the play defend: the Warrior Protects, the Ranger Closes Out, the Wizard Wards, the Cleric heals (Triage), and the Rogue Strips the Ball (a goblin off the ram, or a skeleton away from the Ritual). Protect and Ward add Armor, or the Warrior guards the objective; Close Out Slows an enemy (half damage).',
     ],
     [
       'The horde',
-      'Its goblins push the ram automatically: each one pushing adds a quarter of the hit, so knocking goblins off slows the ram. Its Champions run one called play each turn and score 2 for a finisher that damages a hero and 4 for a hero they take down. If your finisher is Blocked, evaded or swallowed by the Barrier, that’s a turnover: the horde scores 2 on the fast break.',
+      'In the Goblin Horde its goblins push the ram automatically (in the Crypt, its dead feed the Ritual): each one pushing adds a quarter of the hit, so knocking goblins off slows the ram. Its Champions run one called play each turn and score 2 for a finisher that damages a hero and 4 for a hero they take down. If your finisher is Blocked, evaded or swallowed by the Barrier, that’s a turnover: the horde scores 2 on the fast break.',
     ],
     [
       'Statuses',
       'Taunted: attacks the Warrior. Exposed: +3 from every hit this possession (Marked: through the next one too). Disabled: out of the horde’s next play, and loses its Taunt or Quick. Slowed: loses Quick, and its next hit deals half.',
+    ],
+    [
+      'The Crypt',
+      'The second encounter. Its objective is the Ritual instead of the ram: it grows with every skeleton and bone pile, and raises the Lich when it completes. Weapon kills leave bone piles that rise again; fire or a Blessed finisher (any Cleric pass) destroys the dead for good. The Wraith is Intangible, and three open graves raise skeletons until consecrated.',
     ],
     ['Timeouts', 'Two per game. A timeout takes back your last possession.'],
     ['Halftime', 'A box score, the horde’s adjustment, and up to two changes to your playbook. Fallen heroes return.'],
@@ -3567,7 +3614,7 @@ function HeroDetail(props: { game: Game; cls: Cls; onClose: () => void }) {
           </div>
         ))}
       </div>
-      <OffBallCard cls={props.cls} defTier={h.defTier} line={l} />
+      <OffBallCard cls={props.cls} defTier={h.defTier} line={l} encounter={props.game.encounter} />
     </ModalShell>
   );
 }

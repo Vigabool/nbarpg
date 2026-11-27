@@ -13,7 +13,7 @@ export const TERMS: Record<string, { name: string; def: string }> = {
   },
   taunt: {
     name: 'Taunt',
-    def: 'A big (the Ogre) forces single-target hits onto itself while it stands; hits that reach several enemies must include it. Get past it with Guided, by Disabling it, or by taking it down.',
+    def: 'A big (the Ogre, or the Crypt’s Bone Giant) forces single-target hits onto itself while it stands; hits that reach several enemies must include it. Get past it with Guided, by Disabling it, or by taking it down.',
   },
   taunted: { name: 'Taunted', def: 'This enemy attacks the Warrior on the horde’s turn.' },
   quick: { name: 'Quick', def: 'The first hit on this enemy each possession misses. A cheap hit first, a Slow, or a Sure hit gets past it.' },
@@ -27,11 +27,14 @@ export const TERMS: Record<string, { name: string; def: string }> = {
   },
   exposed: { name: 'Exposed', def: 'Takes +3 from every hit this possession.' },
   marked: { name: 'Marked', def: 'Exposed through the next possession too.' },
-  disabled: { name: 'Disabled', def: 'Out of the horde’s next play, and loses its Taunt or Quick. A Disabled Shaman casts nothing and drums nothing.' },
+  disabled: {
+    name: 'Disabled',
+    def: 'Out of the horde’s next play, and loses its Taunt or Quick. A Disabled Shaman or Wight casts nothing and gives no War Drum or Unholy Vigor.',
+  },
   slowed: { name: 'Slowed', def: 'Loses Quick, and its next hit deals half.' },
   stripped: {
     name: 'Stripped',
-    def: 'Knocked off the ram by Strip the Ball: it doesn’t push this turn (the ram hits a quarter softer for each), but still counts as crew.',
+    def: 'Knocked off the ram by Strip the Ball: it doesn’t push this turn (the ram hits a quarter softer for each), but still counts as crew. In the Crypt, a stripped skeleton is pinned away from the Ritual and doesn’t feed it.',
   },
   warDrum: { name: 'War Drum', def: 'While the Shaman stands (and isn’t Disabled), the ram hits +2.' },
   callPack: {
@@ -76,16 +79,25 @@ export const TERMS: Record<string, { name: string; def: string }> = {
   boneHarvest: { name: 'Bone Harvest', def: 'The Bone Giant heals 2 whenever a skeleton crumbles from a weapon kill. Fire and holy kills give it nothing.' },
   turnover: {
     name: 'Turnover',
-    def: 'Your finisher is Blocked, evaded or swallowed by the Barrier: the horde scores 2 on the fast break. A cheap hit first, or a Sure finisher, avoids it.',
+    def: 'Your finisher is Blocked, evaded, swallowed by the Barrier, or (in the Crypt) passes through the Wraith or hits a grave without holy damage: the horde scores 2 on the fast break. A cheap hit first, or a Sure finisher, avoids it.',
   },
   bucket: { name: 'Bucket', def: '2 points for a finisher that damages a Champion or the boss. One per finisher, however many it hits.' },
-  takedown: { name: 'Takedown', def: 'Each enemy taken down scores its 🏀 value: goblins 1, Champions 4 or more, the boss most.' },
+  takedown: {
+    name: 'Takedown',
+    def: 'Each enemy taken down scores its 🏀 value: goblins and skeletons 1 (a skeleton only when destroyed for good), Champions 4 or more, the boss most.',
+  },
   finisher: { name: 'Finisher', def: 'The last move of a possession and the only one that scores a bucket. Every helper’s buff goes to it.' },
-  protect: { name: 'Protect', def: 'The Warrior’s defense when not in the play: Armor on one hero through the horde’s turn.' },
+  protect: {
+    name: 'Protect',
+    def: 'The Warrior’s defense when not in the play: Armor on one hero through the horde’s turn, or guard the objective (brace the gate, halving the ram; in the Crypt, guard the circle, halving the Ritual).',
+  },
   closeOut: { name: 'Close Out', def: 'The Ranger’s defense when not in the play: Slows one enemy, so its next hit deals half.' },
   ward: { name: 'Ward', def: 'The Wizard’s defense when not in the play: Armor on one ally through the horde’s turn.' },
   triage: { name: 'Triage', def: 'The Cleric’s defense when not in the play: heals the most injured hero after the horde’s turn.' },
-  stripBall: { name: 'Strip the Ball', def: 'The Rogue’s defense when not in the play: knocks goblins off the ram so they don’t push this turn.' },
+  stripBall: {
+    name: 'Strip the Ball',
+    def: 'The Rogue’s defense when not in the play: knocks goblins off the ram so they don’t push this turn. In the Crypt it pins skeletons away from the Ritual.',
+  },
 };
 
 /** How each term is written in the text (longest first, so "Strip the Ball" wins over shorter words). */
