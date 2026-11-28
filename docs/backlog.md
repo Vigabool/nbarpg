@@ -169,8 +169,8 @@ Parked from design discussions (see `docs/concept-play-calling.md` and the Play 
 6. **Objectives for the other encounters:** the Dragon's Lair's Hoard (push your luck: a Steal step and a Wake meter) and the Giant's Hall's Hearth (a tug-of-war that scores at the end of each quarter).
 7. **Possession time.** Playtests run 80–120 seconds a possession against a target of about 20.
 8. **Critical Taunt is in five of six plans.** With Backstab ×2.5 against a Taunt, the Rogue scores 22–29 a game in every book that has it. Without it, the best Goblin Horde book is +13 on Normal and +1 on Hard. Consider ×2 or other strong Goblin Horde finishers.
-9. **An untended Ritual runs away.** A book with no area play let it score 143 in one game, and with a cold Wizard the default book now loses 54–90 (Normal) and 54–96 (Hard) in the Crypt. Cap what one Ritual can score, or slow it after each fill.
-10. **Holy Chain is the Crypt's best plan by far** (+29.9 / +19.5 against about +14 / 0 for the others). Fine while Smite is the answer to a cold shooter; watch it in playtests.
+9. **The runaway Ritual: fixed** (the circle holds six; Unholy Vigor +2, a skeleton per 33). A cold-Wizard night is now a loss of 12–24 instead of 36–42. `ritualCap`, `ritualStep`, `vigor` and `ramCap` stay as difficulty levers.
+10. **Holy Chain is the Crypt's best plan** (+23.8 / +13.3 against about +13 / 0 for the others, down from +29.9 / +19.5 before the circle's limit). Fine while Smite is the answer to a cold shooter; watch it in playtests.
 
 ## Later / parked
 

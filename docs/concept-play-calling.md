@@ -701,3 +701,28 @@ Buttons, numbers and rules stay the same in both. It's stored per browser, like 
     - Goblin Horde, smart bot: 60–49 and 60–58.
     - Crypt, default book: 54–90 and 54–96, the runaway Ritual.
     - Crypt, Holy Chain: 62–36 and 62–52.
+- **The circle holds six (Nov 28).** The runaway Ritual came from the crowd: every skeleton and bone pile fed it 1 a turn with no limit, so the horde's points grew with the number of dead. On a cold-Wizard night the second-half waves and open graves brought 10 skeletons, the Ritual grew 10 a turn and completed every other turn, and it scored 61 of the horde's 96.
+  - Now at most six dead feed the Ritual at once; the rest wait their turn. The Ritual panel says "6 of 10 feeding: the circle holds 6", and the explainers and glossary say the same.
+  - To keep the Crypt's pressure, Unholy Vigor is +2 (was +1) and the Crypt raises one skeleton per 33 opposing points (was 37).
+  - **Levers kept in the tuning,** for tuning an encounter's difficulty without HP:
+    - `ritualCap` (6): the circle's limit.
+    - `ritualStep` (0): each completion raises the next threshold. It barely mattered in tests, because the completions follow the crowd.
+    - `vigor` (2).
+    - `ramCap` (6): the ram's crew limit, the same rule as before, now a lever.
+  - **Compared on the built rosters** (smart bot, default book, Normal / Hard), with the off night (sample week, cold Wizard):
+
+    | Option | Built rosters | Off night |
+    | --- | --- | --- |
+    | No limit | +14.6 / +0.3 | 54–90 / 54–96 |
+    | Rising threshold +8 | +14.9 / +0.6 | 54–90 / 54–88 |
+    | Limit 6 | +18.1 / +4.4 | 60–71 / 61–84 |
+    | Limit 5 | +21.6 / +8.7 | 60–59 / 61–72 |
+    | **Limit 6, Vigor +2, a skeleton per 33** | **+14.7 / +1.9** | **60–72 / 58–82** |
+  - **Results** (Normal / Hard; expert bot in brackets):
+    - Crypt, default book: +15.0 / +2.2 (+32.4 / +21.0).
+    - Fire Volume: +12.2 / −1.3 (+17.8 / +8.6).
+    - Holy Chain: +23.8 / +13.3 (+31.8 / +24.2), its lead roughly halved.
+    - Champion Race: +14.4 / +1.6 (+17.5 / +7.7).
+    - The Goblin Horde is unchanged.
+    - Sample week, Crypt: expert 62–37 and 62–48, smart 60–53 and 60–64.
+    - Off night with Holy Chain: 63–50 and 63–58.

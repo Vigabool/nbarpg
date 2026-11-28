@@ -49,7 +49,7 @@ export const TERMS: Record<string, { name: string; def: string }> = {
   },
   ritual: {
     name: 'The Ritual',
-    def: 'The Crypt’s objective. It grows each enemy turn by 1 per skeleton and bone pile, and 1 more while the Wight stands; the horde scores 1 per 2 Ritual points, and 1 more each turn it grows. When it completes (at 22), the horde scores 8 and it starts over; the first time, the Lich rises early. Destroying the dead for good sets it back 1; the Necromancer, 3.',
+    def: 'The Crypt’s objective. It grows each enemy turn by 1 per skeleton and bone pile (up to 6: the circle holds six, and the rest wait their turn), and 2 more while the Wight stands; the horde scores 1 per 2 Ritual points, and 1 more each turn it grows. When it completes (at 22), the horde scores 8 and it starts over; the first time, the Lich rises early. Destroying the dead for good sets it back 1; the Necromancer, 3.',
   },
   restless: {
     name: 'Restless Dead',
@@ -73,7 +73,10 @@ export const TERMS: Record<string, { name: string; def: string }> = {
     def: 'The Wraith: only Wizard spells and holy (Blessed) hits touch it, and the first one makes it solid for the rest of the possession. Other hits pass through it, and a finisher that only passes through is a turnover.',
   },
   raiseDead: { name: 'Raise Dead', def: 'The Wight’s cast when bone piles are on the floor: every pile rises at once, at the HP it had before it crumbled.' },
-  unholyVigor: { name: 'Unholy Vigor', def: 'The Wight’s passive: the Ritual grows 1 more each turn while it stands (and isn’t Disabled).' },
+  unholyVigor: {
+    name: 'Unholy Vigor',
+    def: 'The Wight’s passive: the Ritual grows 2 more each turn while it stands (and isn’t Disabled), on top of the six dead the circle holds.',
+  },
   enervate: { name: 'Enervate', def: 'The Necromancer’s setup: the targeted hero loses a touch and any Quick, and the next hit +2.' },
   deathBolt: { name: 'Death Bolt', def: 'The Lich, every other enemy turn: 1.5× its damage to the lowest-HP hero, ignoring Armor.' },
   consecrate: { name: 'Consecrate', def: 'Close an open grave for good with holy damage (+3). An open grave raises a skeleton at the start of every quarter.' },

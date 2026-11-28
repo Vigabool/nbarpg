@@ -682,7 +682,7 @@ export const CRYPT_INFO: Partial<Record<EnemyKind, EnemyInfo>> = {
     name: 'Wight',
     icon: '🧟',
     mirrors: 'assists leader',
-    job: 'Unholy Vigor (automatic): the Ritual gains 1 more each turn while it stands. On an enemy turn with bone piles on the floor, it casts Raise Dead: every pile rises at once, at the HP it had before it crumbled.',
+    job: 'Unholy Vigor (automatic): the Ritual gains 2 more each turn while it stands. On an enemy turn with bone piles on the floor, it casts Raise Dead: every pile rises at once, at the HP it had before it crumbled.',
   },
   hexer: {
     name: 'Necromancer',

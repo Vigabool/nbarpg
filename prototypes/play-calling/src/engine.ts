@@ -62,10 +62,14 @@ export interface Tuning {
   ritualFill: number;
   /** The Crypt raises 1 skeleton per this many opposing points. */
   skeletonPer: number;
-  /** Test: at most this many dead feed the Ritual at once (0 = no limit). */
-  ritualCap?: number;
-  /** Test: each completion raises the next one's threshold by this much. */
-  ritualStep?: number;
+  /** At most this many dead feed the Ritual at once ("the circle holds six"; 0 = no limit). */
+  ritualCap: number;
+  /** Each completion raises the next one's threshold by this much (0 = the same every time). */
+  ritualStep: number;
+  /** At most this many goblins crew the ram (each of the first four pushes a quarter of the hit, each extra adds 1). */
+  ramCap: number;
+  /** The Wight's Unholy Vigor: the Ritual grows this much more each turn while it stands. */
+  vigor: number;
 }
 export const DEFAULT_TUNING: Tuning = {
   gateHp: 70,
@@ -91,7 +95,11 @@ export const DEFAULT_TUNING: Tuning = {
   ritualMax: 22,
   ritualPer: 2,
   ritualFill: 8,
-  skeletonPer: 37,
+  skeletonPer: 33,
+  ritualCap: 6,
+  ritualStep: 0,
+  ramCap: 6,
+  vigor: 2,
 };
 export type Difficulty = 'normal' | 'hard';
 
@@ -500,7 +508,7 @@ function arrive(g: Game) {
     if (!e.arrived && e.quarter <= q && e.hp > 0) {
       e.arrived = true;
       came.push(e);
-      if (e.kind === 'goblin' && (g.encounter === 'crypt' || (!g.gate.breached && crew(g).length < 4))) e.onRam = true;
+      if (e.kind === 'goblin' && (g.encounter === 'crypt' || (!g.gate.breached && crew(g).length < Math.min(4, g.tuning.ramCap)))) e.onRam = true;
     }
   if (g.encounter === 'crypt' && q > g.graveQuarter) {
     g.graveQuarter = q;
@@ -535,6 +543,7 @@ export const pushing = (g: Game) => crew(g).filter((e) => !e.stripped);
 /** What the ram hits the gate for with this many goblins pushing: each of the first four pushes a quarter of the hit, each extra adds 1. */
 export function ramHit(g: Game, pushers: number, boost = 0): number {
   if (pushers <= 0) return 0;
+  pushers = Math.min(pushers, g.tuning.ramCap);
   const full = g.ramBase + boost + g.ramBonus + warDrum(g);
   return Math.max(1, Math.round((full * Math.min(pushers, 4)) / 4)) + Math.max(0, pushers - 4);
 }
@@ -545,13 +554,13 @@ export const wight = (g: Game) => onField(g).find((e) => e.wight && !e.disabled)
 /** What the Ritual gains this enemy turn with this many skeletons and piles feeding it. */
 export function ritualGain(g: Game, feeders: number, boost = 0): number {
   if (g.encounter !== 'crypt') return 0;
-  return feeders + (wight(g) ? 1 : 0) + boost + g.ramBonus;
+  return feeders + (wight(g) ? g.tuning.vigor : 0) + boost + g.ramBonus;
 }
 /** Skeletons and bone piles feeding the Ritual (pinned skeletons don't). */
-export const ritualFeeders = (g: Game) => {
-  const n = pushing(g).length + piles(g).length;
-  return g.tuning.ritualCap ? Math.min(n, g.tuning.ritualCap) : n;
-};
+/** Every skeleton and bone pile that could feed the Ritual, before the circle's limit. */
+export const ritualCrowd = (g: Game) => pushing(g).length + piles(g).length;
+/** The dead feeding the Ritual this turn: the crowd, up to the circle's limit (ritualCap). */
+export const ritualFeeders = (g: Game) => (g.tuning.ritualCap ? Math.min(ritualCrowd(g), g.tuning.ritualCap) : ritualCrowd(g));
 /** Whether the Wight will cast Raise Dead (it needs bone piles on the floor). */
 export const wightCast = (g: Game): 'raise' | null => (wight(g) && piles(g).length ? 'raise' : null);
 export const skeletonsStand = (g: Game) => onField(g).some((e) => e.kind === 'goblin');
@@ -1464,7 +1473,7 @@ function summon(g: Game, n: number, frames: Frame[], by: Enemy) {
     const e = goblin(`e${g.nextId++}`, g.tuning, quarterOf(g.possession), g.encounter);
     e.arrived = true;
     e.summonedThisTurn = true;
-    e.onRam = !g.gate.breached && crew(g).length < 6;
+    e.onRam = !g.gate.breached && crew(g).length < g.tuning.ramCap;
     g.enemies.push(e);
   }
   frames.push({ game: clone(g), text: `${who} calls the pack: ${n} goblins${g.gate.breached ? '' : ' head for the ram'}.`, side: 'horde', actor: by.id });
@@ -1766,7 +1775,8 @@ function ritualTurn(g: Game, off: Set<Cls>, defense: Defense, boost: number, fra
   let pts = Math.floor((r.total + gain) / g.tuning.ritualPer) - Math.floor(r.total / g.tuning.ritualPer) + g.tuning.pushPoints;
   r.total += gain;
   r.value += gain;
-  let text = `The Ritual grows ${gain} (${feeders} dead feeding it${wight(g) ? ', Unholy Vigor +1' : ''}${boost ? `, Dark Command +${boost}` : ''}${guarded ? ', the Warrior guards the circle' : ''}): ${Math.min(r.value, r.max)}/${r.max}`;
+  const crowd = ritualCrowd(g);
+  let text = `The Ritual grows ${gain} (${crowd > feeders ? `${feeders} of ${crowd} dead feeding it, the circle holds ${feeders}` : `${feeders} dead feeding it`}${wight(g) ? `, Unholy Vigor +${g.tuning.vigor}` : ''}${boost ? `, Dark Command +${boost}` : ''}${guarded ? ', the Warrior guards the circle' : ''}): ${Math.min(r.value, r.max)}/${r.max}`;
   if (r.value >= r.max) {
     r.value = 0;
     r.fills += 1;

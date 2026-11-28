@@ -52,6 +52,7 @@ import {
   piles,
   ritualGain,
   ritualFeeders,
+  ritualCrowd,
   graveForecast,
   shamanCast,
   warDrum,
@@ -131,7 +132,7 @@ interface Saved {
 }
 const KEY = 'play-calling-prototype-v1';
 /** Bump when DEFAULT_TUNING changes, so players' saved tuning (which stores every value) picks up the new defaults. */
-const TUNING_VERSION = 7;
+const TUNING_VERSION = 8;
 function load(): Saved {
   try {
     return JSON.parse(localStorage.getItem(KEY) ?? '{}') as Saved;
@@ -740,7 +741,7 @@ export function App() {
                   ? [
                       [
                         `+1 for every ${tuning.ritualPer} Ritual points, +${tuning.pushPoints} each turn it grows`,
-                        'The Ritual grows each turn by 1 per skeleton and bone pile, and 1 more while the Wight stands. Destroying the dead for good sets it back 1, the Necromancer 3.',
+                        `The Ritual grows each turn by 1 per skeleton and bone pile (the circle holds ${tuning.ritualCap}: more than that wait their turn), and ${tuning.vigor} more while the Wight stands. Destroying the dead for good sets it back 1, the Necromancer 3.`,
                       ],
                       [`+${tuning.ritualFill} when the Ritual completes`, `At ${tuning.ritualMax}, and it starts over. The first time, the Lich rises early.`],
                     ]
@@ -1521,7 +1522,7 @@ function PlanScreen(props: {
                 {open === 'ritual' && (
                   <div className="panel detail small">
                     <Rich>
-                      {`The Ritual grows each enemy turn by 1 per skeleton and bone pile, and 1 more while the Wight stands. The horde scores 1 per ${g.tuning.ritualPer} Ritual points, and ${g.tuning.pushPoints} more each turn it grows. At ${g.ritual.max} it completes: +${g.tuning.ritualFill}, and it starts over; the first time, the Lich rises early. Destroying the dead for good sets it back 1; the Necromancer, 3. Strip the Ball pins a skeleton away from it, and the Warrior can guard the circle to halve it.`}
+                      {`The Ritual grows each enemy turn by 1 per skeleton and bone pile (up to ${g.tuning.ritualCap} at once: the circle holds ${g.tuning.ritualCap}), and ${g.tuning.vigor} more while the Wight stands. The horde scores 1 per ${g.tuning.ritualPer} Ritual points, and ${g.tuning.pushPoints} more each turn it grows. At ${g.ritual.max} it completes: +${g.tuning.ritualFill}, and it starts over; the first time, the Lich rises early. Destroying the dead for good sets it back 1; the Necromancer, 3. Strip the Ball pins a skeleton away from it, and the Warrior can guard the circle to halve it.`}
                     </Rich>
                   </div>
                 )}
@@ -1563,8 +1564,9 @@ function PlanScreen(props: {
                 {open === 'gate' && (
                   <div className="panel detail small">
                     Each goblin pushing the ram adds a quarter of its hit: with 4 pushing it hits the {g.gate.max}-HP gate for {g.ramBase} each enemy turn, +1
-                    per extra goblin (the opponents shot {(opponentsFg() * 100).toFixed(1)}% this week). The horde scores 1 per {g.tuning.ramPer} gate damage,{' '}
-                    {g.tuning.pushPoints} more each turn the ram hits, and 10 when it falls; after that, every goblin on the field pillages for 1 a turn.
+                    per extra goblin (the ram holds {g.tuning.ramCap} crew) (the opponents shot {(opponentsFg() * 100).toFixed(1)}% this week). The horde scores
+                    1 per {g.tuning.ramPer} gate damage, {g.tuning.pushPoints} more each turn the ram hits, and 10 when it falls; after that, every goblin on
+                    the field pillages for 1 a turn.
                   </div>
                 )}
                 {open === 'bounty' && (
@@ -2384,6 +2386,11 @@ function Board(props: {
               })()}
             </span>
           </div>
+          {ritualCrowd(g) > ritualFeeders(g) && (
+            <span className="small muted">
+              {ritualFeeders(g)} of {ritualCrowd(g)} feeding: the circle holds {g.tuning.ritualCap}.
+            </span>
+          )}
           <div className="gob-row">
             <span className="small" style={{ minWidth: 70 }}>
               Skeletons

@@ -692,7 +692,7 @@ export function GamesScreen(props: { state: SetupState; onChange: (s: SetupState
             {crypt ? (
               <>
                 💀 {goblins} skeletons (1 per {DEFAULT_TUNING.skeletonPer} opposing points), plus one a quarter from each open grave · 🕯 the Ritual grows by 1
-                per skeleton and bone pile
+                per skeleton and bone pile, up to {DEFAULT_TUNING.ritualCap} at once
               </>
             ) : (
               <>
