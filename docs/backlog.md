@@ -161,7 +161,7 @@ For a wider test beyond close friends, who send feedback by text.
 
 Parked from design discussions (see `docs/concept-play-calling.md` and the Play Calling Strategy Tracker artifact, https://claude.ai/artifact/Edp1qkTxp68y8mNRUidMYH). Each one supports "several ways to win" and "scoring versus defending".
 
-1. **Stops score.** Built as stops and fast breaks (Help Defense, the Steal, Spacing's Quick, Crit after a stop; see the concept doc, Nov 28). Ward now matches Protect (Armor 8 ×), and Hex/Enervate take away a hero's Quick. Difficulty now comes from the horde's scoring, not HP (the objective's push +1 a turn, Champion hits 3 on Hard). Still to do: Lockdown is barely even for the expert bot and loses for the smart bot.
+1. **Stops score.** Replaced by defense by count (Nov 28): each hero off the ball adds to a capped chance of stopping the horde's play. Watch in playtests whether the dice feel fair, and whether Lockdown (+1.3 / −13.0) should be viable.
 2. **Full-court press.** Choose to run with all five heroes and no defenders for one possession: big offense, an unopposed horde turn. Sanctuary is the safe version.
 3. **Specials as plans.** Each double-double/triple-double special should unlock a plan, not just hit harder: Volley as the Ranger's own crew clear, Chain Lightning Exposing every Champion, and so on (Sanctuary now freezes the objective).
 4. **A Lich that matters.** Done in the Crypt rework: it's the halftime payoff, with 2.5× the boss's HP, a Death Bolt every turn and the phylactery's shield.

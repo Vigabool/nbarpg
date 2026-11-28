@@ -62,6 +62,10 @@ export interface Tuning {
   lichPoints: number;
   /** The Lich's HP ×, over the boss's (it's the fight the ritual was for). */
   lichHp: number;
+  /** The Death Bolt: this × the Lich's hit, every enemy turn, ignoring Armor. */
+  boltMult: number;
+  /** Hard: the ritual scores this much more each turn. */
+  hardClock: number;
   /** The phylactery's HP (holy damage only). */
   phylacteryHp: number;
   /** The phylactery's takedown value. */
@@ -87,22 +91,24 @@ export const DEFAULT_TUNING: Tuning = {
   // A drafted lineup's picked games total about 136 true usage (median over weeks 1–20 and all four draft modes), so 3.8 gives about 36 touches.
   usagePerTouch: 3.8,
   hordeDamage: 1,
-  championHp: 1.25,
+  championHp: 1,
   hardMult: 1,
   hordeHitPoints: 2,
   hardHitPoints: 3,
-  ramPer: 2,
-  pushPoints: 1,
+  ramPer: 3,
+  pushPoints: 0,
   champReturn: 0,
-  stopBase: 0.15,
-  stopCap: 0.65,
+  stopBase: 0.12,
+  stopCap: 0.6,
   hexClearsQuick: true,
   turnoverPoints: 2,
-  ritualClock: 2,
+  ritualClock: 3,
   wardMin: 3,
   necroBounty: 3,
-  lichPoints: 12,
-  lichHp: 2.5,
+  lichPoints: 8,
+  lichHp: 3,
+  boltMult: 1.25,
+  hardClock: 1,
   phylacteryHp: 30,
   phylacteryPoints: 4,
   wailMult: 0.5,
@@ -191,8 +197,6 @@ export interface Enemy {
   solid?: boolean;
   /** The Necromancer: works the ritual, warded while skeletons stand. */
   necro?: boolean;
-  /** A skeleton Strip the Ball pinned: it doesn't guard the Necromancer in this possession. */
-  pinnedFor?: number;
   /** The Wight: Unholy Vigor feeds the ritual; it casts Raise Dead. */
   wight?: boolean;
   /** The Lich after the Ritual raised it: Death Bolt every enemy turn. */
@@ -551,12 +555,15 @@ export function ramHit(g: Game, pushers: number, boost = 0): number {
 export const piles = (g: Game) => g.enemies.filter((e) => e.arrived && e.pile);
 /** The Wight standing (and not Disabled). */
 export const wight = (g: Game) => onField(g).find((e) => e.wight && !e.disabled);
-/** The skeletons guarding the Necromancer now: standing (not bone piles), and not pinned by Strip the Ball. */
-export const wardCount = (g: Game) => onField(g).filter((e) => e.kind === 'goblin' && e.pinnedFor !== g.possession).length;
+/** The skeletons guarding the Necromancer now: standing (not bone piles). */
+export const wardCount = (g: Game) => onField(g).filter((e) => e.kind === 'goblin').length;
 /** The Necromancer can't be hit while the ritual lasts and enough skeletons guard him. */
 export const warded = (g: Game) => g.encounter === 'crypt' && g.ritual.phase === 'ritual' && wardCount(g) >= g.tuning.wardMin;
-/** What the ritual scores this enemy turn (before the Warrior guards the circle). */
-export const ritualPoints = (g: Game) => (g.encounter === 'crypt' && g.ritual.phase === 'ritual' ? g.tuning.ritualClock + (wight(g) ? g.tuning.vigor : 0) : 0);
+/** What the ritual scores this enemy turn. */
+export const ritualPoints = (g: Game) =>
+  g.encounter === 'crypt' && g.ritual.phase === 'ritual'
+    ? g.tuning.ritualClock + (g.difficulty === 'hard' ? g.tuning.hardClock : 0) + (wight(g) ? g.tuning.vigor : 0)
+    : 0;
 export const phylactery = (g: Game) => onField(g).find((e) => e.kind === 'phylactery');
 /** Whether the Wight will cast Raise Dead (it needs bone piles on the floor). */
 export const wightCast = (g: Game): 'raise' | null => (wight(g) && piles(g).length ? 'raise' : null);
@@ -1682,7 +1689,8 @@ function enemyTurn(g: Game, inPlay: Set<Cls>, defense: Defense, frames: Frame[],
     const target = activeHeroes(g)
       .filter((x) => !x.untargetable)
       .sort((a, b) => a.hp - b.hp)[0];
-    if (target && !lich.disabled) hordeHit(g, lich, target.cls, Math.round(lich.damage * 0.5), defense, off, frames, 'Death Bolt', { ignoreArmor: true });
+    if (target && !lich.disabled)
+      hordeHit(g, lich, target.cls, Math.round(lich.damage * (g.tuning.boltMult - 1)), defense, off, frames, 'Death Bolt', { ignoreArmor: true });
   }
   // The Wraith: a Wail every enemy turn, part of its hit (wailMult) on the lowest-HP hero, ignoring Armor (a lesser Death Bolt).
   const wraith = onField(g).find((e) => e.kind === 'wraith');
@@ -1707,13 +1715,12 @@ function enemyTurn(g: Game, inPlay: Set<Cls>, defense: Defense, frames: Frame[],
     const p = pushing(g);
     if (p.length > 0) {
       let d = ramHit(g, p.length, ramBoost);
-      const guarded = false;
       d = Math.min(d, g.gate.hp);
       const before = Math.floor(g.gate.dmg / g.tuning.ramPer);
       g.gate.dmg += d;
       g.gate.hp -= d;
       let pts = Math.floor(g.gate.dmg / g.tuning.ramPer) - before + (d > 0 ? g.tuning.pushPoints : 0);
-      let text = `The ram hits the gate for ${d}${p.length < 4 ? ` (${p.length} of 4 crew pushing)` : ''}${guarded ? ' (the Warrior braces it)' : ''}`;
+      let text = `The ram hits the gate for ${d}${p.length < 4 ? ` (${p.length} of 4 crew pushing)` : ''}`;
       if (g.gate.hp <= 0) {
         g.gate.breached = true;
         pts += 10;
@@ -1751,13 +1758,12 @@ function ritualTurn(g: Game, off: Set<Cls>, defense: Defense, frames: Frame[]) {
   void defense;
   if (g.ritual.phase !== 'ritual') return;
   const pts = ritualPoints(g);
-  const guarded = false;
   g.ritual.scored += pts;
   g.score.horde += pts;
   g.stats.horde.gate += pts;
   frames.push({
     game: clone(g),
-    text: `The ritual: the Necromancer chants${wight(g) ? `, Unholy Vigor +${g.tuning.vigor}` : ''}${guarded ? ', the Warrior guards the circle (half)' : ''}: +${pts}.`,
+    text: `The ritual: the Necromancer chants${wight(g) ? `, Unholy Vigor +${g.tuning.vigor}` : ''}: +${pts}.`,
     side: 'horde',
     target: 'gate',
     pts: pts || undefined,

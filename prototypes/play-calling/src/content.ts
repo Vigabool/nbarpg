@@ -9,7 +9,7 @@ export const tierIndex = (t: Tier) => TIERS.indexOf(t);
 export const CLASSES: Cls[] = ['warrior', 'cleric', 'rogue', 'wizard', 'ranger'];
 /** Every hero defends the same way off the ball. */
 const OFF_BALL =
-  'Off the ball, this hero adds to the chance of stopping the horde’s play (a steal or a block): about 15% at Average, more with a better defensive night.';
+  'Off the ball, this hero adds to the chance of stopping the horde’s play (a steal or a block): about 12% at Average, more with a better defensive night.';
 export const CLASS_INFO: Record<Cls, { name: string; role: string; icon: string; hp: number; defense: string; defenseText: string }> = {
   warrior: { name: 'Warrior', role: 'the big', icon: '🛡', hp: 40, defense: 'Block', defenseText: OFF_BALL },
   cleric: { name: 'Cleric', role: 'the point guard', icon: '✚', hp: 28, defense: 'Block', defenseText: OFF_BALL },
@@ -607,8 +607,8 @@ export const PLANS: { id: string; encounter: Encounter; name: string; idea: stri
     id: 'cr-lich',
     encounter: 'crypt',
     name: 'Face the Lich',
-    idea: 'Leave the ritual running: Light the Way’s Blessed Aimed Shots take the lieutenants and the phylactery, then Critical Taunt brings down the Lich.',
-    playbook: ['critical-taunt', 'crack-the-shell', 'spread-the-floor', 'light-the-way'],
+    idea: 'Leave the ritual running: Light the Way’s Blessed Aimed Shots and Pick and Pop take the lieutenants and the phylactery, then Critical Taunt brings down the Lich.',
+    playbook: ['critical-taunt', 'shut-it-down', 'pick-and-pop', 'light-the-way'],
   },
   {
     id: 'cr-fire',
@@ -727,7 +727,7 @@ export const CRYPT_INFO: Partial<Record<EnemyKind, EnemyInfo>> = {
     name: 'Lich',
     icon: '☠️',
     mirrors: 'best opposing performance',
-    job: 'The Necromancer, transformed at halftime if he was still standing. Death Bolt every enemy turn: 1.5× damage to the lowest-HP hero, ignoring Armor. Takes half damage while the phylactery stands.',
+    job: 'The Necromancer, transformed at halftime if he was still standing. Death Bolt every enemy turn: 1.25× damage to the lowest-HP hero, ignoring Armor. Takes half damage while the phylactery stands.',
   },
   wraith: {
     name: 'Wraith',

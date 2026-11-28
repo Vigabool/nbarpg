@@ -754,3 +754,30 @@ Buttons, numbers and rules stay the same in both. It's stored per browser, like 
   - The Wraith now **Wails** every enemy turn: half its hit (`wailMult` 0.5) on the lowest-HP hero, ignoring Armor. It's the horde's second way to score, beside its called play. The Wraith no longer joins the horde's plays.
   - Its full hit took Stop the Ritual from +19.3 / +9.6 to +7.7 / −4.1, so it's half.
   - **Results** (smart bot, Normal / Hard): Stop the Ritual +14.3 / +3.0, Face the Lich +11.8 / +1.4. The second half after a break is now 23.2–18.9.
+- **Defense by count (Nov 28).** Five different off-ball effects (Protect, Ward, Close Out, the Steal, Strip the Ball, plus Triage) were one more thing to track. Defense is now the number of heroes off the ball.
+  - Each one adds `stopBase` (12%) × its defensive tier to the chance of stopping the horde's called play, up to `stopCap` (60%): about 9% for a cold defender, 18% for an elite one. A stop shows up as a steal (Rogue or Ranger leading) or a block.
+  - A stop cancels the whole play and still gives the next finisher Crit (the fast break). The ram, the ritual, the Death Bolt and the Wail can't be stopped.
+  - **The roll:** one per possession, seeded by the week, encounter, difficulty and possession number, so a timeout replays the same result. Previews don't roll; Horde calls shows the play "if it lands", with a "N% stop" badge and who is back.
+  - **The bots** add the chance × what the horde's play would score when they pick a play, so shorter plays get credit for leaving heroes back.
+  - **Removed:** Manual defense and the defense picker, Armor from defenders, guarding the gate or circle, and Strip the Ball's effect on the objective. Hero cards say "On D"; hero sheets say what each hero adds.
+  - **Re-tune** (enemy HP down where possible):
+    - Champion HP ×1.0 (was 1.25).
+    - The ram scores 1 per 3 gate damage, with no extra +1 a turn (Strip the Ball and the gate brace had been holding it to about half).
+    - The ritual scores 3 a turn, 4 on Hard (`hardClock`).
+    - The Death Bolt is 1.25× the Lich's hit (`boltMult`).
+    - The Lich is worth 8 (was 12) and has 3× the base HP (2.5× of a 1.25 base before, so slightly less HP than it had).
+  - **Face the Lich** has a new playbook, found by the search: Critical Taunt, Shut It Down, Pick and Pop, Light the Way. The old one fell to −2.0 / −12.1.
+  - **Results** (smart bot on 32 built rosters, Normal / Hard):
+
+    | Encounter | Plan | Margin |
+    | --- | --- | --- |
+    | Goblin Horde | Default book | +14.3 / +3.5 |
+    | Goblin Horde | Clear the Ram | +13.3 / +0.8 |
+    | Goblin Horde | Hunt Champions | +22.8 / +13.7 |
+    | Goblin Horde | Lockdown | +1.3 / −13.0 (was −9.2 / −18.5) |
+    | Crypt | Stop the Ritual | +11.8 / +3.0 |
+    | Crypt | Face the Lich | +14.6 / +6.8 |
+    | Crypt | Fire Volume (no holy) | −2.7 / −21.4 |
+
+    Close games run 16–45%.
+  - **Sample week:** Goblin Horde smart 57–49 and 66–49; Crypt smart 64–50 and 69–56.

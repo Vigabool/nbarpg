@@ -138,7 +138,7 @@ interface Saved {
 }
 const KEY = 'play-calling-prototype-v1';
 /** Bump when DEFAULT_TUNING changes, so players' saved tuning (which stores every value) picks up the new defaults. */
-const TUNING_VERSION = 9;
+const TUNING_VERSION = 10;
 function load(): Saved {
   try {
     return JSON.parse(localStorage.getItem(KEY) ?? '{}') as Saved;
@@ -729,7 +729,7 @@ export function App() {
                       ],
                       [
                         'The Lich after halftime',
-                        `If the Necromancer still stands at halftime he becomes the Lich: a Death Bolt every turn (1.5× its hit, ignoring Armor) and worth ${tuning.lichPoints} to take down.`,
+                        `If the Necromancer still stands at halftime he becomes the Lich: a Death Bolt every turn (1.25× its hit, ignoring Armor) and worth ${tuning.lichPoints} to take down.`,
                       ],
                     ]
                   : [
@@ -752,7 +752,7 @@ export function App() {
           </div>
           <p className="small muted">
             <Rich>
-              {`Heroes who aren’t in your play defend. Each one off the ball adds about 15% (more with a better defensive night, up to ${Math.round(tuning.stopCap * 100)}%) to the chance of stopping the horde’s play: a steal or a block. A stop scores them nothing and gives your next finisher Crit. The objective and the bosses’ own attacks can’t be stopped.`}
+              {`Heroes who aren’t in your play defend. Each one off the ball adds about 12% (more with a better defensive night, up to ${Math.round(tuning.stopCap * 100)}%) to the chance of stopping the horde’s play: a steal or a block. A stop scores them nothing and gives your next finisher Crit. The objective and the bosses’ own attacks can’t be stopped.`}
             </Rich>
           </p>
         </ModalShell>
@@ -1451,7 +1451,7 @@ function PlanScreen(props: {
                 {open === 'ritual' && (
                   <div className="panel detail small">
                     <Rich>
-                      {`The Necromancer is turning himself into a Lich. Until halftime the ritual scores ${g.tuning.ritualClock} each enemy turn (${g.tuning.vigor} more while the Wight stands; the Warrior guarding the circle halves it). He never attacks, and he can’t be hit while ${g.tuning.wardMin} or more skeletons stand (bone piles and pinned skeletons don’t count; fire and holy kills stay down). Take him down before halftime and the ritual breaks: +${g.tuning.necroBounty}, but his soul flees into the phylactery and he rises as a Wraith. Still standing at halftime, he becomes the Lich: a Death Bolt every turn, worth ${g.tuning.lichPoints}.`}
+                      {`The Necromancer is turning himself into a Lich. Until halftime the ritual scores ${g.tuning.ritualClock + (g.difficulty === 'hard' ? g.tuning.hardClock : 0)} each enemy turn (${g.tuning.vigor} more while the Wight stands). He never attacks, and he can’t be hit while ${g.tuning.wardMin} or more skeletons stand (bone piles don’t count; fire and holy kills stay down). Take him down before halftime and the ritual breaks: +${g.tuning.necroBounty}, but his soul flees into the phylactery and he rises as a Wraith. Still standing at halftime, he becomes the Lich: a Death Bolt every turn, worth ${g.tuning.lichPoints}.`}
                     </Rich>
                   </div>
                 )}
@@ -2065,7 +2065,7 @@ function callRows(g: Game, horde: Sim['horde'] | undefined): CallRow[] {
       key: 'bolt',
       label: `${name(bolt[0].actor)} → Death Bolt`,
       value: val(bolt),
-      detail: [...bolt.map((x) => x.t), 'Death Bolt ignores Armor and hits the lowest-HP hero (1.5× the Lich’s hit), every turn.'],
+      detail: [...bolt.map((x) => x.t), 'Death Bolt ignores Armor and hits the lowest-HP hero (1.25× the Lich’s hit), every turn.'],
     });
   const wail = take((x) => /· Wail/.test(x.t));
   if (wail.length)
@@ -3399,7 +3399,7 @@ function Guide(props: { onClose: () => void }) {
     ['Touches', 'From each player’s true usage this week (shots, free throws, turnovers and assists). Out of touches, a hero can’t be in a play.'],
     [
       'Defense',
-      'Heroes not in the play defend. Each one off the ball adds about 15% to the chance of stopping the horde’s play (more with a better defensive night, up to 65%): a steal or a block. Horde calls shows the chance. A stop scores them nothing and gives your next finisher Crit (a fast break). Shorter plays leave more heroes back; an Iso leaves four. The ram or the ritual, the Death Bolt and the Wail can’t be stopped.',
+      'Heroes not in the play defend. Each one off the ball adds about 12% to the chance of stopping the horde’s play (more with a better defensive night, up to 60%): a steal or a block. Horde calls shows the chance. A stop scores them nothing and gives your next finisher Crit (a fast break). Shorter plays leave more heroes back; an Iso leaves four. The ram or the ritual, the Death Bolt and the Wail can’t be stopped.',
     ],
     [
       'The horde',

@@ -45,7 +45,7 @@ export const TERMS: Record<string, { name: string; def: string }> = {
   },
   ritual: {
     name: 'The ritual',
-    def: 'The Crypt’s objective. The Necromancer is turning himself into a Lich: until halftime the ritual scores 2 each enemy turn (1 more while the Wight stands; the Warrior guarding the circle halves it). Take him down before halftime to break it (+6). Still standing at halftime, he becomes the Lich.',
+    def: 'The Crypt’s objective. The Necromancer is turning himself into a Lich: until halftime the ritual scores 3 each enemy turn (4 on Hard) (1 more while the Wight stands). Take him down before halftime to break it (+6). Still standing at halftime, he becomes the Lich.',
   },
   warded: {
     name: 'Warded',
@@ -57,7 +57,7 @@ export const TERMS: Record<string, { name: string; def: string }> = {
   },
   lich: {
     name: 'Lich',
-    def: 'The Necromancer after the ritual completes at halftime. A Death Bolt every enemy turn (1.5× its hit to the lowest-HP hero, ignoring Armor), half damage while the phylactery stands, and worth 12.',
+    def: 'The Necromancer after the ritual completes at halftime. A Death Bolt every enemy turn (1.25× its hit to the lowest-HP hero, ignoring Armor), half damage while the phylactery stands, and worth 8.',
   },
   wraith: {
     name: 'Wraith',
@@ -90,7 +90,7 @@ export const TERMS: Record<string, { name: string; def: string }> = {
     def: 'The Wight’s passive: the ritual scores 1 more each turn while it stands (and isn’t Disabled).',
   },
   enervate: { name: 'Paralyzing Claws', def: 'The Ghoul’s setup: the targeted hero loses a touch and any Quick, and the next hit +2.' },
-  deathBolt: { name: 'Death Bolt', def: 'The Lich, every enemy turn: 1.5× its damage to the lowest-HP hero, ignoring Armor.' },
+  deathBolt: { name: 'Death Bolt', def: 'The Lich, every enemy turn: 1.25× its damage to the lowest-HP hero, ignoring Armor.' },
   consecrate: {
     name: 'Consecrate',
     def: 'Close an open grave for good with holy damage (+3). An open grave raises a skeleton every enemy turn while the ritual lasts.',
@@ -107,7 +107,7 @@ export const TERMS: Record<string, { name: string; def: string }> = {
   finisher: { name: 'Finisher', def: 'The last move of a possession and the only one that scores a bucket. Every helper’s buff goes to it.' },
   stop: {
     name: 'Stop',
-    def: 'The horde’s play held to nothing. Each hero off the ball adds to the chance (about 15% each, more with a better defensive night, up to 65%): a steal or a block. Armor at least as big as a hit, or a Quick dodge, also stops that hit. Each stop starts a fast break.',
+    def: 'The horde’s play held to nothing. Each hero off the ball adds to the chance (about 12% each, more with a better defensive night, up to 60%): a steal or a block. Armor at least as big as a hit, or a Quick dodge, also stops that hit. Each stop starts a fast break.',
   },
   fastBreak: {
     name: 'Fast break',
