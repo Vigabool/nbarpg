@@ -28,7 +28,7 @@ import {
   DEFAULT_TUNING,
   activeHeroes,
   autoDefense,
-  canSteal,
+  stopChance,
   beginLive,
   bestCall,
   describeCarry,
@@ -176,29 +176,19 @@ function SpecialChip(props: { m: Move }) {
   const td = props.m.kind === 'legendary';
   return <span className={`chip special ${td ? 'td' : ''}`}>{td ? '★★ Triple-double special' : '★ Double-double special'}</span>;
 }
-/** The extra effect a top defensive tier adds. */
-const ELITE_DEFENSE: Partial<Record<Cls, string>> = {
-  // (The Rogue's Elite note is encounter-specific: see eliteDefense.)
-};
 /** What a hero does on the horde's turn when they don't touch the ball. */
 function OffBallCard(props: { cls: Cls; defTier: Tier; line: StatLine; encounter: Encounter }) {
-  const c = CLASS_INFO[props.cls];
-  const elite =
-    props.cls === 'rogue'
-      ? props.encounter === 'crypt'
-        ? 'At Elite, two skeletons are pinned.'
-        : 'At Elite, two goblins are knocked off the ram.'
-      : ELITE_DEFENSE[props.cls];
+  const pct = Math.round(DEFAULT_TUNING.stopBase * TIER_MULT[props.defTier] * 100);
   return (
     <div className="offball">
       <span className="row" style={{ justifyContent: 'space-between' }}>
-        <strong>Off the ball: {c.defense}</strong>
+        <strong>Off the ball: +{pct}% to stop their play</strong>
         <span className={`tier ${props.defTier}`}>Defense {tierLabel(props.defTier)}</span>
       </span>
       <span className="small">{defenseText(props.cls, props.encounter)}</span>
       <span className="small muted">
-        Automatic when this hero doesn’t touch the ball this possession. Defense rating from {props.line.stl} stl, {props.line.blk} blk, {props.line.dreb} dreb.
-        {elite && props.defTier === 'elite' ? ` ${elite}` : ''}
+        When this hero doesn’t touch the ball, they add {pct}% to the chance of stopping the horde’s play (up to {Math.round(DEFAULT_TUNING.stopCap * 100)}% in
+        all). Defense rating from {props.line.stl} stl, {props.line.blk} blk, {props.line.dreb} dreb.
       </span>
     </div>
   );
@@ -223,7 +213,6 @@ export function App() {
   const saved = useMemo(load, []);
   const [screen, setScreen] = useState<Screen>('intro');
   const [difficulty, setDifficulty] = useState<Difficulty>(saved.difficulty ?? 'normal');
-  const [manual, setManual] = useState<boolean>(saved.manual ?? false);
   /** The possession being built: Start, Support, Support, Finish. */
   const [slots, setSlots] = useState<(BuildStep | null)[]>([null, null, null, null]);
   const [editSlot, setEditSlot] = useState<number | null>(null);
@@ -255,7 +244,6 @@ export function App() {
   const [sampleEncounter, setSampleEncounter] = useState<string>(saved.sampleEncounter ?? 'goblin-horde');
   const [setup, setSetup] = useState<SetupState>(saved.setup ?? emptySetup(FIXED_WEEK.week.index));
   const frames = replay?.frames ?? null;
-  const [override, setOverride] = useState<Defense>({});
   const [modal, setModal] = useState<Modal | null>(null);
   const [adjustment, setAdjustment] = useState<Adjustment | null>(null);
   const [changesLeft, setChangesLeft] = useState(2);
@@ -264,8 +252,8 @@ export function App() {
   const startedAt = useRef<number>(0);
 
   useEffect(() => {
-    store({ custom, active, difficulty, manual, tuning, tuningVersion: TUNING_VERSION, pace: speed, callsClosed, setup, sampleEncounter });
-  }, [custom, active, difficulty, manual, tuning, speed, callsClosed, setup, sampleEncounter]);
+    store({ custom, active, difficulty, tuning, tuningVersion: TUNING_VERSION, pace: speed, callsClosed, setup, sampleEncounter });
+  }, [custom, active, difficulty, tuning, speed, callsClosed, setup, sampleEncounter]);
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [screen]);
@@ -320,10 +308,7 @@ export function App() {
   const primaryId = finisher?.picks?.[0] ?? finisher?.target;
   const filled = slots.map((s, i) => (s ? { s, i } : null)).filter((x): x is { s: BuildStep; i: number } => !!x);
   const inPlay = useMemo(() => new Set<Cls>(slots.filter((s): s is BuildStep => !!s).map((s) => s.cls)), [slots]);
-  const defense: Defense = useMemo(() => {
-    const auto = autoDefense(game, inPlay);
-    return manual ? { ...auto, ...override } : auto;
-  }, [game, inPlay, manual, override]);
+  const defense: Defense = useMemo(() => autoDefense(game, inPlay), [game, inPlay]);
   /** Play the built steps on a copy of the game (no frames) to project the shot. */
   const sim = useMemo(() => simulateBuild(game, slots, defense), [game, slots, defense]);
   const aimMove = aimSlot !== null && slots[aimSlot] ? MOVE[slots[aimSlot]!.move] : null;
@@ -352,7 +337,6 @@ export function App() {
     setEditSlot(null);
     setAimSlot(null);
     setPresetName(null);
-    setOverride({});
   }
   function setSlotStep(i: number, step: BuildStep | null) {
     setSlots((ss) => ss.map((x, j) => (j === i ? step : x)));
@@ -445,8 +429,6 @@ export function App() {
         <Intro
           difficulty={difficulty}
           setDifficulty={setDifficulty}
-          manual={manual}
-          setManual={setManual}
           onBuild={() => setScreen('roster')}
           sampleEncounter={sampleEncounter}
           setSampleEncounter={setSampleEncounter}
@@ -586,9 +568,7 @@ export function App() {
               aimMax={aimMax}
               aimPrompt={aimPrompt}
               defense={defense}
-              manual={manual}
               anyTouches={anyTouches}
-              setOverride={setOverride}
               onEdit={(i) => {
                 setEditSlot(i);
                 setAimSlot(null);
@@ -702,8 +682,6 @@ export function App() {
         <Menu
           difficulty={difficulty}
           setDifficulty={setDifficulty}
-          manual={manual}
-          setManual={setManual}
           tuning={tuning}
           onLog={() => setModal({ kind: 'log' })}
           onApplyTuning={(t) => {
@@ -774,7 +752,7 @@ export function App() {
           </div>
           <p className="small muted">
             <Rich>
-              {`Heroes who aren’t in your play defend: the Warrior Protects, the Ranger Closes Out, the Wizard Wards, the Cleric heals (Triage) and the Rogue Strips the Ball ${game.encounter === 'crypt' ? '(pinning a skeleton so it doesn’t guard the Necromancer)' : 'off the ram'}.`}
+              {`Heroes who aren’t in your play defend. Each one off the ball adds about 15% (more with a better defensive night, up to ${Math.round(tuning.stopCap * 100)}%) to the chance of stopping the horde’s play: a steal or a block. A stop scores them nothing and gives your next finisher Crit. The objective and the bosses’ own attacks can’t be stopped.`}
             </Rich>
           </p>
         </ModalShell>
@@ -800,8 +778,6 @@ export function App() {
 function Intro(props: {
   difficulty: Difficulty;
   setDifficulty: (d: Difficulty) => void;
-  manual: boolean;
-  setManual: (m: boolean) => void;
   onBuild: () => void;
   onSample: () => void;
   sampleEncounter: string;
@@ -837,7 +813,6 @@ function Intro(props: {
           On Hard, a Champion’s hit on a hero scores 3 instead of 2, and the horde’s halftime adjustment lasts the whole second half (on Normal, only the third
           quarter).
         </span>
-        <DefenseChoice manual={props.manual} setManual={props.setManual} />
       </div>
       <button className="btn primary big" onClick={props.onBuild}>
         Build your roster
@@ -875,39 +850,6 @@ function Intro(props: {
   );
 }
 
-function DefenseChoice(props: { manual: boolean; setManual: (m: boolean) => void }) {
-  const [info, setInfo] = useState(false);
-  return (
-    <>
-      <span className="eyebrow">Defense</span>
-      <div className="opt-group" style={{ alignItems: 'center' }}>
-        <button className="opt" aria-pressed={!props.manual} onClick={() => props.setManual(false)}>
-          Automatic
-        </button>
-        <button className="opt" aria-pressed={props.manual} onClick={() => props.setManual(true)}>
-          Manual
-        </button>
-        <button
-          className="helpbtn"
-          aria-expanded={info}
-          aria-controls="defense-info"
-          aria-label="What's the difference between automatic and manual defense?"
-          title="What's the difference?"
-          onClick={() => setInfo((x) => !x)}
-        >
-          ?
-        </button>
-      </div>
-      {info && (
-        <p id="defense-info" className="muted small">
-          Heroes who don’t touch the ball defend. Automatic picks their targets; Manual lets you choose who the Warrior protects, who the Ranger closes out, who
-          the Wizard wards, and whether the Rogue strips the ball or steals.
-        </p>
-      )}
-    </>
-  );
-}
-
 // ---------- The possession builder ----------
 
 /** One slot of the builder: a hero, their move, and (for aimed moves) a target or the finisher's picks. */
@@ -934,7 +876,9 @@ interface Sim {
     points: number;
     lines: HordeLine[];
     /** What the ram would score if the Rogue weren't Stripping the Ball (only when the Rogue defends). */
-    ramNoStrip?: number;
+    /** The chance the heroes off the ball stop the horde's play, and who they are. */
+    stop: number;
+    defenders: Cls[];
   };
 }
 /** Whether a move earlier than slot i breaks the Barrier, so slot i can aim past it. */
@@ -1031,17 +975,12 @@ function simulateBuild(g: Game, slots: (BuildStep | null)[], defense?: Defense):
   // Play out the horde's turn that would follow.
   let horde: Sim['horde'];
   if (defense) {
-    const res = finishLive(l, defense);
+    const res = finishLive(l, defense, { preview: true });
     const lines = res.frames
       .filter((f) => (f.phase === 'horde' || /^Turnover/.test(f.text)) && !/^Possession|^Halftime|^Final/.test(f.text))
       .map((f) => ({ t: f.text, pts: f.side === 'horde' ? f.pts : undefined, side: f.side, actor: f.actor, target: f.target, game: f.game }));
-    // What the Rogue's strip saves: the same turn without it.
-    let ramNoStrip: number | undefined;
-    if (lines.some((x) => x.actor === 'rogue' && /Strip the Ball/.test(x.t))) {
-      const alt = finishLive(l, { ...defense, noStrip: true });
-      ramNoStrip = alt.frames.filter((f) => f.phase === 'horde' && f.target === 'gate').reduce((s2, f) => s2 + (f.pts ?? 0), 0);
-    }
-    horde = { points: res.game.score.horde - g.score.horde, lines, ramNoStrip };
+    const inPlay = new Set(l.steps.map((s2) => s2.cls));
+    horde = { points: res.game.score.horde - g.score.horde, lines, stop: stopChance(g, inPlay), defenders: defenders(g, inPlay) };
   }
   return { buffs, shot: { damage, kills, points }, bucket, notes, ready, hits, barrierBroken, horde };
 }
@@ -1057,9 +996,7 @@ function BuilderSheet(props: {
   aimMax: number;
   aimPrompt: string | null;
   defense: Defense;
-  manual: boolean;
   anyTouches: boolean;
-  setOverride: (f: (d: Defense) => Defense) => void;
   onEdit: (i: number) => void;
   onCloseEdit: () => void;
   onChoose: (i: number, step: BuildStep) => void;
@@ -1077,7 +1014,6 @@ function BuilderSheet(props: {
   const g = props.game;
   const { slots, sim } = props;
   const [pickHero, setPickHero] = useState<Cls | null>(null);
-  const [showDefense, setShowDefense] = useState(false);
   useEffect(() => {
     setPickHero(props.editSlot !== null ? (slots[props.editSlot]?.cls ?? null) : null);
   }, [props.editSlot]); // eslint-disable-line
@@ -1095,15 +1031,6 @@ function BuilderSheet(props: {
   };
   const buffText = (m: Move) => buffShort(m, g.encounter);
   const off = defenders(g, new Set(slots.filter((s): s is BuildStep => !!s).map((s) => s.cls)));
-  const roleText = (c: Cls) => {
-    const d = props.defense;
-    const who = (x?: string) => (x === 'gate' ? 'gate' : x ? (CLASS_INFO[x as Cls]?.name ?? name(x)) : '');
-    if (c === 'warrior') return `Protect → ${who(d.protect)}`;
-    if (c === 'ranger') return `Close Out → ${who(d.closeOut)}`;
-    if (c === 'wizard') return `Ward → ${who(d.ward)}`;
-    if (c === 'rogue' && d.steal) return `Steal → ${who(d.steal)}`;
-    return CLASS_INFO[c].defense;
-  };
 
   // Aiming: the board is the picker, so the sheet shrinks to a bar.
   if (props.aimSlot !== null) {
@@ -1340,30 +1267,12 @@ function BuilderSheet(props: {
         </div>
         <div className="row defline">
           <span className="small">
-            <strong>Defending:</strong> {off.length ? off.map((c) => `${CLASS_INFO[c].icon} ${roleText(c)}`).join(' · ') : 'nobody'}
+            <strong>Defense:</strong>{' '}
+            {off.length
+              ? `${off.map((c) => CLASS_INFO[c].icon).join(' ')} ${off.length} off the ball · ${Math.round(stopChance(g, new Set(slots.filter((s): s is BuildStep => !!s).map((s) => s.cls))) * 100)}% to stop their play`
+              : 'nobody off the ball'}
           </span>
-          {props.manual && off.length > 0 && (
-            <button className="linkish" onClick={() => setShowDefense((x) => !x)}>
-              {showDefense ? 'Done' : 'Change'}
-            </button>
-          )}
         </div>
-        {props.manual && showDefense && (
-          <div className="defrow">
-            {off.map((c) => (
-              <DefenseLine
-                key={c}
-                cls={c}
-                game={g}
-                defense={props.defense}
-                manual={props.manual}
-                heroes={activeHeroes(g).map((h) => h.cls)}
-                champs={onField(g).filter((e) => e.kind !== 'goblin' && e.kind !== 'wagon' && e.kind !== 'grave' && e.kind !== 'phylactery')}
-                setOverride={props.setOverride}
-              />
-            ))}
-          </div>
-        )}
         {props.anyTouches ? (
           <div className="row">
             <button className="btn quiet" onClick={props.onClearAll}>
@@ -1672,7 +1581,7 @@ function PlanScreen(props: {
                         <span className={`tier ${h.defTier}`}>Defense {tierLabel(h.defTier)}</span>
                       </span>
                       <span className="small">
-                        {h.touchesMax} touches · {CLASS_INFO[openHero].defense} on defense
+                        {h.touchesMax} touches · +{Math.round(g.tuning.stopBase * TIER_MULT[h.defTier as Tier] * 100)}% to stop their play off the ball
                         {h.td ? ' · triple-double: signature and legendary finishers' : h.dd ? ' · double-double: signature finisher' : ''}
                       </span>
                       <span className="chips">
@@ -1962,6 +1871,8 @@ interface CallRow {
   label: ReactNode;
   /** Points, or a word for actions that don't score (BARRIER, PACK). */
   value?: string;
+  /** A tag beside the value: the chance your defense stops this. */
+  badge?: string;
   detail: string[];
 }
 
@@ -2023,7 +1934,6 @@ function callRows(g: Game, horde: Sim['horde'] | undefined): CallRow[] {
 
   // The ram (or, once the gate is down, the pillage).
   const ramLines = take((x) => x.target === 'gate' || /pillage/i.test(x.t));
-  const strip = lines.find((x) => x.actor === 'rogue' && /Strip the Ball/.test(x.t));
   const ramRow: CallRow = {
     key: 'ram',
     label: crypt ? '🕯 Ritual' : g.gate.breached ? 'Pillage' : pound ? 'Pound the Gate' : 'Ram → Gate',
@@ -2044,7 +1954,6 @@ function callRows(g: Game, horde: Sim['horde'] | undefined): CallRow[] {
           ? `The Necromancer is warded: ${wardCount(g)} skeletons stand (he opens below ${g.tuning.wardMin}). Fire and holy kills stay down; bone piles don't guard.`
           : `The Necromancer is open: fewer than ${g.tuning.wardMin} skeletons guard him. Take him down to break the ritual (+${g.tuning.necroBounty}).`,
       );
-      if (strip) ramRow.detail.push('The Rogue is pinning a skeleton: it won’t guard him next possession.');
       ramRow.detail.push(
         `${Math.max(0, 6 - g.possession)} possession${6 - g.possession === 1 ? '' : 's'} to halftime, when a standing Necromancer becomes the Lich.`,
       );
@@ -2061,16 +1970,8 @@ function callRows(g: Game, horde: Sim['horde'] | undefined): CallRow[] {
       ramRow.detail.push(
         `With ${n === 1 ? 'one goblin' : `${['', '', 'two', 'three', 'four', 'five', 'six'][n] ?? n} goblins`} pushing, the ram deals ${d} damage to the gate and scores ${scored} point${scored === 1 ? '' : 's'}.`,
       );
-      if (/braces/.test(hitLine.t)) ramRow.detail.push('The Warrior is bracing the gate, halving the hit.');
       if (warDrum(g)) ramRow.detail.push('The Shaman’s War Drum adds 2 to the full hit while it stands.');
       if (/gate falls/.test(hitLine.t)) ramRow.detail.push('The gate falls: +10, and the goblins start pillaging.');
-    }
-    if (strip) {
-      const k = Number(/(\d+) goblin/.exec(strip.t)?.[1] ?? 1);
-      const saved = (horde.ramNoStrip ?? scored) - scored;
-      ramRow.detail.push(
-        `The Rogue is pinning ${k === 1 ? 'one goblin' : `${k} goblins`}${saved > 0 ? `, reducing points by ${saved}` : ', though it doesn’t change the points this turn'}.`,
-      );
     }
   }
 
@@ -2079,11 +1980,30 @@ function callRows(g: Game, horde: Sim['horde'] | undefined): CallRow[] {
   if (g.call) {
     const actors = new Set(g.call.actors.filter((a): a is string => !!a));
     const ls = take((x) => !!x.actor && actors.has(x.actor) && !/calls the pack/.test(x.t));
+    const stop = horde?.stop ?? 0;
+    const who = horde?.defenders ?? [];
     callRow = {
       key: 'call',
       label: <CallChain game={g} />,
       value: val(ls),
-      detail: horde ? (ls.length ? ls.map((x) => x.t) : ['Its players are out of the play: nothing happens.']) : [`${g.call.name}: ${g.call.text}.`],
+      badge: horde && stop > 0 ? `${Math.round(stop * 100)}% stop` : undefined,
+      detail: [
+        ...(horde
+          ? ls.length
+            ? ls.map((x) => `If it lands: ${x.t}`)
+            : ['Its players are out of the play: nothing happens.']
+          : [`${g.call.name}: ${g.call.text}.`]),
+        ...(horde
+          ? [
+              who.length
+                ? `Your ${who.length === 1 ? 'one defender' : `${who.length} defenders`} off the ball (${who.map((c) => CLASS_INFO[c].name).join(', ')}) ${who.length === 1 ? 'has' : 'have'} a ${Math.round(stop * 100)}% chance to stop it: a steal or a block. A stop scores the horde nothing and gives your next finisher Crit (a fast break).`
+                : 'Everyone is in your play: nobody is back on defense to stop it.',
+              'Each hero off the ball adds to the chance (more with a better defensive night), up to ' +
+                Math.round(g.tuning.stopCap * 100) +
+                '%. Shorter plays leave more heroes back.',
+            ]
+          : []),
+      ],
     };
   }
   rows.push(...(pound || !callRow ? [ramRow, ...(callRow ? [callRow] : [])] : [callRow, ramRow]));
@@ -2205,7 +2125,10 @@ function CallBanner(props: { game: Game; horde?: Sim['horde']; closed: boolean; 
             <div key={r.key} className="callrowwrap">
               <button className="callrow" aria-expanded={open === r.key} onClick={() => setOpen(open === r.key ? null : r.key)}>
                 <span className="cl">{r.label}</span>
-                {r.value && <span className={`cv num ${/^\+0$/.test(r.value) ? 'zero' : ''}`}>{r.value}</span>}
+                <span className="cvwrap">
+                  {r.badge && <span className="cbadge">{r.badge}</span>}
+                  {r.value && <span className={`cv num ${/^\+0$/.test(r.value) ? 'zero' : ''}`}>{r.value}</span>}
+                </span>
                 <span className="chev" aria-hidden="true">
                   {open === r.key ? '▾' : '▸'}
                 </span>
@@ -2503,35 +2426,6 @@ function Board(props: {
   );
 }
 
-/** Short names for the defense chips on the hero cards. */
-const SHORT: Record<string, string> = {
-  warrior: 'War',
-  cleric: 'Cle',
-  rogue: 'Rog',
-  wizard: 'Wiz',
-  ranger: 'Ran',
-  shaman: 'Shaman',
-  hexer: 'Hexer',
-  ogre: 'Ogre',
-  cutthroat: 'Cutthr.',
-  sharpshooter: 'Sharp.',
-  chieftain: 'Chief',
-  goblin: 'Gob',
-  wagon: 'Wagon',
-};
-/** The Crypt's short names, by role. */
-const SHORT_CRYPT: Record<string, string> = {
-  shaman: 'Wight',
-  hexer: 'Necro',
-  ogre: 'Knight',
-  cutthroat: 'Wraith',
-  sharpshooter: 'Archer',
-  lich: 'Lich',
-  goblin: 'Skel.',
-  grave: 'Grave',
-  phylactery: 'Phyl.',
-};
-
 /** A hero's HP as a bar with the number on it (or "Bench N"), and touches left. */
 function HeroVitals(props: { hero: Hero; touchesLabel?: string }) {
   const h = props.hero;
@@ -2556,34 +2450,10 @@ function HeroRow(props: { game: Game; inPlay: Set<Cls>; defense: Defense | null;
   const g = props.game;
   const d = props.defense;
   const off = d ? new Set(defenders(g, props.inPlay)) : new Set<Cls>();
-  const short = (x?: string) =>
-    x === 'gate'
-      ? g.encounter === 'crypt'
-        ? 'Circle'
-        : 'Gate'
-      : x
-        ? (SHORT[x] ??
-          (() => {
-            const kind = g.enemies.find((e) => e.id === x)?.kind ?? '';
-            return (g.encounter === 'crypt' ? SHORT_CRYPT[kind] : undefined) ?? SHORT[kind] ?? '?';
-          })())
-        : '?';
   /** The defense chip: short text, and the full words for screen readers and the tooltip. */
   const role = (c: Cls): { t: string; full: string } | null => {
     if (!d || !off.has(c)) return null;
-    if (c === 'warrior')
-      return {
-        t: `→ ${short(d.protect)}`,
-        full: `Protect → ${d.protect === 'gate' ? (g.encounter === 'crypt' ? 'the circle' : 'the gate') : short(d.protect)}`,
-      };
-    if (c === 'ranger') return { t: `→ ${short(d.closeOut)}`, full: `Close Out → ${short(d.closeOut)}` };
-    if (c === 'wizard') return { t: `→ ${short(d.ward)}`, full: `Ward → ${short(d.ward)}` };
-    if (c === 'cleric') return { t: 'Heal', full: 'Triage: heals the most injured hero' };
-    if (d.steal) return { t: `Steal ${short(d.steal)}`, full: `Steal → ${short(d.steal)}` };
-    return {
-      t: 'Strip',
-      full: g.encounter === 'crypt' ? 'Strip the Ball: pins a skeleton so it doesn’t guard the Necromancer' : 'Strip the Ball: knocks a goblin off the ram',
-    };
+    return { t: 'On D', full: `Off the ball: on defense (adds to the chance to stop the horde’s play)` };
   };
   return (
     <div className="heroes">
@@ -2626,67 +2496,6 @@ function HeroRow(props: { game: Game; inPlay: Set<Cls>; defense: Defense | null;
         );
       })}
     </div>
-  );
-}
-
-function DefenseLine(props: {
-  cls: Cls;
-  game: Game;
-  defense: Defense;
-  manual: boolean;
-  heroes: Cls[];
-  champs: Enemy[];
-  setOverride: (f: (d: Defense) => Defense) => void;
-}) {
-  const { cls, defense: d } = props;
-  const label = `${CLASS_INFO[cls].icon} ${CLASS_INFO[cls].defense}`;
-  const sel = (value: string | undefined, options: { v: string; t: string }[], key: keyof Defense) =>
-    props.manual ? (
-      <select id={`def-${cls}`} value={value ?? ''} onChange={(e) => props.setOverride((o) => ({ ...o, [key]: e.target.value }))}>
-        {options.map((o) => (
-          <option key={o.v} value={o.v}>
-            {o.t}
-          </option>
-        ))}
-      </select>
-    ) : (
-      <span>{options.find((o) => o.v === value)?.t ?? '—'}</span>
-    );
-  const heroOpts = props.heroes.map((h) => ({ v: h, t: CLASS_INFO[h].name }));
-  let body: ReactNode;
-  if (cls === 'warrior')
-    body = sel(
-      d.protect,
-      [
-        ...heroOpts,
-        ...(props.game.gate.breached
-          ? []
-          : [{ v: 'gate', t: props.game.encounter === 'crypt' ? 'the circle (halves the ritual)' : 'the gate (halves the ram)' }]),
-      ],
-      'protect',
-    );
-  else if (cls === 'ranger')
-    body = sel(
-      d.closeOut,
-      props.champs.map((e) => ({ v: e.id, t: e.name })),
-      'closeOut',
-    );
-  else if (cls === 'wizard') body = sel(d.ward, heroOpts, 'ward');
-  else if (cls === 'rogue')
-    body = sel(
-      d.steal,
-      [
-        { v: '', t: props.game.encounter === 'crypt' ? 'Strip the Ball (pin a skeleton)' : 'Strip the Ball (off the ram)' },
-        ...props.champs.map((e) => ({ v: e.id, t: `Steal → ${e.name}${canSteal(e) || d.closeOut === e.id ? '' : ' (needs Slowed or Exposed)'}` })),
-      ],
-      'steal',
-    );
-  else body = <span className="muted">{defenseText(cls, props.game.encounter)}</span>;
-  return (
-    <>
-      <label htmlFor={`def-${cls}`}>{label}</label>
-      {body}
-    </>
   );
 }
 
@@ -3490,8 +3299,6 @@ function Designer(props: { tuning: Tuning; difficulty: Difficulty; initial?: Pla
 function Menu(props: {
   difficulty: Difficulty;
   setDifficulty: (d: Difficulty) => void;
-  manual: boolean;
-  setManual: (m: boolean) => void;
   tuning: Tuning;
   onLog: () => void;
   onApplyTuning: (t: Tuning) => void;
@@ -3511,12 +3318,13 @@ function Menu(props: {
     { k: 'bossPoints', label: 'Chieftain takedown points', step: 1 },
     { k: 'bountyPoints', label: 'Shaman bounty points', step: 1 },
     { k: 'hordeHitPoints', label: 'Horde bucket points', step: 1 },
+    { k: 'stopBase', label: 'Stop chance per defender', step: 0.01 },
+    { k: 'stopCap', label: 'Stop chance cap', step: 0.05 },
     { k: 'usagePerTouch', label: 'True usage per touch', step: 0.1 },
   ];
   return (
     <ModalShell title="Menu" onClose={props.onClose}>
       <div className="panel">
-        <DefenseChoice manual={props.manual} setManual={props.setManual} />
         <span className="eyebrow">Difficulty (next game)</span>
         <div className="opt-group">
           {(['normal', 'hard'] as Difficulty[]).map((d) => (
@@ -3591,7 +3399,7 @@ function Guide(props: { onClose: () => void }) {
     ['Touches', 'From each player’s true usage this week (shots, free throws, turnovers and assists). Out of touches, a hero can’t be in a play.'],
     [
       'Defense',
-      'Heroes not in the play defend: the Warrior Protects, the Ranger Closes Out, the Wizard Wards, the Cleric heals (Triage), and the Rogue Strips the Ball (a goblin off the ram, or a skeleton pinned so it doesn’t guard the Necromancer). Protect and Ward add Armor, or the Warrior guards the objective; Close Out Slows an enemy (half damage).',
+      'Heroes not in the play defend. Each one off the ball adds about 15% to the chance of stopping the horde’s play (more with a better defensive night, up to 65%): a steal or a block. Horde calls shows the chance. A stop scores them nothing and gives your next finisher Crit (a fast break). Shorter plays leave more heroes back; an Iso leaves four. The ram or the ritual, the Death Bolt and the Wail can’t be stopped.',
     ],
     [
       'The horde',

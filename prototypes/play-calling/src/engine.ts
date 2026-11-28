@@ -44,12 +44,10 @@ export interface Tuning {
   pushPoints: number;
   /** A Champion (not the boss) taken down comes back at half HP this many possessions later, once (0 = never). */
   champReturn: number;
-  /** Help Defense: Protect's Armor before the Warrior's defense tier. Alone it never stops a full hit. */
-  protectArmor: number;
-  /** Ward's Armor before the Wizard's defense tier. */
-  wardArmor: number;
-  /** Test switch: Ward makes its ally Quick instead of giving Armor (Blink). */
-  wardQuick?: boolean;
+  /** Defense: each hero off the ball adds this chance (× its defensive tier) to stop the horde's play. */
+  stopBase: number;
+  /** The most that defense can reach. */
+  stopCap: number;
   /** The Hexer's Hex (Enervate in the Crypt) takes away a hero's Quick. */
   hexClearsQuick?: boolean;
   /** The horde's fast break when your finisher is stopped. */
@@ -96,8 +94,8 @@ export const DEFAULT_TUNING: Tuning = {
   ramPer: 2,
   pushPoints: 1,
   champReturn: 0,
-  protectArmor: 8,
-  wardArmor: 8,
+  stopBase: 0.15,
+  stopCap: 0.65,
   hexClearsQuick: true,
   turnoverPoints: 2,
   ritualClock: 2,
@@ -217,15 +215,8 @@ export interface Adjustment {
   playId?: string;
 }
 
-export interface Defense {
-  protect?: Cls | 'gate';
-  closeOut?: string;
-  ward?: Cls;
-  /** The Rogue's Steal: a Champion that's Slowed or Exposed drops its hit this turn (instead of Strip the Ball). */
-  steal?: string;
-  /** What-if only: play the horde's turn as if the Rogue didn't Strip the Ball (to show what the strip saves). */
-  noStrip?: boolean;
-}
+/** Defense is the count of heroes off the ball (stopChance); nothing to set per hero. Kept as a type so callers pass one value. */
+export type Defense = Record<string, never>;
 
 export interface Stats {
   heroes: Record<Cls, { pts: number; ast: number; stops: number; touches: number; dmg: number }>;
@@ -285,6 +276,8 @@ export interface Game {
    * 'lich' once he has transformed. scored = the horde's points from it.
    */
   ritual: { phase: 'ritual' | 'broken' | 'lich'; scored: number };
+  /** Seeds the defense rolls: one roll per possession, the same on a replay or after a timeout. */
+  seed: number;
   /** Sanctuary: enemy turns left with the horde's objective frozen and every hero at Armor +3. */
   sanctuary: number;
   /** A stop last enemy turn: the next finisher gets Crit (Sure too if it already has Crit). */
@@ -480,6 +473,7 @@ export function newGame(tuning: Tuning = DEFAULT_TUNING, difficulty: Difficulty 
     barrierUp: false,
     encounter: enc,
     ritual: { phase: 'ritual', scored: 0 },
+    seed: (week.week.index * 7919 + (crypt ? 104729 : 0) + (difficulty === 'hard' ? 31 : 0)) >>> 0,
     sanctuary: 0,
   };
   arrive(g);
@@ -1334,7 +1328,7 @@ export function describeCarry(c: Carry): string[] {
 }
 
 /** End the party's half (with or without a finisher) and play the horde's turn. */
-export function finishLive(l: Live, defense: Defense): { game: Game; frames: Frame[] } {
+export function finishLive(l: Live, defense: Defense, opts: { preview?: boolean } = {}): { game: Game; frames: Frame[] } {
   const g = clone(l.ctx.g);
   const frames = [...l.ctx.frames];
   const last = l.steps[l.steps.length - 1];
@@ -1344,7 +1338,7 @@ export function finishLive(l: Live, defense: Defense): { game: Game; frames: Fra
   for (const e of g.enemies) e.exposed = Math.max(0, e.exposed - 1);
   const inPlay = new Set(l.steps.map((s) => s.cls));
   const partyEnd = frames.length;
-  enemyTurn(g, inPlay, defense, frames);
+  enemyTurn(g, inPlay, defense, frames, !opts.preview);
   endPossession(g, frames);
   markPhases(frames, Math.max(1, partyEnd));
   return { game: g, frames };
@@ -1381,39 +1375,31 @@ export function defenders(g: Game, inPlay: Set<Cls>): Cls[] {
     .filter((c) => !inPlay.has(c));
 }
 
-/** The automatic defensive targets for the heroes off the ball. */
+/** Defense has nothing to choose any more: kept so callers keep one shape. */
 export function autoDefense(g: Game, inPlay: Set<Cls>): Defense {
-  const d: Defense = {};
-  const off = new Set(defenders(g, inPlay));
-  const call = g.call;
-  const target = call?.target ?? null;
-  if (off.has('warrior')) d.protect = target && target !== 'warrior' ? target : g.gate.breached ? (target ?? 'wizard') : 'gate';
-  if (off.has('ranger') && call) {
-    const fin = call.actors[call.actors.length - 1];
-    const ranged = onField(g).find((e) => e.kind === 'sharpshooter');
-    d.closeOut = fin ?? ranged?.id;
-  }
-  if (off.has('wizard')) {
-    const hs = activeHeroes(g).filter((h) => h.cls !== d.protect);
-    const t = target && activeHeroes(g).some((h) => h.cls === target) ? target : [...hs].sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0]?.cls;
-    if (t) d.ward = t;
-  }
-  // The Rogue steals from the horde's hitter when Close Out (or the play) leaves it Slowed or Exposed; otherwise it strips the ball.
-  if (off.has('rogue') && call) {
-    const stealable = [...call.actors]
-      .reverse()
-      .map((id) => onField(g).find((e) => e.id === id))
-      .find((e) => e && !e.disabled && (e.slowed || e.exposed > 0 || d.closeOut === e.id));
-    if (stealable) d.steal = stealable.id;
-  }
-  return d;
+  void g;
+  void inPlay;
+  return {};
+}
+
+/** The chance the heroes off the ball stop the horde's play: stopBase × each defender's tier, capped at stopCap. */
+export function stopChance(g: Game, inPlay: Set<Cls>): number {
+  const sum = defenders(g, inPlay).reduce((s, c) => s + g.tuning.stopBase * tm(g.heroes[c].defTier), 0);
+  return Math.min(g.tuning.stopCap, sum);
+}
+
+/** This possession's defense roll, 0–1: seeded by the game and the possession, so a replay rolls the same. */
+export function defenseRoll(g: Game): number {
+  let x = (g.seed ^ Math.imul(g.possession + 1, 0x9e3779b1)) >>> 0;
+  x = Math.imul(x ^ (x >>> 16), 0x85ebca6b) >>> 0;
+  x = Math.imul(x ^ (x >>> 13), 0xc2b2ae35) >>> 0;
+  x = (x ^ (x >>> 16)) >>> 0;
+  return x / 4294967296;
 }
 
 // ---------- The enemy turn ----------
 
 /** A horde hit held to nothing: counts the stop, credits its defenders, and sets up a fast break. */
-/** The Rogue can steal from a Champion that's Slowed (Close Out, Slam) or Exposed (Mark, Double Strike, Read). */
-export const canSteal = (e: Enemy) => !e.disabled && (e.slowed || e.exposed > 0);
 
 function recordStop(g: Game, by: Cls[]) {
   g.stats.party.stops += 1;
@@ -1432,6 +1418,8 @@ function hordeHit(
   label: string,
   opts: { ignoreArmor?: boolean } = {},
 ) {
+  void defense;
+  void off;
   let cls = targetCls;
   const w = g.heroes.warrior;
   if (actor.taunted && w.benched === 0 && w.hp > 0) cls = 'warrior';
@@ -1458,7 +1446,6 @@ function hordeHit(
     });
     return;
   }
-  const closedOut = actor.slowed && off.has('ranger') && defense.closeOut === actor.id;
   let d = actor.damage + bonus + (h.exposed ? 3 : 0);
   if (actor.slowed) {
     d = Math.floor(d / 2);
@@ -1480,12 +1467,7 @@ function hordeHit(
     g.stats.horde.hits += hitPts;
   } else {
     notes.push('no bucket: a stop');
-    // Credit the defenders who made it: Protect or Ward on this hero, Close Out on this enemy.
-    const by: Cls[] = [];
-    if (off.has('warrior') && defense.protect === cls) by.push('warrior');
-    if (off.has('wizard') && defense.ward === cls) by.push('wizard');
-    if (closedOut) by.push('ranger');
-    recordStop(g, by);
+    recordStop(g, []);
   }
   if (h.hp <= 0) {
     if (h.lastStand) h.hp = 1;
@@ -1520,68 +1502,13 @@ function summon(g: Game, n: number, frames: Frame[], by: Enemy) {
   frames.push({ game: clone(g), text: `${who} calls the pack: ${n} goblins${g.gate.breached ? '' : ' head for the ram'}.`, side: 'horde', actor: by.id });
 }
 
-function enemyTurn(g: Game, inPlay: Set<Cls>, defense: Defense, frames: Frame[]) {
+function enemyTurn(g: Game, inPlay: Set<Cls>, defense: Defense, frames: Frame[], roll = true) {
   const off = new Set(defenders(g, inPlay));
   g.blocked = false;
   g.fastBreak = false;
   g.stopsThisTurn = 0;
   // Sanctuary: every hero has Armor +3 while it holds.
   if (g.sanctuary > 0) for (const h of activeHeroes(g)) h.armor += 3;
-  // Protect, Close Out, Ward and Strip the Ball happen first.
-  if (off.has('warrior') && defense.protect && defense.protect !== 'gate') {
-    g.heroes[defense.protect].armor += Math.round(g.tuning.protectArmor * tm(g.heroes.warrior.defTier));
-  }
-  if (off.has('ranger') && defense.closeOut) {
-    const e = onField(g).find((x) => x.id === defense.closeOut);
-    if (e) e.slowed = true;
-  }
-  if (off.has('wizard') && defense.ward) {
-    if (g.tuning.wardQuick) g.heroes[defense.ward].quick = true;
-    else g.heroes[defense.ward].armor += Math.round(g.tuning.wardArmor * tm(g.heroes.wizard.defTier));
-  }
-  // The Steal: the Rogue picks the pocket of a Champion that's Slowed or Exposed; it drops out of the horde's play.
-  const stealFrom = off.has('rogue') && defense.steal ? onField(g).find((e) => e.id === defense.steal) : undefined;
-  if (stealFrom) {
-    if (canSteal(stealFrom)) {
-      stealFrom.disabled = true;
-      g.stats.heroes.rogue.stops += 1;
-      recordStop(g, []);
-      frames.push({
-        game: clone(g),
-        text: `Rogue · Steal: picks the ${stealFrom.name}’s pocket, a stop. It drops out of the horde’s play.`,
-        side: 'party',
-        actor: 'rogue',
-        target: stealFrom.id,
-      });
-    } else
-      frames.push({
-        game: clone(g),
-        text: `Rogue · Steal: the ${stealFrom.name} isn’t Slowed or Exposed, so the steal misses.`,
-        side: 'party',
-        actor: 'rogue',
-        target: stealFrom.id,
-      });
-  } else if (off.has('rogue') && !g.gate.breached && !defense.noStrip) {
-    const n = tierIndex(g.heroes.rogue.defTier) >= tierIndex('elite') ? 2 : 1;
-    const ps = pushing(g).slice(0, n);
-    for (const e of ps) {
-      e.stripped = true;
-      if (g.encounter === 'crypt') e.pinnedFor = g.possession + 1;
-    }
-    if (ps.length) {
-      g.stats.heroes.rogue.stops += ps.length;
-      frames.push({
-        game: clone(g),
-        text:
-          g.encounter === 'crypt'
-            ? `Rogue · Strip the Ball: ${ps.length} skeleton${ps.length > 1 ? 's' : ''} pinned: ${ps.length > 1 ? 'they don’t' : 'it doesn’t'} guard the Necromancer next possession.`
-            : `Rogue · Strip the Ball: ${ps.length} goblin${ps.length > 1 ? 's' : ''} knocked off the ram.`,
-        side: 'party',
-        actor: 'rogue',
-      });
-    }
-  }
-
   // The Shaman casts: Call the Pack when the ram is short of crew, otherwise the Barrier.
   const shaman = onField(g).find((e) => e.barrier);
   if (shaman && !shaman.disabled) {
@@ -1632,7 +1559,30 @@ function enemyTurn(g: Game, inPlay: Set<Cls>, defense: Defense, frames: Frame[])
     call = fresh;
   }
   let ramBoost = 0;
-  if (call) {
+  // Defense: the heroes off the ball may stop the horde's play (a steal or a block). Previews don't roll: they show the play landing.
+  const chance = call ? stopChance(g, inPlay) : 0;
+  let stopped = false;
+  if (call && chance > 0) {
+    if (roll && defenseRoll(g) < chance) {
+      stopped = true;
+      const by = [...off].sort((a, b) => tierIndex(g.heroes[b].defTier) - tierIndex(g.heroes[a].defTier))[0];
+      const steal = by === 'rogue' || by === 'ranger';
+      g.stats.heroes[by].stops += 1;
+      recordStop(g, []);
+      frames.push({
+        game: clone(g),
+        text: `${CLASS_INFO[by].name} · ${steal ? 'Steal' : 'Block'}: the horde’s ${call.name} is stopped, a stop (${off.size} on defense, ${Math.round(chance * 100)}%).`,
+        side: 'party',
+        actor: by,
+      });
+    } else if (roll)
+      frames.push({
+        game: clone(g),
+        text: `The defense contests (${off.size} on defense, ${Math.round(chance * 100)}%), but the horde runs ${call.name}.`,
+        side: 'info',
+      });
+  }
+  if (call && !stopped) {
     const play = hordePlays(g.encounter).find((p) => p.id === call!.playId)!;
     let bonus = 0;
     play.steps.forEach((s, i) => {
@@ -1757,11 +1707,7 @@ function enemyTurn(g: Game, inPlay: Set<Cls>, defense: Defense, frames: Frame[])
     const p = pushing(g);
     if (p.length > 0) {
       let d = ramHit(g, p.length, ramBoost);
-      const guarded = off.has('warrior') && defense.protect === 'gate';
-      if (guarded) {
-        d = Math.ceil(d / 2);
-        g.stats.heroes.warrior.stops += 1;
-      }
+      const guarded = false;
       d = Math.min(d, g.gate.hp);
       const before = Math.floor(g.gate.dmg / g.tuning.ramPer);
       g.gate.dmg += d;
@@ -1789,15 +1735,6 @@ function enemyTurn(g: Game, inPlay: Set<Cls>, defense: Defense, frames: Frame[])
     }
   }
 
-  // Triage.
-  if (off.has('cleric')) {
-    const t = activeHeroes(g).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
-    if (t && t.hp < t.maxHp) {
-      const healed = Math.min(t.maxHp - t.hp, Math.round(6 * tm(g.heroes.cleric.defTier)));
-      t.hp += healed;
-      frames.push({ game: clone(g), text: `Cleric · Triage: heals the ${CLASS_INFO[t.cls].name} ${healed}.`, side: 'party', actor: 'cleric', target: t.cls });
-    }
-  }
   // A stop starts a fast break: the next finisher gets Crit.
   if (g.stopsThisTurn) {
     g.fastBreak = true;
@@ -1810,13 +1747,11 @@ function enemyTurn(g: Game, inPlay: Set<Cls>, defense: Defense, frames: Frame[])
 }
 
 function ritualTurn(g: Game, off: Set<Cls>, defense: Defense, frames: Frame[]) {
+  void off;
+  void defense;
   if (g.ritual.phase !== 'ritual') return;
-  let pts = ritualPoints(g);
-  const guarded = off.has('warrior') && defense.protect === 'gate';
-  if (guarded) {
-    pts = Math.floor(pts / 2);
-    g.stats.heroes.warrior.stops += 1;
-  }
+  const pts = ritualPoints(g);
+  const guarded = false;
   g.ritual.scored += pts;
   g.score.horde += pts;
   g.stats.horde.gate += pts;
@@ -2037,7 +1972,12 @@ export function project(g: Game, play: Play, targetId: string): Projection {
     }
     if (phylactery(g) && !phylactery(game)) objective += g.ritual.phase === 'ritual' ? 2 : 6;
   }
-  const value = points - given + damage * 0.12 + objective + broke * 3;
+  // Defense: heroes left off the ball may stop the horde's play; worth the chance × what the play would score.
+  const hitPts = g.difficulty === 'hard' && g.tuning.hardHitPoints ? g.tuning.hardHitPoints : g.tuning.hordeHitPoints;
+  const callPlay = g.call ? hordePlays(g.encounter).find((p) => p.id === g.call!.playId) : undefined;
+  const swings = callPlay ? callPlay.steps.filter((s, i) => (s.kind === 'hit' || s.kind === 'toss') && g.call!.actors[i]).length : 0;
+  const defenseValue = stopChance(g, new Set(play.steps.map((s) => s.cls))) * (swings * (hitPts + 1) + 1.5);
+  const value = points - given + damage * 0.12 + objective + broke * 3 + defenseValue;
   return { playId: play.id, targetId, points, damage, kills, open, value };
 }
 

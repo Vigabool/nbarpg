@@ -1926,6 +1926,20 @@ th {
 .callrow .cv.zero {
   color: var(--muted);
 }
+.callrow .cvwrap {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.callrow .cbadge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 999px;
+  color: var(--party);
+  border: 1px solid color-mix(in srgb, var(--party) 55%, transparent);
+  white-space: nowrap;
+}
 .callrow .chev {
   color: var(--muted);
 }

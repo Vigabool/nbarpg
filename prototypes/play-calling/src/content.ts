@@ -7,40 +7,15 @@ export const TIER_MULT: Record<Tier, number> = { cold: 0.75, average: 1, good: 1
 export const tierIndex = (t: Tier) => TIERS.indexOf(t);
 
 export const CLASSES: Cls[] = ['warrior', 'cleric', 'rogue', 'wizard', 'ranger'];
+/** Every hero defends the same way off the ball. */
+const OFF_BALL =
+  'Off the ball, this hero adds to the chance of stopping the horde’s play (a steal or a block): about 15% at Average, more with a better defensive night.';
 export const CLASS_INFO: Record<Cls, { name: string; role: string; icon: string; hp: number; defense: string; defenseText: string }> = {
-  warrior: {
-    name: 'Warrior',
-    role: 'the big',
-    icon: '🛡',
-    hp: 40,
-    defense: 'Protect',
-    defenseText: 'Gives one ally Armor against the horde’s hit, or halves the ram on the gate.',
-  },
-  cleric: { name: 'Cleric', role: 'the point guard', icon: '✚', hp: 28, defense: 'Triage', defenseText: 'Heals the most injured hero after the enemy turn.' },
-  rogue: {
-    name: 'Rogue',
-    role: 'the pest',
-    icon: '🗡',
-    hp: 25,
-    defense: 'Strip the Ball',
-    defenseText: 'Knocks the ball loose from a goblin on the ram (two at Elite), or Steals from a Champion that’s Slowed or Exposed: a stop.',
-  },
-  wizard: {
-    name: 'Wizard',
-    role: 'the shooter',
-    icon: '✦',
-    hp: 22,
-    defense: 'Ward',
-    defenseText: 'Armor on one ally through the enemy turn: with Protect or Close Out on the same hit, often a stop.',
-  },
-  ranger: {
-    name: 'Ranger',
-    role: 'the wing scorer',
-    icon: '🏹',
-    hp: 30,
-    defense: 'Close Out',
-    defenseText: 'Slows one enemy: its hit this turn deals half (with Protect, usually a stop), and the Rogue can Steal from it.',
-  },
+  warrior: { name: 'Warrior', role: 'the big', icon: '🛡', hp: 40, defense: 'Block', defenseText: OFF_BALL },
+  cleric: { name: 'Cleric', role: 'the point guard', icon: '✚', hp: 28, defense: 'Block', defenseText: OFF_BALL },
+  rogue: { name: 'Rogue', role: 'the pest', icon: '🗡', hp: 25, defense: 'Steal', defenseText: OFF_BALL },
+  wizard: { name: 'Wizard', role: 'the shooter', icon: '✦', hp: 22, defense: 'Block', defenseText: OFF_BALL },
+  ranger: { name: 'Ranger', role: 'the wing scorer', icon: '🏹', hp: 30, defense: 'Steal', defenseText: OFF_BALL },
 };
 
 /** What a move passes to the next hero. */
@@ -774,13 +749,7 @@ export const CRYPT_INFO: Partial<Record<EnemyKind, EnemyInfo>> = {
 /** An enemy kind's name, icon and description in an encounter. */
 /** A hero's off-ball defense, in the words of the encounter (the Warrior and Rogue defend its objective). */
 export function defenseText(cls: Cls, encounter: Encounter = 'goblin-horde'): string {
-  const crypt = encounter === 'crypt';
-  if (cls === 'warrior')
-    return `Gives one ally Armor against the horde’s hit (with Close Out, usually a stop), or ${crypt ? 'guards the circle (halves what the ritual scores)' : 'braces the gate (halves the ram)'}.`;
-  if (cls === 'rogue')
-    return `${
-      crypt ? 'Pins a skeleton so it doesn’t guard the Necromancer next possession' : 'Knocks the ball loose from a goblin on the ram'
-    } (two at Elite), or Steals from a Champion that’s Slowed or Exposed: a stop.`;
+  void encounter;
   return CLASS_INFO[cls].defenseText;
 }
 

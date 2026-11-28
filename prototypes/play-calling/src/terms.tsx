@@ -29,7 +29,7 @@ export const TERMS: Record<string, { name: string; def: string }> = {
   },
   block: {
     name: 'Block',
-    def: 'The Chieftain cancels the first hit on any enemy each possession. A cheap hit first uses it up; Sure hits get through.',
+    def: 'The Chieftain cancels the first hit on any enemy each possession. A cheap hit first uses it up; Sure hits get through. (When your defense stops the horde’s play and the Warrior, Wizard or Cleric leads it, the log calls it a block.)',
   },
   exposed: { name: 'Exposed', def: 'Takes +3 from every hit this possession.' },
   marked: { name: 'Marked', def: 'Exposed through the next possession too.' },
@@ -38,10 +38,6 @@ export const TERMS: Record<string, { name: string; def: string }> = {
     def: 'Out of the horde’s next play, and loses its Taunt or Quick. A Disabled Shaman or Wight casts nothing and gives no War Drum or Unholy Vigor.',
   },
   slowed: { name: 'Slowed', def: 'Loses Quick, and its next hit deals half.' },
-  stripped: {
-    name: 'Stripped',
-    def: 'Knocked off the ram by Strip the Ball: it doesn’t push this turn (the ram hits a quarter softer for each), but still counts as crew. In the Crypt, a stripped skeleton is pinned: it doesn’t guard the Necromancer next possession.',
-  },
   warDrum: { name: 'War Drum', def: 'While the Shaman stands (and isn’t Disabled), the ram hits +2.' },
   callPack: {
     name: 'Call the Pack',
@@ -53,7 +49,7 @@ export const TERMS: Record<string, { name: string; def: string }> = {
   },
   warded: {
     name: 'Warded',
-    def: 'The Necromancer can’t be hit while 3 or more skeletons stand. Bone piles don’t count, and neither does a skeleton Strip the Ball pinned, so fire, holy kills and the Rogue open the way. The open graves raise more every turn.',
+    def: 'The Necromancer can’t be hit while 3 or more skeletons stand. Bone piles don’t count, so fire and holy kills open the way. The open graves raise more every turn.',
   },
   phylactery: {
     name: 'Phylactery',
@@ -111,7 +107,7 @@ export const TERMS: Record<string, { name: string; def: string }> = {
   finisher: { name: 'Finisher', def: 'The last move of a possession and the only one that scores a bucket. Every helper’s buff goes to it.' },
   stop: {
     name: 'Stop',
-    def: 'A horde hit held to nothing: Armor at least as big as the hit, a Quick dodge, or a Steal. No defender stops a full hit alone: pair Protect with Close Out, or Steal from an enemy that’s Slowed or Exposed. Each stop starts a fast break.',
+    def: 'The horde’s play held to nothing. Each hero off the ball adds to the chance (about 15% each, more with a better defensive night, up to 65%): a steal or a block. Armor at least as big as a hit, or a Quick dodge, also stops that hit. Each stop starts a fast break.',
   },
   fastBreak: {
     name: 'Fast break',
@@ -119,38 +115,18 @@ export const TERMS: Record<string, { name: string; def: string }> = {
   },
   steal: {
     name: 'Steal',
-    def: 'The Rogue’s other defense: instead of Strip the Ball, pick the pocket of a Champion that’s Slowed (Close Out, Slam) or Exposed (Mark, Double Strike, Read). It drops out of the horde’s play: a stop. On anyone else it misses.',
-  },
-  protect: {
-    name: 'Protect',
-    def: 'The Warrior’s defense when not in the play: Armor (8, more with a better defensive night) on one hero through the horde’s turn, or guard the objective (brace the gate, halving the ram; in the Crypt, guard the circle, halving what the ritual scores).',
-  },
-  closeOut: {
-    name: 'Close Out',
-    def: 'The Ranger’s defense when not in the play: Slows one enemy, so its next hit deals half. A halved hit into Protect’s Armor is usually a stop, and a Slowed Champion can be stolen from.',
-  },
-  ward: {
-    name: 'Ward',
-    def: 'The Wizard’s defense when not in the play: Armor (8, more with a better defensive night) on one ally through the horde’s turn. On the hero the Warrior protects, or against a Slowed hit, it can make a stop.',
-  },
-  triage: { name: 'Triage', def: 'The Cleric’s defense when not in the play: heals the most injured hero after the horde’s turn.' },
-  stripBall: {
-    name: 'Strip the Ball',
-    def: 'The Rogue’s defense when not in the play: knocks goblins off the ram so they don’t push this turn. In the Crypt it pins a skeleton so it doesn’t guard the Necromancer next possession.',
+    def: 'How a stop shows up when the Rogue or Ranger leads the defense; a block when it’s the Warrior, Wizard or Cleric. Either way the horde’s play scores nothing.',
   },
 };
 
 /** How each term is written in the text (longest first, so "Strip the Ball" wins over shorter words). */
 const FORMS: [string, string][] = [
-  ['Strip the Ball', 'stripBall'],
   ['Fast break', 'fastBreak'],
   ['fast break', 'fastBreak'],
   ['Steal', 'steal'],
   ['Call the Pack', 'callPack'],
   ['calls the pack', 'callPack'],
   ['War Drum', 'warDrum'],
-  ['Close Out', 'closeOut'],
-  ['Closes Out', 'closeOut'],
   ['Split', 'split'],
   ['Sure', 'sure'],
   ['Crit', 'crit'],
@@ -174,7 +150,6 @@ const FORMS: [string, string][] = [
   ['Disables', 'disabled'],
   ['Slowed', 'slowed'],
   ['Slows', 'slowed'],
-  ['Stripped', 'stripped'],
   ['Restless Dead', 'restless'],
   ['Restless', 'restless'],
   ['bone piles', 'pile'],
@@ -211,11 +186,6 @@ const FORMS: [string, string][] = [
   ['Finishers', 'finisher'],
   ['finisher', 'finisher'],
   ['Finisher', 'finisher'],
-  ['Protects', 'protect'],
-  ['Protect', 'protect'],
-  ['Wards', 'ward'],
-  ['Ward', 'ward'],
-  ['Triage', 'triage'],
 ];
 const FORM_KEY = new Map(FORMS);
 const PATTERN = new RegExp(

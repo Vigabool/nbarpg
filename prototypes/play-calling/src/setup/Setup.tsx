@@ -509,7 +509,7 @@ export function AssignScreen(props: { state: SetupState; onChange: (s: SetupStat
                 {info.icon} {info.name}
               </strong>
               <span className="small muted">
-                {info.role} · {info.hp} HP · on defense: <Rich>{info.defense}</Rich>
+                {info.role} · {info.hp} HP · off the ball: adds to the stop chance
               </span>
             </span>
             <select

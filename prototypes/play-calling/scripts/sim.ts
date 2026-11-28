@@ -19,12 +19,11 @@ import {
   project,
   runPossession,
   startSecondHalf,
-  defenders,
   type Defense,
   type Difficulty,
   type Game,
 } from '../src/engine';
-import { CLASSES, type Cls } from '../src/content';
+import { CLASSES } from '../src/content';
 
 const isoOrHold = { iso: 0, hold: 0 };
 // STRATEGY=<plan id> (see PLANS in content.ts): both bots commit to that plan's playbook (the expert can still fall back on an Iso).
@@ -36,32 +35,10 @@ const book: Play[] = (custom ?? plan?.playbook ?? suggestedPlaybook(process.env.
 /** The expert bot's book: every saved play (or the plan's), plus each hero's Iso. */
 const fullBook: Play[] = [...(plan || custom ? book : TEMPLATES), ...CLASSES.map(isoPlay)];
 
-/** Every defense the free heroes could set. */
-function defenseOptions(g: Game, inPlay: Set<Cls>): Defense[] {
-  const off = new Set(defenders(g, inPlay));
-  const heroes = activeHeroes(g).map((h) => h.cls);
-  const protects: (Defense['protect'] | undefined)[] = off.has('warrior') ? [...heroes, ...(g.gate.breached ? [] : (['gate'] as const))] : [undefined];
-  const closeOuts: (string | undefined)[] = off.has('ranger') ? onField(g).map((e) => e.id) : [undefined];
-  const wards: (Cls | undefined)[] = off.has('wizard') ? heroes : [undefined];
-  // The Rogue strips the ball (undefined) or steals from one of the horde's called actors.
-  const steals: (string | undefined)[] = off.has('rogue') ? [undefined, ...(g.call?.actors.filter((a): a is string => !!a) ?? [])] : [undefined];
-  const out: Defense[] = [];
-  for (const protect of protects)
-    for (const closeOut of closeOuts) for (const ward of wards) for (const steal of steals) out.push({ protect, closeOut, ward, steal });
-  return out;
-}
-
-/** The defense that holds the horde to the fewest points this turn (ties: the most hero HP, then the most gate HP). */
+/** Defense is the count of heroes off the ball: there is nothing to choose. */
 function bestDefense(g: Game, play: Play, target: string): Defense {
-  const inPlay = new Set(play.steps.map((s) => s.cls));
-  let best: { d: Defense; key: number[] } | null = null;
-  for (const d of defenseOptions(g, inPlay)) {
-    const r = runPossession(g, play, target, d).game;
-    const hp = activeHeroes(r).reduce((s, h) => s + h.hp, 0);
-    const key = [r.score.horde - g.score.horde, -hp, -r.gate.hp];
-    if (!best || key.some((v, i) => v !== best!.key[i] && key.slice(0, i).every((w, j) => w === best!.key[j]) && v < best!.key[i])) best = { d, key };
-  }
-  return best?.d ?? autoDefense(g, inPlay);
+  void target;
+  return autoDefense(g, new Set(play.steps.map((s) => s.cls)));
 }
 
 function play(difficulty: Difficulty, bot: 'smart' | 'naive' | 'expert', seed: number) {
