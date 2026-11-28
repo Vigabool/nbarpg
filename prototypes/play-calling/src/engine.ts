@@ -36,6 +36,14 @@ export interface Tuning {
   /** Hard: Champions' HP and damage ×. */
   hardMult: number;
   hordeHitPoints: number;
+  /** Hard: a Champion's hit scores this instead of hordeHitPoints (0 = the same). */
+  hardHitPoints: number;
+  /** The ram scores 1 per this much damage to the gate. */
+  ramPer: number;
+  /** The objective's push: +this each turn the ram hits the gate or the Ritual grows. */
+  pushPoints: number;
+  /** A Champion (not the boss) taken down comes back at half HP this many possessions later, once (0 = never). */
+  champReturn: number;
   /** Help Defense: Protect's Armor before the Warrior's defense tier. Alone it never stops a full hit. */
   protectArmor: number;
   /** Ward's Armor before the Wizard's defense tier. */
@@ -56,7 +64,7 @@ export interface Tuning {
   skeletonPer: number;
 }
 export const DEFAULT_TUNING: Tuning = {
-  gateHp: 60,
+  gateHp: 70,
   goblinHp: 9,
   shotPoints: 2,
   championPoints: 4,
@@ -65,9 +73,13 @@ export const DEFAULT_TUNING: Tuning = {
   // A drafted lineup's picked games total about 136 true usage (median over weeks 1–20 and all four draft modes), so 3.8 gives about 36 touches.
   usagePerTouch: 3.8,
   hordeDamage: 1,
-  championHp: 1.45,
-  hardMult: 1.12,
+  championHp: 1.25,
+  hardMult: 1,
   hordeHitPoints: 2,
+  hardHitPoints: 3,
+  ramPer: 2,
+  pushPoints: 1,
+  champReturn: 0,
   protectArmor: 8,
   wardArmor: 8,
   hexClearsQuick: true,
@@ -75,7 +87,7 @@ export const DEFAULT_TUNING: Tuning = {
   ritualMax: 22,
   ritualPer: 2,
   ritualFill: 8,
-  skeletonPer: 35,
+  skeletonPer: 37,
 };
 export type Difficulty = 'normal' | 'hard';
 
@@ -113,6 +125,11 @@ export interface Enemy {
   player?: string;
   team?: string;
   tier?: Tier;
+  /** A Champion (from a player's game), not a goblin, skeleton or object. */
+  champ?: boolean;
+  /** Champions come back: the possession it returns, once. */
+  returnAt?: number;
+  returned?: boolean;
   maxHp: number;
   hp: number;
   damage: number;
@@ -348,6 +365,7 @@ export function newGame(tuning: Tuning = DEFAULT_TUNING, difficulty: Difficulty 
       armor: kind === 'ogre' && !crypt ? 3 : kind === 'chieftain' ? 2 : 0,
       points: c.boss ? tuning.bossPoints : tuning.championPoints + (elite ? 2 : 0),
       boss: c.boss,
+      champ: true,
       onRam: false,
       quarter: 0,
       arrived: false,
@@ -766,6 +784,11 @@ function takedown(g: Game, e: Enemy, by: Cls, frames: Frame[], rec: boolean, pla
     pts += g.tuning.bountyPoints;
     g.stats.party.objectives += g.tuning.bountyPoints;
     text += `, and the ${e.name.replace('Goblin ', '')} bounty: +${g.tuning.bountyPoints}`;
+  }
+  // Champions come back (tuning): once, at half HP, a few possessions later.
+  if (g.tuning.champReturn && e.champ && !e.boss && !e.returned) {
+    e.returnAt = g.possession + g.tuning.champReturn;
+    text += ` (back in ${g.tuning.champReturn} possession${g.tuning.champReturn > 1 ? 's' : ''})`;
   }
   // Crew takedowns provoke the horde's Hunt.
   if (wasCrew) g.last.crewDowns[by] = (g.last.crewDowns[by] ?? 0) + 1;
@@ -1395,8 +1418,9 @@ function hordeHit(
   h.hp -= d;
   let pts = 0;
   if (d > 0) {
-    pts += g.tuning.hordeHitPoints;
-    g.stats.horde.hits += g.tuning.hordeHitPoints;
+    const hitPts = g.difficulty === 'hard' && g.tuning.hardHitPoints ? g.tuning.hardHitPoints : g.tuning.hordeHitPoints;
+    pts += hitPts;
+    g.stats.horde.hits += hitPts;
   } else {
     notes.push('no bucket: a stop');
     // Credit the defenders who made it: Protect or Ward on this hero, Close Out on this enemy.
@@ -1673,10 +1697,10 @@ function enemyTurn(g: Game, inPlay: Set<Cls>, defense: Defense, frames: Frame[])
         g.stats.heroes.warrior.stops += 1;
       }
       d = Math.min(d, g.gate.hp);
-      const before = Math.floor(g.gate.dmg / 2);
+      const before = Math.floor(g.gate.dmg / g.tuning.ramPer);
       g.gate.dmg += d;
       g.gate.hp -= d;
-      let pts = Math.floor(g.gate.dmg / 2) - before;
+      let pts = Math.floor(g.gate.dmg / g.tuning.ramPer) - before + (d > 0 ? g.tuning.pushPoints : 0);
       let text = `The ram hits the gate for ${d}${p.length < 4 ? ` (${p.length} of 4 crew pushing)` : ''}${guarded ? ' (the Warrior braces it)' : ''}`;
       if (g.gate.hp <= 0) {
         g.gate.breached = true;
@@ -1732,7 +1756,7 @@ function ritualTurn(g: Game, off: Set<Cls>, defense: Defense, boost: number, fra
     g.stats.heroes.warrior.stops += 1;
   }
   const r = g.ritual;
-  let pts = Math.floor((r.total + gain) / g.tuning.ritualPer) - Math.floor(r.total / g.tuning.ritualPer);
+  let pts = Math.floor((r.total + gain) / g.tuning.ritualPer) - Math.floor(r.total / g.tuning.ritualPer) + g.tuning.pushPoints;
   r.total += gain;
   r.value += gain;
   let text = `The Ritual grows ${gain} (${feeders} dead feeding it${wight(g) ? ', Unholy Vigor +1' : ''}${boost ? `, Dark Command +${boost}` : ''}${guarded ? ', the Warrior guards the circle' : ''}): ${Math.min(r.value, r.max)}/${r.max}`;
@@ -1769,6 +1793,15 @@ function endPossession(g: Game, frames: Frame[]) {
     e.hp = e.maxHp;
     e.onRam = e.kind === 'goblin';
   }
+  // Champions come back (tuning) at the start of the possession they're due.
+  for (const e of g.enemies)
+    if (e.returnAt !== undefined && e.returnAt === g.possession + 1) {
+      e.returnAt = undefined;
+      e.returned = true;
+      e.down = false;
+      e.hp = Math.ceil(e.maxHp / 2);
+      frames.push({ game: clone(g), text: `${e.name} checks back in with ${e.hp} HP.`, side: 'horde', actor: e.id });
+    }
   if (rising.length) frames.push({ game: clone(g), text: `${rising.length} bone pile${rising.length > 1 ? 's reassemble' : ' reassembles'}.`, side: 'info' });
   if (g.sanctuary > 0) g.sanctuary -= 1;
   g.blockUsed = false;

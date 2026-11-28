@@ -99,6 +99,8 @@ for (const t of top) {
   const pts: Record<string, number> = {};
   const horde: Record<string, number> = {};
   let stops = 0;
+  let close = 0;
+  let tk = 0;
   for (const w of weeks) {
     setWeek(w);
     const gn = playGame(t.b, 'normal');
@@ -108,11 +110,13 @@ for (const t of top) {
     nw += gn.score.party > gn.score.horde ? 1 : 0;
     for (const [k, v] of Object.entries(gn.stats.heroes)) pts[k] = (pts[k] ?? 0) + v.pts;
     stops += gn.stats.party.stops;
+    tk += gn.stats.party.takedowns;
+    close += (Math.abs(gn.score.party - gn.score.horde) <= 8 ? 1 : 0) + (Math.abs(gh.score.party - gh.score.horde) <= 8 ? 1 : 0);
     for (const [k, v] of Object.entries(gn.stats.horde)) horde[k] = (horde[k] ?? 0) + (v as number);
   }
   const per = (x: number) => (x / weeks.length).toFixed(1);
   console.log(
-    `${t.b.map((p) => p.id).join(',')} | sample ${t.sample} | built normal ${per(n)} (${nw}/${weeks.length}) hard ${per(h)} | stops ${per(stops)} | heroes ${Object.entries(
+    `${t.b.map((p) => p.id).join(',')} | sample ${t.sample} | built normal ${per(n)} (${nw}/${weeks.length}) hard ${per(h)} | stops ${per(stops)} | takedown pts ${per(tk)} | close ${Math.round((close / (2 * weeks.length)) * 100)}% | heroes ${Object.entries(
       pts,
     )
       .map(([k, v]) => `${k.slice(0, 2)}:${per(v)}`)

@@ -131,7 +131,7 @@ interface Saved {
 }
 const KEY = 'play-calling-prototype-v1';
 /** Bump when DEFAULT_TUNING changes, so players' saved tuning (which stores every value) picks up the new defaults. */
-const TUNING_VERSION = 6;
+const TUNING_VERSION = 7;
 function load(): Saved {
   try {
     return JSON.parse(localStorage.getItem(KEY) ?? '{}') as Saved;
@@ -727,7 +727,10 @@ export function App() {
           <div className="list">
             {(
               [
-                ['+2 for a hit on a hero', 'When the horde’s finisher damages a hero. A hit fully stopped by Armor or a Slow scores nothing.'],
+                [
+                  `+${game.difficulty === 'hard' && tuning.hardHitPoints ? tuning.hardHitPoints : tuning.hordeHitPoints} for a hit on a hero`,
+                  `When the horde’s finisher damages a hero${tuning.hardHitPoints && tuning.hardHitPoints !== tuning.hordeHitPoints ? ` (${tuning.hordeHitPoints} on Normal, ${tuning.hardHitPoints} on Hard)` : ''}. A stopped hit (Armor at least as big as the hit, a Quick dodge or a Steal) scores nothing.`,
+                ],
                 ['+4 for a takedown', 'When the horde takes a hero down.'],
                 [
                   '+2 on a turnover',
@@ -736,14 +739,14 @@ export function App() {
                 ...((game.encounter === 'crypt'
                   ? [
                       [
-                        `+1 for every ${tuning.ritualPer} Ritual points`,
+                        `+1 for every ${tuning.ritualPer} Ritual points, +${tuning.pushPoints} each turn it grows`,
                         'The Ritual grows each turn by 1 per skeleton and bone pile, and 1 more while the Wight stands. Destroying the dead for good sets it back 1, the Necromancer 3.',
                       ],
                       [`+${tuning.ritualFill} when the Ritual completes`, `At ${tuning.ritualMax}, and it starts over. The first time, the Lich rises early.`],
                     ]
                   : [
                       [
-                        '+1 for every 2 gate damage',
+                        `+1 for every ${tuning.ramPer} gate damage, +${tuning.pushPoints} each turn it hits`,
                         'The ram hits the gate each turn. Each goblin pushing adds a quarter of its hit, so knocking goblins off the ram slows it.',
                       ],
                       ['+10 when the gate falls', 'Then the goblins pour into the city.'],
@@ -820,6 +823,10 @@ function Intro(props: {
             </button>
           ))}
         </div>
+        <span className="small muted">
+          On Hard, a Champion’s hit on a hero scores 3 instead of 2, and the horde’s halftime adjustment lasts the whole second half (on Normal, only the third
+          quarter).
+        </span>
         <DefenseChoice manual={props.manual} setManual={props.setManual} />
       </div>
       <button className="btn primary big" onClick={props.onBuild}>
@@ -1514,7 +1521,7 @@ function PlanScreen(props: {
                 {open === 'ritual' && (
                   <div className="panel detail small">
                     <Rich>
-                      {`The Ritual grows each enemy turn by 1 per skeleton and bone pile, and 1 more while the Wight stands. The horde scores 1 per ${g.tuning.ritualPer} Ritual points. At ${g.ritual.max} it completes: +${g.tuning.ritualFill}, and it starts over; the first time, the Lich rises early. Destroying the dead for good sets it back 1; the Necromancer, 3. Strip the Ball pins a skeleton away from it, and the Warrior can guard the circle to halve it.`}
+                      {`The Ritual grows each enemy turn by 1 per skeleton and bone pile, and 1 more while the Wight stands. The horde scores 1 per ${g.tuning.ritualPer} Ritual points, and ${g.tuning.pushPoints} more each turn it grows. At ${g.ritual.max} it completes: +${g.tuning.ritualFill}, and it starts over; the first time, the Lich rises early. Destroying the dead for good sets it back 1; the Necromancer, 3. Strip the Ball pins a skeleton away from it, and the Warrior can guard the circle to halve it.`}
                     </Rich>
                   </div>
                 )}
@@ -1556,8 +1563,8 @@ function PlanScreen(props: {
                 {open === 'gate' && (
                   <div className="panel detail small">
                     Each goblin pushing the ram adds a quarter of its hit: with 4 pushing it hits the {g.gate.max}-HP gate for {g.ramBase} each enemy turn, +1
-                    per extra goblin (the opponents shot {(opponentsFg() * 100).toFixed(1)}% this week). The horde scores 1 per 2 gate damage and 10 when it
-                    falls; after that, every goblin on the field pillages for 1 a turn.
+                    per extra goblin (the opponents shot {(opponentsFg() * 100).toFixed(1)}% this week). The horde scores 1 per {g.tuning.ramPer} gate damage,{' '}
+                    {g.tuning.pushPoints} more each turn the ram hits, and 10 when it falls; after that, every goblin on the field pillages for 1 a turn.
                   </div>
                 )}
                 {open === 'bounty' && (
@@ -1996,7 +2003,7 @@ function callRows(g: Game, horde: Sim['horde'] | undefined): CallRow[] {
       const scored = pts(ramLines);
       const after = grow.game.ritual;
       ramRow.detail.push(
-        `The Ritual grows ${d} and scores ${scored} point${scored === 1 ? '' : 's'} (1 per ${g.tuning.ritualPer} Ritual points): ${after.fills > g.ritual.fills ? 'it completes' : `${after.value}/${after.max} after this turn`}.`,
+        `The Ritual grows ${d} and scores ${scored} point${scored === 1 ? '' : 's'} (1 per ${g.tuning.ritualPer} Ritual points, +${g.tuning.pushPoints} for growing): ${after.fills > g.ritual.fills ? 'it completes' : `${after.value}/${after.max} after this turn`}.`,
       );
       const why = /\(([^)]*)\)/.exec(grow.t)?.[1];
       if (why) ramRow.detail.push(`${why[0].toUpperCase()}${why.slice(1)}.`);
@@ -2370,7 +2377,9 @@ function Board(props: {
                 if (g.sanctuary > 0) return 'frozen by Sanctuary';
                 const d = props.ram ? props.ram.d : ritualGain(g, ritualFeeders(g));
                 if (d <= 0) return 'stalled';
-                const pts = props.ram ? props.ram.pts : Math.floor((g.ritual.total + d) / g.tuning.ritualPer) - Math.floor(g.ritual.total / g.tuning.ritualPer);
+                const pts = props.ram
+                  ? props.ram.pts
+                  : Math.floor((g.ritual.total + d) / g.tuning.ritualPer) - Math.floor(g.ritual.total / g.tuning.ritualPer) + g.tuning.pushPoints;
                 return `grows ${d} (${pts} point${pts === 1 ? '' : 's'}) · ${g.ritual.value}/${g.ritual.max}`;
               })()}
             </span>
@@ -2410,7 +2419,12 @@ function Board(props: {
                   if (g.sanctuary > 0) return 'frozen by Sanctuary';
                   const d = props.ram ? props.ram.d : Math.min(ramHit(g, pushing(g).length), g.gate.hp);
                   if (d <= 0) return 'stalled';
-                  const pts = props.ram ? props.ram.pts : Math.floor((g.gate.dmg + d) / 2) - Math.floor(g.gate.dmg / 2) + (d >= g.gate.hp ? 10 : 0);
+                  const pts = props.ram
+                    ? props.ram.pts
+                    : Math.floor((g.gate.dmg + d) / g.tuning.ramPer) -
+                      Math.floor(g.gate.dmg / g.tuning.ramPer) +
+                      g.tuning.pushPoints +
+                      (d >= g.gate.hp ? 10 : 0);
                   return `hits the gate for ${d} (${pts} point${pts === 1 ? '' : 's'})`;
                 })()}
               </span>
@@ -3541,7 +3555,7 @@ function Guide(props: { onClose: () => void }) {
     ],
     [
       'The horde',
-      'In the Goblin Horde its goblins push the ram automatically (in the Crypt, its dead feed the Ritual): each one pushing adds a quarter of the hit, so knocking goblins off slows the ram. Its Champions run one called play each turn and score 2 for a finisher that damages a hero and 4 for a hero they take down. If your finisher is Blocked, evaded or swallowed by the Barrier, that’s a turnover: the horde scores 2 on the fast break.',
+      'In the Goblin Horde its goblins push the ram automatically (in the Crypt, its dead feed the Ritual): each one pushing adds a quarter of the hit, so knocking goblins off slows the ram. Its Champions run one called play each turn and score 2 for a finisher that damages a hero (3 on Hard) and 4 for a hero they take down. If your finisher is Blocked, evaded or swallowed by the Barrier, that’s a turnover: the horde scores 2 on the fast break.',
     ],
     [
       'Statuses',

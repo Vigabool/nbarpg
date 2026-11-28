@@ -49,7 +49,7 @@ export const TERMS: Record<string, { name: string; def: string }> = {
   },
   ritual: {
     name: 'The Ritual',
-    def: 'The Crypt’s objective. It grows each enemy turn by 1 per skeleton and bone pile, and 1 more while the Wight stands; the horde scores 1 per 2 Ritual points. When it completes (at 22), the horde scores 8 and it starts over; the first time, the Lich rises early. Destroying the dead for good sets it back 1; the Necromancer, 3.',
+    def: 'The Crypt’s objective. It grows each enemy turn by 1 per skeleton and bone pile, and 1 more while the Wight stands; the horde scores 1 per 2 Ritual points, and 1 more each turn it grows. When it completes (at 22), the horde scores 8 and it starts over; the first time, the Lich rises early. Destroying the dead for good sets it back 1; the Necromancer, 3.',
   },
   restless: {
     name: 'Restless Dead',

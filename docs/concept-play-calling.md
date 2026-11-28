@@ -666,3 +666,38 @@ Buttons, numbers and rules stay the same in both. It's stored per browser, like 
     - Goblin Horde, smart bot: 50–43 on Normal, 52–78 on Hard.
     - Crypt, default book: 52–56 and 50–126. The Ritual runs away, the open item in the backlog.
     - Crypt, Holy Chain: 62–33 and 56–42, so Holy Chain is still the answer to a cold shooter.
+- **Difficulty without extra HP (Nov 28).** Extra Champion HP makes takedowns slower, and takedowns are the fun part. So the horde scores more instead. Three options were compared from the old tuning (Champion HP ×1.25, gate 70, 37 points a skeleton), each tuned toward the same target. Columns are the smart bot's default book, Normal / Hard, then the share of close games (within 8 points) and the party's takedown points a game:
+
+  | Option | Goblin Horde | Crypt |
+  | --- | --- | --- |
+  | HP re-tune (×1.45, gate 60, 35 a skeleton) | +12.6 / +0.8, 38% close, 28.0 | +18.0 / −3.8, 11% close, 40.9 |
+  | **A: the objective's push (+1 each turn the ram hits or the Ritual grows) and Champion hits score 3 on Hard (no extra HP on Hard)** | **+11.3 / +2.9, 44% close, 28.6** | **+14.6 / +0.2, 39% close, 42.7** |
+  | B: Champions come back once at half HP | 4 possessions later, with a faster Ritual: +12.2 / −3.4, 14% close | +19.3 / +7.8, 13% close |
+  | C: takedowns worth 3 (boss 6) | +13.5 / +6.8, 28% close | +17.6 / +7.9, 20% close |
+
+  - **A is the default now.** It hits the target, has the most close games, and leaves takedowns as fast as before. It also keeps the plans closer: Clear the Ram is +14.0 / +6.3, where the HP re-tune left it at +10.1 / −7.3.
+  - **B** is inconsistent. It's much harder in the Goblin Horde, where every returning Champion is another hitter, and easier in the Crypt, where it's more takedowns to score. Its plans scatter.
+  - **C** works, but games stay lopsided.
+  - Tuning: `pushPoints` 1, `hardHitPoints` 3, `hardMult` 1 (Hard no longer scales Champion HP or damage), `championHp` 1.25, `gateHp` 70, `skeletonPer` 37. `TUNING_VERSION` 7.
+  - The scoring explainers, the ram and Ritual projections and the title screen's difficulty note say how it works.
+  - **Plans** (Normal / Hard; expert bot in brackets):
+
+    | Encounter | Plan | Margin |
+    | --- | --- | --- |
+    | Goblin Horde | Default book | +11.3 / +2.9 (+32.5 / +27.5) |
+    | Goblin Horde | Clear the Ram | +14.0 / +6.3 (+19.4 / +12.8) |
+    | Goblin Horde | Hunt Champions | +17.5 / +10.3 (+27.2 / +22.5) |
+    | Goblin Horde | Lockdown | −9.2 / −18.5 (−1.8 / −10.6) |
+    | Crypt | Default book | +14.6 / +0.3 (+37.0 / +26.5) |
+    | Crypt | Fire Volume | +13.7 / −0.9 (+24.1 / +13.7) |
+    | Crypt | Holy Chain | +29.9 / +19.5 (+38.2 / +29.8) |
+    | Crypt | Champion Race | +14.5 / +0.2 (+23.8 / +13.0) |
+
+    Holy Chain is the outlier now.
+  - **Sample week:**
+    - Goblin Horde: expert 67–53 and 67–61, smart 61–56 and 61–67.
+    - Crypt: expert 62–29 and 62–36, smart 62–51 and 62–66.
+  - **Off night** (cold Wizard):
+    - Goblin Horde, smart bot: 60–49 and 60–58.
+    - Crypt, default book: 54–90 and 54–96, the runaway Ritual.
+    - Crypt, Holy Chain: 62–36 and 62–52.
