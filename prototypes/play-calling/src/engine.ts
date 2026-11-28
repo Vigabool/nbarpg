@@ -208,10 +208,9 @@ export interface HordeCall {
 }
 
 export interface Adjustment {
-  id: 'double' | 'scout' | 'allHands' | 'lead';
+  id: 'scout' | 'allHands' | 'lead';
   name: string;
   text: string;
-  star?: Cls;
   playId?: string;
 }
 
@@ -275,8 +274,6 @@ export interface Game {
   blocked: boolean;
   /** The horde's Block has been used this possession. */
   blockUsed: boolean;
-  /** The double-team has smothered the star's first hit this possession. */
-  starBlockUsed: boolean;
   /** The Shaman's Barrier stands in front of the whole horde until a hit breaks it. */
   barrierUp: boolean;
   encounter: Encounter;
@@ -477,7 +474,6 @@ export function newGame(tuning: Tuning = DEFAULT_TUNING, difficulty: Difficulty 
     chieftainTurns: 0,
     blocked: false,
     blockUsed: false,
-    starBlockUsed: false,
     barrierUp: false,
     encounter: enc,
     ritual: { phase: 'ritual', scored: 0 },
@@ -605,10 +601,6 @@ export function shamanCast(g: Game): 'pack' | 'barrier' | null {
 export const blockUp = (g: Game) => !g.blockUsed && onField(g).some((e) => e.block);
 /** Everything that reduces a hit on this enemy. */
 export const armorOf = (g: Game, e: Enemy) => e.armor + (adjusting(g, 'lead') && isChampion(e) ? 1 : 0);
-
-function starDoubled(g: Game, cls: Cls) {
-  return adjusting(g, 'double') && g.adjustment?.star === cls;
-}
 
 export function playAvailable(g: Game, play: Play): { ok: boolean; why?: string } {
   const need: Partial<Record<Cls, number>> = {};
@@ -1060,11 +1052,6 @@ function doStep(ctx: StepCtx, step: PlayStep, i: number, primaryId: string, pick
       }
       // Backstab is Sure against a target that's Taunted (looking at the Warrior) or Disabled.
       if (!sure && !(m.doubleVsShaken && (e.taunted || e.disabled))) {
-        if (starDoubled(g, h.cls) && !g.starBlockUsed) {
-          g.starBlockUsed = true;
-          note('the double-team smothers the first hit');
-          return -1;
-        }
         if (blockUp(g)) {
           g.blockUsed = true;
           const blocker = onField(g).find((x) => x.block);
@@ -1894,7 +1881,6 @@ function endPossession(g: Game, frames: Frame[]) {
   if (rising.length) frames.push({ game: clone(g), text: `${rising.length} bone pile${rising.length > 1 ? 's reassemble' : ' reassembles'}.`, side: 'info' });
   if (g.sanctuary > 0) g.sanctuary -= 1;
   g.blockUsed = false;
-  g.starBlockUsed = false;
   for (const c of CLASSES) {
     const h = g.heroes[c];
     h.armor = 0;
@@ -1939,30 +1925,11 @@ export function halftimeAdjustment(g: Game, playbook: Play[]): Adjustment {
       name: 'Protect the lead',
       text: `Every Champion gains Armor +1${mild ? ' in the third quarter' : ''}.`,
     };
-  if (g.encounter === 'crypt') {
-    // The Crypt's halftime is the transformation (startSecondHalf); its adjustment is the star double-team.
-  } else if (!g.gate.breached && g.gate.hp > g.gate.max / 2)
+  if (g.encounter !== 'crypt' && !g.gate.breached && g.gate.hp > g.gate.max / 2)
     return { id: 'allHands', name: 'All hands on the ram', text: `The second half's goblins push harder: the ram hits for +${mild ? 1 : 2}.` };
-  const total = Math.max(
-    1,
-    CLASSES.reduce((s, c) => s + g.stats.heroes[c].pts, 0),
-  );
-  const star = CLASSES.map((c) => ({ c, p: g.stats.heroes[c].pts })).sort((a, b) => b.p - a.p)[0];
-  if (star.p / total >= 0.4)
-    return {
-      id: 'double',
-      name: 'Double the star',
-      star: star.c,
-      text: `They double the ${CLASS_INFO[star.c].name}: its first hit each possession is smothered unless it's Sure${mild ? ', in the third quarter' : ''}.`,
-    };
-  // Otherwise they double the top scorer.
+  // Otherwise they dig in. (Halftime adjustments are an open question: see the backlog.)
   void playbook;
-  return {
-    id: 'double',
-    name: 'Double the star',
-    star: star.c,
-    text: `They double the ${CLASS_INFO[star.c].name}: its first hit each possession is smothered unless it's Sure${mild ? ', in the third quarter' : ''}.`,
-  };
+  return { id: 'lead', name: 'Dig in', text: `Every Champion gains Armor +1${mild ? ' in the third quarter' : ''}.` };
 }
 
 export function startSecondHalf(g0: Game, adjustment: Adjustment): Game {

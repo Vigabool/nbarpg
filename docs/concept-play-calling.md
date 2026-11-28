@@ -749,3 +749,4 @@ Buttons, numbers and rules stay the same in both. It's stored per browser, like 
     Close games run 20–52%.
   - **Sample week:** expert 64–44 and 64–55, smart 55–48 and 55–58. With a cold Wizard, the smart bot loses 49–60 and 49–72.
   - **Tuning path:** a guard of 17 never broke (the graves refill it), so the guard went to about 9. Lich HP ×2.5 and the clock at 2 kept both paths viable. A bounty of 3 instead of 6 narrowed the gap between them.
+- **Double-team removed (Nov 28).** The halftime "Double the star" (the top scorer's first hit each possession smothered unless Sure) was too obscure: a playtest's Guiding Light → Aimed Shot on the phylactery turned over with no visible reason. The horde now protects the lead when it's ahead, the Goblin Horde puts all hands on the ram, and otherwise it digs in (every Champion Armor +1). Halftime adjustments are an open question in the backlog.

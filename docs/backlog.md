@@ -171,6 +171,7 @@ Parked from design discussions (see `docs/concept-play-calling.md` and the Play 
 8. **Critical Taunt is in five of six plans.** With Backstab ×2.5 against a Taunt, the Rogue scores 22–29 a game in every book that has it. Without it, the best Goblin Horde book is +13 on Normal and +1 on Hard. Consider ×2 or other strong Goblin Horde finishers.
 9. **The runaway Ritual:** superseded by the Crypt rework (Nov 28). The ritual is now a flat clock to halftime.
 10. **The Crypt rework, to watch in playtests:** whether skeletons left standing after halftime (they do nothing once the ritual ends) feel like clutter; whether Face the Lich is thin on Hard (+1.3); whether Fire Volume, with no holy damage, needs another way past the graves.
+11. **Horde halftime adjustments.** The double-team (the top scorer's first hit each possession smothered unless Sure) was too obscure and is gone (Nov 28). What's left is "Protect the lead" or "Dig in" (Champions Armor +1) and the Goblin Horde's "All hands on the ram". What should the horde's halftime adjustment be, and how does the player see it coming?
 
 ## Later / parked
 

@@ -3004,13 +3004,11 @@ function Halftime(props: {
   // Suggestions: plays that dodge the adjustment.
   const suggestions = props.library.filter((p) => {
     if (inBook.has(p.id)) return false;
-    if (a.id === 'double' && a.star) return p.steps[p.steps.length - 1].cls !== a.star;
     if (a.id === 'allHands' || a.id === 'lead') return p.tags.some((t) => t.includes('ram') || t.includes('swarm'));
     return true;
   });
   const weakest = (() => {
     if (a.id === 'scout') return props.playbook.findIndex((p) => p.id === a.playId);
-    if (a.id === 'double' && a.star) return props.playbook.findIndex((p) => p.steps[p.steps.length - 1].cls === a.star);
     const pts = props.playbook.map((p) => g.stats.plays[p.id]?.pts ?? 0);
     return pts.indexOf(Math.min(...pts));
   })();

@@ -470,7 +470,7 @@ export const TEMPLATES: Play[] = [
       { cls: 'rogue', move: 'backstab' },
     ],
     tags: ['vs a big'],
-    blurb: 'Provoke Taunts the target and shields the Cleric; Empower’s Crit lands on a doubled Backstab. With the Barrier up, Provoke only breaks it.',
+    blurb: 'Provoke Taunts the target and shields the Cleric; Empower’s Crit lands on a ×2.5 Backstab. With the Barrier up, Provoke only breaks it.',
   },
   {
     id: 'kick-out',
