@@ -34,6 +34,8 @@ export interface Tuning {
   hordeDamage: number;
   championHp: number;
   hordeHitPoints: number;
+  /** Help Defense: Protect's Armor before the Warrior's defense tier. Alone it never stops a full hit. */
+  protectArmor: number;
   /** The horde's fast break when your finisher is stopped. */
   turnoverPoints: number;
   /** The Crypt: Ritual points that raise the Lich (then it starts over). */
@@ -57,6 +59,7 @@ export const DEFAULT_TUNING: Tuning = {
   hordeDamage: 1,
   championHp: 1.25,
   hordeHitPoints: 2,
+  protectArmor: 8,
   turnoverPoints: 2,
   ritualMax: 22,
   ritualPer: 2,
@@ -87,6 +90,8 @@ export interface Hero {
   armor: number;
   exposed: boolean;
   untargetable: boolean;
+  /** Quick (Spacing's pass): dodges the first horde hit this turn. */
+  quick: boolean;
   lastStand: boolean;
 }
 
@@ -161,6 +166,8 @@ export interface Defense {
   protect?: Cls | 'gate';
   closeOut?: string;
   ward?: Cls;
+  /** The Rogue's Steal: a Champion that's Slowed or Exposed drops its hit this turn (instead of Strip the Ball). */
+  steal?: string;
   /** What-if only: play the horde's turn as if the Rogue didn't Strip the Ball (to show what the strip saves). */
   noStrip?: boolean;
 }
@@ -168,7 +175,7 @@ export interface Defense {
 export interface Stats {
   heroes: Record<Cls, { pts: number; ast: number; stops: number; touches: number; dmg: number }>;
   plays: Record<string, { calls: number; pts: number }>;
-  party: { shots: number; takedowns: number; objectives: number };
+  party: { shots: number; takedowns: number; objectives: number; stops: number };
   /** gate: the objective's points (the ram on the gate, or the Crypt's Ritual). */
   horde: { hits: number; takedowns: number; gate: number; pillage: number; turnovers: number };
 }
@@ -226,6 +233,10 @@ export interface Game {
   graveQuarter: number;
   /** Sanctuary: enemy turns left with the horde's objective frozen and every hero at Armor +3. */
   sanctuary: number;
+  /** A stop last enemy turn: the next finisher gets Crit (Sure too if it already has Crit). */
+  fastBreak?: boolean;
+  /** Stops in the enemy turn being played (sets fastBreak at its end). */
+  stopsThisTurn?: number;
 }
 
 export interface Frame {
@@ -304,6 +315,7 @@ export function newGame(tuning: Tuning = DEFAULT_TUNING, difficulty: Difficulty 
       armor: 0,
       exposed: false,
       untargetable: false,
+      quick: false,
       lastStand: false,
     };
   }
@@ -378,7 +390,7 @@ export function newGame(tuning: Tuning = DEFAULT_TUNING, difficulty: Difficulty 
   const stats: Stats = {
     heroes: Object.fromEntries(CLASSES.map((c) => [c, { pts: 0, ast: 0, stops: 0, touches: 0, dmg: 0 }])) as Stats['heroes'],
     plays: {},
-    party: { shots: 0, takedowns: 0, objectives: 0 },
+    party: { shots: 0, takedowns: 0, objectives: 0, stops: 0 },
     horde: { hits: 0, takedowns: 0, gate: 0, pillage: 0, turnovers: 0 },
   };
   const g: Game = {
@@ -665,6 +677,8 @@ export interface Carry {
   split: boolean;
   /** Guided: the finisher ignores Taunt. */
   guided: boolean;
+  /** Quick (Spacing): the finisher dodges the first horde hit this turn. */
+  quick?: boolean;
   /** Heroes whose buffs are in the shot (credited with assists if it scores). */
   helpers: Cls[];
 }
@@ -675,6 +689,7 @@ function addBuff(c0: Carry, e: Enabler | undefined, mult: number, from: Cls): Ca
   const c = { ...c0, helpers: [...c0.helpers] };
   if (!e) return c;
   c.helpers.push(from);
+  if (e.quick) c.quick = true;
   if (e.kind === 'armor') c.armor = Math.max(c.armor, Math.round(e.amount * mult));
   else c[e.kind] = true;
   return c;
@@ -796,11 +811,20 @@ function doStep(ctx: StepCtx, step: PlayStep, i: number, primaryId: string, pick
   g.stats.heroes[h.cls].touches += 1;
   const fin = isFinisher(m);
   // Every buff the helpers built up goes to the finisher; helpers' own hits get none.
-  const buff = fin ? carry : emptyCarry();
+  let buff = fin ? carry : emptyCarry();
+  let fastBreak = false;
+  if (fin && g.fastBreak) {
+    buff = { ...buff, crit: true, sure: buff.sure || buff.crit };
+    g.fastBreak = false;
+    fastBreak = true;
+  }
   if (buff.armor) h.armor += buff.armor;
+  if (buff.quick) h.quick = true;
   if (m.kind === 'signature' || m.kind === 'legendary') h.usedSpecial.push(m.id);
   const scoreBefore = g.score.party;
   const parts: string[] = [];
+  if (fastBreak) parts.push(buff.sure && carry.crit ? 'fast break: Sure' : 'fast break: Crit');
+  if (buff.quick) parts.push(`the ${CLASS_INFO[h.cls].name} is Quick`);
   const chosen = g.enemies.find((e) => e.id === primaryId && e.hp > 0 && e.arrived) ?? onField(g)[0];
 
   // Effects on the party.
@@ -1214,6 +1238,7 @@ export function describeCarry(c: Carry): string[] {
   if (c.pierce) out.push('Pierce');
   if (c.split) out.push('Split (+1 target)');
   if (c.guided) out.push('Guided (ignores Taunt)');
+  if (c.quick) out.push('Quick (dodges the first hit)');
   return out;
 }
 
@@ -1282,10 +1307,28 @@ export function autoDefense(g: Game, inPlay: Set<Cls>): Defense {
     const t = target && target !== d.protect && hs.some((h) => h.cls === target) ? target : [...hs].sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0]?.cls;
     if (t) d.ward = t;
   }
+  // The Rogue steals from the horde's hitter when Close Out (or the play) leaves it Slowed or Exposed; otherwise it strips the ball.
+  if (off.has('rogue') && call) {
+    const stealable = [...call.actors]
+      .reverse()
+      .map((id) => onField(g).find((e) => e.id === id))
+      .find((e) => e && !e.disabled && (e.slowed || e.exposed > 0 || d.closeOut === e.id));
+    if (stealable) d.steal = stealable.id;
+  }
   return d;
 }
 
 // ---------- The enemy turn ----------
+
+/** A horde hit held to nothing: counts the stop, credits its defenders, and sets up a fast break. */
+/** The Rogue can steal from a Champion that's Slowed (Close Out, Slam) or Exposed (Mark, Double Strike, Read). */
+export const canSteal = (e: Enemy) => !e.disabled && (e.slowed || e.exposed > 0);
+
+function recordStop(g: Game, by: Cls[]) {
+  g.stats.party.stops += 1;
+  for (const c of by) g.stats.heroes[c].stops += 1;
+  g.stopsThisTurn = (g.stopsThisTurn ?? 0) + 1;
+}
 
 function hordeHit(
   g: Game,
@@ -1310,17 +1353,26 @@ function hordeHit(
     h = alt;
     cls = alt.cls;
   }
-  let d = actor.damage + bonus + (h.exposed ? 3 : 0);
   const notes: string[] = [];
+  // Quick (Spacing's pass): the hero dodges the first hit, a stop.
+  if (h.quick) {
+    h.quick = false;
+    recordStop(g, []);
+    frames.push({
+      game: clone(g),
+      text: `${actor.name} · ${label}: the ${CLASS_INFO[cls].name} is Quick and dodges it: a stop`,
+      side: 'party',
+      actor: actor.id,
+      target: cls,
+    });
+    return;
+  }
+  const closedOut = actor.slowed && off.has('ranger') && defense.closeOut === actor.id;
+  let d = actor.damage + bonus + (h.exposed ? 3 : 0);
   if (actor.slowed) {
     d = Math.floor(d / 2);
     actor.slowed = false;
     notes.push('Slowed: half damage');
-  }
-  // An Elite Warrior's Protect also halves the hit on that hero (then Armor applies): it reduces scoring, never cancels it.
-  if (off.has('warrior') && defense.protect === cls && tierIndex(g.heroes.warrior.defTier) >= tierIndex('elite') && d > 0) {
-    d = Math.ceil(d / 2);
-    notes.push('the Warrior takes half');
   }
   const before = d;
   if (opts.ignoreArmor) {
@@ -1334,7 +1386,15 @@ function hordeHit(
   if (d > 0) {
     pts += g.tuning.hordeHitPoints;
     g.stats.horde.hits += g.tuning.hordeHitPoints;
-  } else notes.push('no bucket');
+  } else {
+    notes.push('no bucket: a stop');
+    // Credit the defenders who made it: Protect or Ward on this hero, Close Out on this enemy.
+    const by: Cls[] = [];
+    if (off.has('warrior') && defense.protect === cls) by.push('warrior');
+    if (off.has('wizard') && defense.ward === cls) by.push('wizard');
+    if (closedOut) by.push('ranger');
+    recordStop(g, by);
+  }
   if (h.hp <= 0) {
     if (h.lastStand) h.hp = 1;
     else {
@@ -1371,25 +1431,45 @@ function summon(g: Game, n: number, frames: Frame[], by: Enemy) {
 function enemyTurn(g: Game, inPlay: Set<Cls>, defense: Defense, frames: Frame[]) {
   const off = new Set(defenders(g, inPlay));
   g.blocked = false;
+  g.fastBreak = false;
+  g.stopsThisTurn = 0;
   // Sanctuary: every hero has Armor +3 while it holds.
   if (g.sanctuary > 0) for (const h of activeHeroes(g)) h.armor += 3;
   // Protect, Close Out, Ward and Strip the Ball happen first.
   if (off.has('warrior') && defense.protect && defense.protect !== 'gate') {
-    g.heroes[defense.protect].armor += Math.round(4 * tm(g.heroes.warrior.defTier));
-    g.stats.heroes.warrior.stops += 1;
+    g.heroes[defense.protect].armor += Math.round(g.tuning.protectArmor * tm(g.heroes.warrior.defTier));
   }
   if (off.has('ranger') && defense.closeOut) {
     const e = onField(g).find((x) => x.id === defense.closeOut);
-    if (e) {
-      e.slowed = true;
-      g.stats.heroes.ranger.stops += 1;
-    }
+    if (e) e.slowed = true;
   }
   if (off.has('wizard') && defense.ward) {
     const a = Math.round(4 * tm(g.heroes.wizard.defTier));
     g.heroes[defense.ward].armor += a;
   }
-  if (off.has('rogue') && !g.gate.breached && !defense.noStrip) {
+  // The Steal: the Rogue picks the pocket of a Champion that's Slowed or Exposed; it drops out of the horde's play.
+  const stealFrom = off.has('rogue') && defense.steal ? onField(g).find((e) => e.id === defense.steal) : undefined;
+  if (stealFrom) {
+    if (canSteal(stealFrom)) {
+      stealFrom.disabled = true;
+      g.stats.heroes.rogue.stops += 1;
+      recordStop(g, []);
+      frames.push({
+        game: clone(g),
+        text: `Rogue · Steal: picks the ${stealFrom.name}’s pocket, a stop. It drops out of the horde’s play.`,
+        side: 'party',
+        actor: 'rogue',
+        target: stealFrom.id,
+      });
+    } else
+      frames.push({
+        game: clone(g),
+        text: `Rogue · Steal: the ${stealFrom.name} isn’t Slowed or Exposed, so the steal misses.`,
+        side: 'party',
+        actor: 'rogue',
+        target: stealFrom.id,
+      });
+  } else if (off.has('rogue') && !g.gate.breached && !defense.noStrip) {
     const n = tierIndex(g.heroes.rogue.defTier) >= tierIndex('elite') ? 2 : 1;
     const ps = pushing(g).slice(0, n);
     for (const e of ps) e.stripped = true;
@@ -1613,6 +1693,15 @@ function enemyTurn(g: Game, inPlay: Set<Cls>, defense: Defense, frames: Frame[])
       frames.push({ game: clone(g), text: `Cleric · Triage: heals the ${CLASS_INFO[t.cls].name} ${healed}.`, side: 'party', actor: 'cleric', target: t.cls });
     }
   }
+  // A stop starts a fast break: the next finisher gets Crit.
+  if (g.stopsThisTurn) {
+    g.fastBreak = true;
+    frames.push({
+      game: clone(g),
+      text: `Fast break: ${g.stopsThisTurn > 1 ? `${g.stopsThisTurn} stops` : 'a stop'}, so your next finisher gets Crit.`,
+      side: 'party',
+    });
+  }
 }
 
 function ritualTurn(g: Game, off: Set<Cls>, defense: Defense, boost: number, frames: Frame[]) {
@@ -1674,6 +1763,7 @@ function endPossession(g: Game, frames: Frame[]) {
     h.armor = 0;
     h.exposed = false;
     h.untargetable = false;
+    h.quick = false;
   }
   // The Shaman bounty runs out at the end of Q1.
   if (g.bounty === 'open' && g.possession === 2) {

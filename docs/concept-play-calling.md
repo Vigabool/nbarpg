@@ -591,3 +591,31 @@ Buttons, numbers and rules stay the same in both. It's stored per browser, like 
     - Defending can't yet beat scoring (see Stops score in the backlog).
     - An untended Ritual runs away.
   - The **Play Calling Strategy Tracker** artifact tracks these plans and the ideas to come back to.
+- **Stops and fast breaks (Nov 28).** A horde hit still scores a flat +2 if it does any damage. Defense pays off only by holding a hit to nothing, a **stop**, so the player still asks one question per hit: stopped or not. No hero can stop a full hit alone; a stop takes two pieces that fit the situation.
+  - **Help Defense:** Protect's Armor is 8 × the Warrior's defense tier (cold 6 … elite 12), up from 4 ×. The Elite Warrior no longer halves the hit, which had made Protect plus Close Out close to a sure stop. A Champion hits for about 15–20, so Protect alone never stops one; with Close Out's half it usually does.
+  - **The Steal:** off the ball, the Rogue can steal from a Champion instead of Strip the Ball. The Champion has to be Slowed (Close Out, Slam) or Exposed (Mark, Double Strike, Read), and then it drops out of the horde's play. The setup can come from defense (Close Out) or from offense (a Mark in the play).
+  - **Spacing passes Quick:** the finisher dodges the first horde hit that turn.
+  - **Fast break:** a stop gives the next finisher Crit (Sure too if it already has Crit).
+  - The box score's stops now count stops, credited to the defenders who made them. The defense picker offers Strip or Steal for the Rogue. The glossary adds Stop, Fast break and Steal. `TUNING_VERSION` is 5 (`protectArmor` in the tuning).
+  - **Stop rates** (`scripts/stops.ts`, smart bot, default book, 32 built rosters):
+    - Goblin Horde: 18% of hits, 2.0 a game, before; 30% and 3.2 a game after.
+    - Crypt: 9% before; 13% and 1.6 a game after.
+    - Protect alone, Ward alone and Close Out alone: 0%.
+    - Protect + Close Out: 86% (Goblin Horde) and 68% (Crypt).
+    - A Steal always stops.
+    - Ward never contributes. Its Armor (4 ×) plus Close Out doesn't reach 0.
+
+    Protect at 6 lost ground: margins dropped about 8, because removing the Elite halving cost the shooter HP. At 10, Protect + Close Out became a sure stop.
+  - **Plans, before → after** (smart bot, Normal / Hard):
+    - Goblin Horde:
+      - Default book: +14.7 / +7.4 → +15.3 / +9.3.
+      - Clear the Ram: +13.3 / +1.1 → +18.2 / +9.3, with 3.7 stops a game.
+      - Hunt Champions: +22.3 / +9.9 → +23.5 / +14.8.
+      - Lockdown: −7.8 / −21.5 → −1.7 / −12.4. The expert bot goes from −2.8 / −16.5 to +5.5 / −1.9.
+    - Crypt:
+      - Default book: +18.3 / +5.8 → +22.2 / +7.3.
+      - Fire Volume: +21.6 / +7.8.
+      - Holy Chain: +31.0 / +13.4.
+      - Champion Race: +21.8 / +5.2.
+
+    The expert bot's Goblin Horde margins rose 5–9 a game, so difficulty needs a re-tune before shipping to friends.

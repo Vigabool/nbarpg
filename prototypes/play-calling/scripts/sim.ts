@@ -43,8 +43,11 @@ function defenseOptions(g: Game, inPlay: Set<Cls>): Defense[] {
   const protects: (Defense['protect'] | undefined)[] = off.has('warrior') ? [...heroes, ...(g.gate.breached ? [] : (['gate'] as const))] : [undefined];
   const closeOuts: (string | undefined)[] = off.has('ranger') ? onField(g).map((e) => e.id) : [undefined];
   const wards: (Cls | undefined)[] = off.has('wizard') ? heroes : [undefined];
+  // The Rogue strips the ball (undefined) or steals from one of the horde's called actors.
+  const steals: (string | undefined)[] = off.has('rogue') ? [undefined, ...(g.call?.actors.filter((a): a is string => !!a) ?? [])] : [undefined];
   const out: Defense[] = [];
-  for (const protect of protects) for (const closeOut of closeOuts) for (const ward of wards) out.push({ protect, closeOut, ward });
+  for (const protect of protects)
+    for (const closeOut of closeOuts) for (const ward of wards) for (const steal of steals) out.push({ protect, closeOut, ward, steal });
   return out;
 }
 

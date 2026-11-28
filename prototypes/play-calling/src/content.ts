@@ -23,7 +23,7 @@ export const CLASS_INFO: Record<Cls, { name: string; role: string; icon: string;
     icon: '🗡',
     hp: 25,
     defense: 'Strip the Ball',
-    defenseText: 'Knocks the ball loose from a goblin on the ram (two at Elite).',
+    defenseText: 'Knocks the ball loose from a goblin on the ram (two at Elite), or Steals from a Champion that’s Slowed or Exposed: a stop.',
   },
   wizard: { name: 'Wizard', role: 'the shooter', icon: '✦', hp: 22, defense: 'Ward', defenseText: 'Armor on one ally through the enemy turn.' },
   ranger: {
@@ -32,12 +32,17 @@ export const CLASS_INFO: Record<Cls, { name: string; role: string; icon: string;
     icon: '🏹',
     hp: 30,
     defense: 'Close Out',
-    defenseText: 'Slows one enemy: its hit this turn deals half.',
+    defenseText: 'Slows one enemy: its hit this turn deals half (with Protect, usually a stop), and the Rogue can Steal from it.',
   },
 };
 
 /** What a move passes to the next hero. */
-export type Enabler = { kind: 'armor'; amount: number } | { kind: 'sure' } | { kind: 'crit' } | { kind: 'pierce' } | { kind: 'split' } | { kind: 'guided' };
+export type Enabler = (
+  { kind: 'armor'; amount: number } | { kind: 'sure' } | { kind: 'crit' } | { kind: 'pierce' } | { kind: 'split' } | { kind: 'guided' }
+) & {
+  /** Also makes the finisher Quick: it dodges the first horde hit this turn (Spacing). */
+  quick?: boolean;
+};
 
 export type Effect =
   | 'taunt'
@@ -303,9 +308,9 @@ export const MOVES: Move[] = [
     kind: 'enabler',
     damage: 2,
     targets: 'all',
-    enabler: { kind: 'split' },
+    enabler: { kind: 'split', quick: true },
     action: '2 damage to every enemy (uses up the Block and every Quick)',
-    enablerText: 'Split (+1 target)',
+    enablerText: 'Split (+1 target), and the finisher is Quick (dodges the first hit)',
   }),
   M({
     id: 'frost',
@@ -714,11 +719,11 @@ export const CRYPT_INFO: Partial<Record<EnemyKind, EnemyInfo>> = {
 export function defenseText(cls: Cls, encounter: Encounter = 'goblin-horde'): string {
   const crypt = encounter === 'crypt';
   if (cls === 'warrior')
-    return `Gives one ally Armor against the horde’s hit, or ${crypt ? 'guards the circle (halves the Ritual’s growth)' : 'braces the gate (halves the ram)'}.`;
+    return `Gives one ally Armor against the horde’s hit (with Close Out, usually a stop), or ${crypt ? 'guards the circle (halves the Ritual’s growth)' : 'braces the gate (halves the ram)'}.`;
   if (cls === 'rogue')
-    return crypt
-      ? 'Pins a skeleton away from the Ritual so it doesn’t feed it this turn (two at Elite).'
-      : 'Knocks the ball loose from a goblin on the ram (two at Elite).';
+    return `${
+      crypt ? 'Pins a skeleton away from the Ritual so it doesn’t feed it this turn' : 'Knocks the ball loose from a goblin on the ram'
+    } (two at Elite), or Steals from a Champion that’s Slowed or Exposed: a stop.`;
   return CLASS_INFO[cls].defenseText;
 }
 

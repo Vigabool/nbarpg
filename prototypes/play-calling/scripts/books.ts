@@ -28,7 +28,7 @@ const ENC = process.env.ENC ?? 'goblin-horde';
 const full = loadSeasonFile('2025-26');
 
 function playGame(book: Play[], difficulty: Difficulty): Game {
-  let g = newGame(DEFAULT_TUNING, difficulty);
+  let g = newGame({ ...DEFAULT_TUNING, ...JSON.parse(process.env.TUNE ?? '{}') }, difficulty);
   while (g.phase !== 'final') {
     if (g.phase === 'halftime') {
       g = startSecondHalf(g, halftimeAdjustment(g, book));
@@ -98,6 +98,7 @@ for (const t of top) {
   let nw = 0;
   const pts: Record<string, number> = {};
   const horde: Record<string, number> = {};
+  let stops = 0;
   for (const w of weeks) {
     setWeek(w);
     const gn = playGame(t.b, 'normal');
@@ -106,11 +107,14 @@ for (const t of top) {
     h += gh.score.party - gh.score.horde;
     nw += gn.score.party > gn.score.horde ? 1 : 0;
     for (const [k, v] of Object.entries(gn.stats.heroes)) pts[k] = (pts[k] ?? 0) + v.pts;
+    stops += gn.stats.party.stops;
     for (const [k, v] of Object.entries(gn.stats.horde)) horde[k] = (horde[k] ?? 0) + (v as number);
   }
   const per = (x: number) => (x / weeks.length).toFixed(1);
   console.log(
-    `${t.b.map((p) => p.id).join(',')} | sample ${t.sample} | built normal ${per(n)} (${nw}/${weeks.length}) hard ${per(h)} | heroes ${Object.entries(pts)
+    `${t.b.map((p) => p.id).join(',')} | sample ${t.sample} | built normal ${per(n)} (${nw}/${weeks.length}) hard ${per(h)} | stops ${per(stops)} | heroes ${Object.entries(
+      pts,
+    )
       .map(([k, v]) => `${k.slice(0, 2)}:${per(v)}`)
       .join(' ')} | horde ${Object.entries(horde)
       .map(([k, v]) => `${k}:${per(v)}`)

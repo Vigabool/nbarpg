@@ -161,7 +161,7 @@ For a wider test beyond close friends, who send feedback by text.
 
 Parked from design discussions (see `docs/concept-play-calling.md` and the Play Calling Strategy Tracker artifact, https://claude.ai/artifact/Edp1qkTxp68y8mNRUidMYH). Each one supports "several ways to win" and "scoring versus defending".
 
-1. **Stops score.** A defensive stop (a fully stopped hit, or a goblin stripped or skeleton pinned) earns +1, like a steal into a fast break, so resting a star has a small offensive upside.
+1. **Stops score.** Built as stops and fast breaks (Help Defense, the Steal, Spacing's Quick, Crit after a stop; see the concept doc, Nov 28). Still to do: Ward never makes a stop (match it to Protect, or make it Quick); re-tune difficulty, which rose 3–8 a game in the Goblin Horde; Lockdown wins only for the expert bot.
 2. **Full-court press.** Choose to run with all five heroes and no defenders for one possession: big offense, an unopposed horde turn. Sanctuary is the safe version.
 3. **Specials as plans.** Each double-double/triple-double special should unlock a plan, not just hit harder: Volley as the Ranger's own crew clear, Chain Lightning Exposing every Champion, and so on (Sanctuary now freezes the objective).
 4. **A Lich that matters.** It falls to one Fireball without firing; more HP, or a rise that's likelier to come early.

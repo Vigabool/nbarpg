@@ -19,7 +19,10 @@ export const TERMS: Record<string, { name: string; def: string }> = {
     def: 'A big (the Ogre) forces single-target hits onto itself while it stands; hits that reach several enemies must include it. Get past it with Guided, by Disabling it, or by taking it down.',
   },
   taunted: { name: 'Taunted', def: 'This enemy attacks the Warrior on the horde’s turn.' },
-  quick: { name: 'Quick', def: 'The first hit on this enemy each possession misses. A cheap hit first, a Slow, or a Sure hit gets past it.' },
+  quick: {
+    name: 'Quick',
+    def: 'The first hit on this enemy each possession misses. A cheap hit first, a Slow, or a Sure hit gets past it. A hero made Quick (Spacing’s pass) dodges the first horde hit that turn: a stop.',
+  },
   barrier: {
     name: 'Barrier',
     def: 'The Shaman’s wall in front of the whole horde for your next possession. Aim at any enemy and the Barrier takes the hit instead; the first damaging move breaks it (a finisher spent on it scores no bucket).',
@@ -84,11 +87,26 @@ export const TERMS: Record<string, { name: string; def: string }> = {
     def: 'Each enemy taken down scores its 🏀 value: goblins and skeletons 1 (a skeleton only when destroyed for good), Champions 4 or more, the boss most.',
   },
   finisher: { name: 'Finisher', def: 'The last move of a possession and the only one that scores a bucket. Every helper’s buff goes to it.' },
+  stop: {
+    name: 'Stop',
+    def: 'A horde hit held to nothing: Armor at least as big as the hit, a Quick dodge, or a Steal. No defender stops a full hit alone: pair Protect with Close Out, or Steal from an enemy that’s Slowed or Exposed. Each stop starts a fast break.',
+  },
+  fastBreak: {
+    name: 'Fast break',
+    def: 'After a stop, your next finisher gets Crit (and Sure, if the play already gives it Crit). After your turnover, the horde gets the fast break.',
+  },
+  steal: {
+    name: 'Steal',
+    def: 'The Rogue’s other defense: instead of Strip the Ball, pick the pocket of a Champion that’s Slowed (Close Out, Slam) or Exposed (Mark, Double Strike, Read). It drops out of the horde’s play: a stop. On anyone else it misses.',
+  },
   protect: {
     name: 'Protect',
-    def: 'The Warrior’s defense when not in the play: Armor on one hero through the horde’s turn, or guard the objective (brace the gate, halving the ram; in the Crypt, guard the circle, halving the Ritual).',
+    def: 'The Warrior’s defense when not in the play: Armor (8, more with a better defensive night) on one hero through the horde’s turn, or guard the objective (brace the gate, halving the ram; in the Crypt, guard the circle, halving the Ritual).',
   },
-  closeOut: { name: 'Close Out', def: 'The Ranger’s defense when not in the play: Slows one enemy, so its next hit deals half.' },
+  closeOut: {
+    name: 'Close Out',
+    def: 'The Ranger’s defense when not in the play: Slows one enemy, so its next hit deals half. A halved hit into Protect’s Armor is usually a stop, and a Slowed Champion can be stolen from.',
+  },
   ward: { name: 'Ward', def: 'The Wizard’s defense when not in the play: Armor on one ally through the horde’s turn.' },
   triage: { name: 'Triage', def: 'The Cleric’s defense when not in the play: heals the most injured hero after the horde’s turn.' },
   stripBall: {
@@ -100,6 +118,9 @@ export const TERMS: Record<string, { name: string; def: string }> = {
 /** How each term is written in the text (longest first, so "Strip the Ball" wins over shorter words). */
 const FORMS: [string, string][] = [
   ['Strip the Ball', 'stripBall'],
+  ['Fast break', 'fastBreak'],
+  ['fast break', 'fastBreak'],
+  ['Steal', 'steal'],
   ['Call the Pack', 'callPack'],
   ['calls the pack', 'callPack'],
   ['War Drum', 'warDrum'],
@@ -147,6 +168,7 @@ const FORMS: [string, string][] = [
   ['consecrates', 'consecrate'],
   ['consecrated', 'consecrate'],
   ['Consecrate', 'consecrate'],
+  ['a stop', 'stop'],
   ['Turnover', 'turnover'],
   ['turnover', 'turnover'],
   ['bucket', 'bucket'],

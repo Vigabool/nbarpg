@@ -24,6 +24,7 @@ import {
   DEFAULT_TUNING,
   activeHeroes,
   autoDefense,
+  canSteal,
   beginLive,
   bestCall,
   describeCarry,
@@ -130,7 +131,7 @@ interface Saved {
 }
 const KEY = 'play-calling-prototype-v1';
 /** Bump when DEFAULT_TUNING changes, so players' saved tuning (which stores every value) picks up the new defaults. */
-const TUNING_VERSION = 4;
+const TUNING_VERSION = 5;
 function load(): Saved {
   try {
     return JSON.parse(localStorage.getItem(KEY) ?? '{}') as Saved;
@@ -882,8 +883,8 @@ function DefenseChoice(props: { manual: boolean; setManual: (m: boolean) => void
       </div>
       {info && (
         <p id="defense-info" className="muted small">
-          Heroes who don’t touch the ball defend. Automatic picks their targets; Manual lets you choose who the Warrior protects, who the Ranger closes out and
-          who the Wizard wards.
+          Heroes who don’t touch the ball defend. Automatic picks their targets; Manual lets you choose who the Warrior protects, who the Ranger closes out, who
+          the Wizard wards, and whether the Rogue strips the ball or steals.
         </p>
       )}
     </>
@@ -1083,6 +1084,7 @@ function BuilderSheet(props: {
     if (c === 'warrior') return `Protect → ${who(d.protect)}`;
     if (c === 'ranger') return `Close Out → ${who(d.closeOut)}`;
     if (c === 'wizard') return `Ward → ${who(d.ward)}`;
+    if (c === 'rogue' && d.steal) return `Steal → ${who(d.steal)}`;
     return CLASS_INFO[c].defense;
   };
 
@@ -1339,7 +1341,7 @@ function BuilderSheet(props: {
                 defense={props.defense}
                 manual={props.manual}
                 heroes={activeHeroes(g).map((h) => h.cls)}
-                champs={onField(g).filter((e) => e.kind !== 'goblin' && e.kind !== 'wagon')}
+                champs={onField(g).filter((e) => e.kind !== 'goblin' && e.kind !== 'wagon' && e.kind !== 'grave' && e.kind !== 'phylactery')}
                 setOverride={props.setOverride}
               />
             ))}
@@ -2523,6 +2525,7 @@ function HeroRow(props: { game: Game; inPlay: Set<Cls>; defense: Defense | null;
     if (c === 'ranger') return { t: `→ ${short(d.closeOut)}`, full: `Close Out → ${short(d.closeOut)}` };
     if (c === 'wizard') return { t: `→ ${short(d.ward)}`, full: `Ward → ${short(d.ward)}` };
     if (c === 'cleric') return { t: 'Heal', full: 'Triage: heals the most injured hero' };
+    if (d.steal) return { t: `Steal ${short(d.steal)}`, full: `Steal → ${short(d.steal)}` };
     return {
       t: 'Strip',
       full: g.encounter === 'crypt' ? 'Strip the Ball: pins a skeleton away from the Ritual' : 'Strip the Ball: knocks a goblin off the ram',
@@ -2615,6 +2618,15 @@ function DefenseLine(props: {
       'closeOut',
     );
   else if (cls === 'wizard') body = sel(d.ward, heroOpts, 'ward');
+  else if (cls === 'rogue')
+    body = sel(
+      d.steal,
+      [
+        { v: '', t: props.game.encounter === 'crypt' ? 'Strip the Ball (pin a skeleton)' : 'Strip the Ball (off the ram)' },
+        ...props.champs.map((e) => ({ v: e.id, t: `Steal → ${e.name}${canSteal(e) || d.closeOut === e.id ? '' : ' (needs Slowed or Exposed)'}` })),
+      ],
+      'steal',
+    );
   else body = <span className="muted">{defenseText(cls, props.game.encounter)}</span>;
   return (
     <>
