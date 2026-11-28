@@ -563,6 +563,12 @@ export const ritualCrowd = (g: Game) => pushing(g).length + piles(g).length;
 export const ritualFeeders = (g: Game) => (g.tuning.ritualCap ? Math.min(ritualCrowd(g), g.tuning.ritualCap) : ritualCrowd(g));
 /** Whether the Wight will cast Raise Dead (it needs bone piles on the floor). */
 export const wightCast = (g: Game): 'raise' | null => (wight(g) && piles(g).length ? 'raise' : null);
+/**
+ * The Crypt's dead, for holy damage (×1.5) and Smite's arcs: skeletons and every undead Champion (the Wight,
+ * Wraith, Skeletal Archer, Bone Knight and Lich). The Necromancer is alive, and graves are objects.
+ */
+export const isDead = (g: Game, e: Enemy) =>
+  g.encounter === 'crypt' && (e.undead !== undefined || ['shaman', 'cutthroat', 'sharpshooter', 'ogre', 'lich'].includes(e.kind));
 export const skeletonsStand = (g: Game) => onField(g).some((e) => e.kind === 'goblin');
 /**
  * The Crypt's next quarter: the skeletons the open graves will raise and the wave that arrives with them,
@@ -1033,7 +1039,7 @@ function doStep(ctx: StepCtx, step: PlayStep, i: number, primaryId: string, pick
       e.quickUsed = true;
       let d = base * mult;
       // The Crypt: holy damage is ×1.5 against the dead.
-      if (crypt && holy && e.undead !== undefined) d *= 1.5;
+      if (crypt && holy && isDead(g, e)) d *= 1.5;
       if (e.exposed > 0) d += 3;
       if (m.doubleVsShaken && (e.taunted || e.disabled)) d *= 2.5;
       if (buff.crit) d *= 1.5;
@@ -1082,7 +1088,7 @@ function doStep(ctx: StepCtx, step: PlayStep, i: number, primaryId: string, pick
       const res = targets.map((x) => ({ x, d: hit(x, m.damage!) }));
       // The Crypt: a Smite that destroys one of the dead arcs to the next skeleton, up to 3 kills.
       if (crypt && m.id === 'smite') {
-        let kills = res.filter((r) => r.x.undead !== undefined && r.x.hp <= 0).length;
+        let kills = res.filter((r) => isDead(g, r.x) && r.x.hp <= 0).length;
         let arcs = 0;
         while (kills > 0 && kills < 3) {
           const next = onField(g).find((e) => e.kind === 'goblin' && !res.some((r) => r.x.id === e.id));

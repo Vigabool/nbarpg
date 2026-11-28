@@ -65,7 +65,7 @@ export const TERMS: Record<string, { name: string; def: string }> = {
   },
   holy: {
     name: 'Holy damage',
-    def: 'A Cleric hit, or a Blessed finisher. It destroys the dead for good, touches the Wraith, and is the only thing that consecrates a grave.',
+    def: 'A Cleric hit, or a Blessed finisher. It deals ×1.5 to the dead (skeletons and every undead Champion: the Wight, Wraith, Skeletal Archer, Bone Knight and Lich; not the living Necromancer), destroys them for good, touches the Wraith, and is the only thing that consecrates a grave. A Smite that kills one of the dead arcs to the next skeleton, up to 3 kills.',
   },
   fire: { name: 'Fire', def: 'Fireball and Meteor. In the Crypt, fire destroys the dead for good.' },
   intangible: {
