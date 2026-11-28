@@ -13,3 +13,4 @@
 - **Saves:** a change to the shape of `SaveGame` bumps `SAVE_VERSION` in `src/app/saves.ts` and adds a migration to `MIGRATIONS`, with a test, so friends' runs keep loading.
 - **Balance:** tune with the simulators (`npm run data:simulate`, `npm run data:season`, `npm run data:lair-combo`) before and after, and report the numbers. Difficulty multipliers live in `src/rules/difficulty.json`. New encounters follow `docs/adding-an-encounter.md`.
 - **Browser checks:** Playwright needs `chromium.launch({ executablePath: '/opt/pw-browsers/chromium' })` here; check UI changes on a phone-sized viewport (390×844).
+- **Play-calling prototype** (`prototypes/play-calling/`): start with `docs/play-calling-handoff.md` (links, how the user works, the tuning method, open decisions); the design history is `docs/concept-play-calling.md`.

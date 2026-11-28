@@ -1,0 +1,471 @@
+<meta name="dash-one-writer" />
+<meta name="dash-form" content="freeform" />
+<style>
+  .pt {
+    display: flex;
+    flex-direction: column;
+    gap: var(--cds-gap-xl);
+    max-width: 980px;
+  }
+  .pt h1 {
+    font-family: var(--font-anthropic-serif);
+    font-weight: 400;
+    font-size: var(--cds-font-size-title);
+    margin: 0;
+    text-wrap: balance;
+  }
+  .pt h2 {
+    font-size: var(--cds-font-size-heading);
+    font-weight: var(--cds-font-weight-medium);
+    margin: 0;
+  }
+  .pt p {
+    margin: 0;
+    max-width: 68ch;
+  }
+  .pt-muted {
+    color: var(--color-fg-muted);
+    font-size: var(--cds-font-size-caption);
+  }
+  .pt-head {
+    display: flex;
+    flex-direction: column;
+    gap: var(--cds-gap-sm);
+  }
+  .pt-enc {
+    display: flex;
+    flex-direction: column;
+    gap: var(--cds-gap-md);
+  }
+  .pt-legend {
+    display: flex;
+    gap: var(--cds-gap-md);
+    flex-wrap: wrap;
+    font-size: var(--cds-font-size-caption);
+    color: var(--color-fg-muted);
+  }
+  .pt-key {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .pt-swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    display: inline-block;
+  }
+  .pt-chart {
+    position: relative;
+    min-height: 260px;
+  }
+  .pt-chart svg {
+    display: block;
+    width: 100%;
+  }
+  .pt-chart text {
+    fill: var(--cds-text-secondary);
+    font-size: var(--cds-font-size-caption);
+  }
+  .pt-chart .pt-name {
+    fill: var(--color-fg);
+  }
+  .pt-tip {
+    position: absolute;
+    pointer-events: none;
+    background: var(--cds-surface-popover);
+    border: 1px solid var(--cds-border);
+    box-shadow: var(--cds-shadow-popover);
+    border-radius: var(--cds-radius);
+    padding: var(--cds-pad-sm) var(--cds-pad-md);
+    font-size: var(--cds-font-size-caption);
+    white-space: nowrap;
+  }
+  .pt-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: var(--cds-gap-md);
+  }
+  .pt-card {
+    background: var(--color-panel);
+    border: 1px solid var(--color-border-line);
+    border-radius: var(--cds-radius);
+    padding: var(--cds-pad-lg);
+    display: flex;
+    flex-direction: column;
+    gap: var(--cds-gap-sm);
+    min-width: 0;
+  }
+  .pt-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: var(--cds-gap-sm);
+  }
+  .pt-card h3 {
+    margin: 0;
+    font-size: var(--cds-font-size-body);
+    font-weight: var(--cds-font-weight-medium);
+  }
+  .pt-pill {
+    font-size: var(--cds-font-size-caption);
+    border-radius: 999px;
+    padding: 1px 8px;
+    border: 1px solid currentColor;
+    white-space: nowrap;
+  }
+  .pt-pill[data-s='Works'],
+  .pt-pill[data-s='Answered'] {
+    color: var(--color-ok);
+  }
+  .pt-pill[data-s='Thin on Hard'],
+  .pt-pill[data-s='New'],
+  .pt-pill[data-s='Check again'],
+  .pt-pill[data-s='Expert only'],
+  .pt-pill[data-s='Testing'] {
+    color: var(--color-warn);
+  }
+  .pt-pill[data-s='Not working'] {
+    color: var(--color-bad);
+  }
+  .pt-pill[data-s='Baseline'],
+  .pt-pill[data-s='Reference'],
+  .pt-pill[data-s='Open'] {
+    color: var(--color-fg-muted);
+  }
+  .pt-book {
+    font-size: var(--cds-font-size-caption);
+    color: var(--color-fg-muted);
+  }
+  .pt-nums {
+    display: grid;
+    grid-template-columns: auto 1fr 1fr;
+    gap: 2px var(--cds-gap-md);
+    font-variant-numeric: tabular-nums;
+    font-size: var(--cds-font-size-caption);
+  }
+  .pt-nums b {
+    font-weight: var(--cds-font-weight-medium);
+    font-size: var(--cds-font-size-body);
+  }
+  .pt-pos {
+    color: var(--color-ok);
+  }
+  .pt-neg {
+    color: var(--color-bad);
+  }
+  .pt-table-wrap {
+    overflow-x: auto;
+  }
+  .pt-table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: var(--cds-font-size-caption);
+  }
+  .pt-table th,
+  .pt-table td {
+    text-align: left;
+    vertical-align: top;
+    padding: var(--cds-pad-sm) var(--cds-pad-md) var(--cds-pad-sm) 0;
+    border-bottom: 1px solid var(--color-border-line);
+  }
+  .pt-table th {
+    color: var(--color-fg-muted);
+    font-weight: var(--cds-font-weight-medium);
+  }
+  .pt-table td:nth-child(2) {
+    min-width: 240px;
+  }
+  .pt details {
+    font-size: var(--cds-font-size-caption);
+    color: var(--color-fg-muted);
+  }
+  .pt details p {
+    margin-top: var(--cds-gap-sm);
+  }
+</style>
+
+<div class="pt">
+  <header class="pt-head" id="top">
+    <h1>Play Calling Strategy Tracker</h1>
+    <p>
+      Three plans per encounter, each a four-play playbook that commits to one way to win. In the Goblin Horde,
+      <b data-draw="lead-gh" data-source="plans" data-field="plan">—</b> leads. In the Crypt,
+      <b data-draw="lead-cr" data-source="plans" data-field="plan">—</b> leads. On a cold night for the Wizard, Holy Chain still wins in the Crypt while the
+      default book loses. After the Nov 28 difficulty re-tune, the default playbook sits near +12 on Normal and +2 on Hard for the smart bot, and about 40% of
+      games end within 8 points.
+    </p>
+    <p class="pt-muted">
+      Margin is heroes minus horde, averaged over 32 built rosters. The smart bot plays the plan's four plays with automatic defense; the expert also searches
+      defenses and can call Isos.
+    </p>
+  </header>
+
+  <section class="pt-enc" id="goblin-horde">
+    <h2>Goblin Horde</h2>
+    <div class="pt-legend">
+      <span class="pt-key"><span class="pt-swatch" style="background: var(--pt-c0)"></span>Smart bot, Normal</span
+      ><span class="pt-key"><span class="pt-swatch" style="background: var(--pt-c1)"></span>Smart bot, Hard</span>
+    </div>
+    <div class="pt-chart" data-draw="chart-gh" data-source="plans"></div>
+    <div class="pt-cards" data-draw="cards-gh" data-source="plans"></div>
+  </section>
+
+  <section class="pt-enc" id="crypt">
+    <h2>The Crypt</h2>
+    <div class="pt-legend">
+      <span class="pt-key"><span class="pt-swatch" style="background: var(--pt-c0)"></span>Smart bot, Normal</span
+      ><span class="pt-key"><span class="pt-swatch" style="background: var(--pt-c1)"></span>Smart bot, Hard</span>
+    </div>
+    <div class="pt-chart" data-draw="chart-cr" data-source="plans"></div>
+    <div class="pt-cards" data-draw="cards-cr" data-source="plans"></div>
+  </section>
+
+  <section class="pt-enc" id="ideas">
+    <h2>Ideas to come back to</h2>
+    <div class="pt-table-wrap">
+      <table class="pt-table" data-source="ideas" data-row-key="idea">
+        <thead>
+          <tr>
+            <th data-field="idea">Idea</th>
+            <th data-field="detail">What and why</th>
+            <th data-field="plan">Plan it helps</th>
+            <th data-field="status">Status</th>
+          </tr>
+        </thead>
+        <tbody data-draw="ideas"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <details id="method">
+    <summary>How these numbers are made</summary>
+    <p>
+      Rosters: weeks 1–8 of 2025-26, each auto-drafted four ways (balance, offense, defense, flexibility), with suggested heroes and Smart-picked games: 32
+      games per bot and difficulty.
+    </p>
+    <p>
+      Smart bot: scripts/books.ts with BOOKS set to the plan. Expert bot: scripts/sim.ts with ROSTERS=8 and STRATEGY set to the plan. The plans were picked from
+      a search of every four-play book that uses all five heroes.
+    </p>
+    <p>
+      Status: Works means ahead on Normal and Hard for both bots; Thin on Hard means the smart bot's Hard margin is under +6; Expert only means only the bot
+      that searches defenses wins with it.
+    </p>
+    <p>
+      Difficulty (Nov 28): the horde scores more instead of Champions getting more HP. The ram or Ritual scores +1 each turn it scores, and on Hard a Champion’s
+      hit scores 3. Champion HP is ×1.25 on both difficulties.
+    </p>
+    <p>
+      The Crypt (Nov 28): the Necromancer’s ritual scores 2 a turn until halftime; his skeletons ward him while 3 or more stand; take him down to break it (he
+      rises as a Wraith while the phylactery stands), or face the Lich after halftime.
+    </p>
+    <p>
+      Defense (Nov 28): Defense is a count: each hero off the ball adds to a capped chance of stopping the horde’s play; the Rogue can Steal from a Slowed or
+      Exposed Champion; Spacing passes Quick; a stop gives the next finisher Crit.
+    </p>
+  </details>
+</div>
+
+<script>
+  document.querySelectorAll('#dash-root').forEach((r) => {
+    r.style.setProperty('--pt-c0', dash.colors[0]);
+    r.style.setProperty('--pt-c1', dash.colors[1]);
+  });
+  const ENC = { gh: 'Goblin Horde', cr: 'The Crypt' };
+  const signed = (v) => (v == null ? '—' : (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toFixed(1));
+  const rowsFor = (key) => {
+    const d = dash.data('plans');
+    return d.status === 'ok' ? d.data.filter((r) => r.encounter === ENC[key]) : null;
+  };
+
+  for (const key of ['gh', 'cr']) {
+    dash.draw('lead-' + key, (el) => {
+      const rows = rowsFor(key);
+      if (!rows) return void (el.textContent = '—');
+      const plans = rows.filter((r) => r.status !== 'Baseline' && r.status !== 'Reference');
+      const best = plans.sort((a, b) => b.smart_hard + b.smart_normal - (a.smart_hard + a.smart_normal))[0];
+      el.textContent = best ? best.plan : '—';
+    });
+
+    dash.draw('chart-' + key, (el) => {
+      const rows = rowsFor(key);
+      if (!rows) {
+        el.textContent = dash.data('plans').status === 'error' ? 'The plan results didn’t load.' : '—';
+        return;
+      }
+      el.replaceChildren();
+      const width = el.clientWidth || 600;
+      const band = 44;
+      const margin = { top: 8, right: 44, bottom: 24, left: Math.min(150, width * 0.36) };
+      const height = margin.top + margin.bottom + rows.length * band;
+      const vals = rows.flatMap((r) => [r.smart_normal, r.smart_hard]);
+      const lo = Math.min(0, d3.min(vals)),
+        hi = Math.max(0, d3.max(vals));
+      const x = d3
+        .scaleLinear()
+        .domain([lo, hi])
+        .nice()
+        .range([margin.left, width - margin.right]);
+      const y = d3
+        .scaleBand()
+        .domain(rows.map((r) => r.id))
+        .range([margin.top, height - margin.bottom])
+        .padding(0.25);
+      const svg = d3
+        .select(el)
+        .append('svg')
+        .attr('viewBox', `0 0 ${width} ${height}`)
+        .attr('height', height)
+        .attr('role', 'img')
+        .attr('aria-label', `${ENC[key]}: average margin for each plan, smart bot, Normal and Hard`);
+      svg
+        .append('g')
+        .selectAll('line')
+        .data(x.ticks(width < 420 ? 4 : 8))
+        .join('line')
+        .attr('x1', (d) => x(d))
+        .attr('x2', (d) => x(d))
+        .attr('y1', margin.top)
+        .attr('y2', height - margin.bottom)
+        .style('stroke', (d) => (d === 0 ? 'var(--cds-chart-reference)' : 'var(--cds-chart-grid)'));
+      svg
+        .append('g')
+        .attr('transform', `translate(0,${height - margin.bottom})`)
+        .call(
+          d3
+            .axisBottom(x)
+            .ticks(width < 420 ? 4 : 8)
+            .tickSize(0)
+            .tickFormat((d) => (d > 0 ? '+' : '') + d),
+        )
+        .call((g) => g.select('.domain').remove());
+      svg
+        .append('g')
+        .selectAll('text')
+        .data(rows)
+        .join('text')
+        .attr('class', 'pt-name')
+        .attr('x', margin.left - 8)
+        .attr('y', (r) => y(r.id) + y.bandwidth() / 2)
+        .attr('dy', '0.35em')
+        .attr('text-anchor', 'end')
+        .text((r) => r.plan);
+      const sub = d3.scaleBand().domain(['smart_normal', 'smart_hard']).range([0, y.bandwidth()]).padding(0.1);
+      const tip = d3.select(el).append('div').attr('class', 'pt-tip').style('display', 'none');
+      const g = svg
+        .append('g')
+        .selectAll('g')
+        .data(rows)
+        .join('g')
+        .attr('transform', (r) => `translate(0,${y(r.id)})`);
+      ['smart_normal', 'smart_hard'].forEach((f, i) => {
+        g.append('rect')
+          .attr('x', (r) => Math.min(x(0), x(r[f])))
+          .attr('y', sub(f))
+          .attr('height', sub.bandwidth())
+          .attr('width', (r) => Math.abs(x(r[f]) - x(0)))
+          .style('fill', dash.colors[i])
+          .on('pointerenter pointermove', (ev, r) => {
+            const [mx, my] = d3.pointer(ev, el);
+            tip
+              .style('display', null)
+              .text(`${r.plan}, ${i ? 'Hard' : 'Normal'}: ${signed(r[f])} a game`)
+              .style('left', Math.min(mx + 12, width - 200) + 'px')
+              .style('top', my - 30 + 'px');
+          })
+          .on('pointerleave', () => tip.style('display', 'none'));
+        g.append('text')
+          .attr('x', (r) => (r[f] >= 0 ? x(r[f]) + 4 : x(r[f]) - 4))
+          .attr('text-anchor', (r) => (r[f] >= 0 ? 'start' : 'end'))
+          .attr('y', sub(f) + sub.bandwidth() / 2)
+          .attr('dy', '0.35em')
+          .text((r) => signed(r[f]));
+      });
+    });
+
+    dash.draw('cards-' + key, (el) => {
+      const rows = rowsFor(key);
+      if (!rows) return void (el.textContent = '—');
+      el.replaceChildren(
+        ...rows.map((r) => {
+          const card = document.createElement('article');
+          card.className = 'pt-card';
+          card.id = 'plan-' + r.id;
+          const where = 'id=' + encodeURIComponent(r.id);
+          const mk = (tag, field, text, cls) => {
+            const e = document.createElement(tag);
+            e.dataset.source = 'plans';
+            e.dataset.field = field;
+            e.dataset.where = where;
+            e.textContent = text;
+            if (cls) e.className = cls;
+            return e;
+          };
+          const top = document.createElement('div');
+          top.className = 'pt-card-top';
+          const pill = mk('span', 'status', r.status, 'pt-pill');
+          pill.dataset.s = r.status;
+          top.append(mk('h3', 'plan', r.plan), pill);
+          const nums = document.createElement('div');
+          nums.className = 'pt-nums';
+          const head = (t) => Object.assign(document.createElement('span'), { textContent: t, className: 'pt-muted' });
+          const num = (field) => {
+            const v = r[field];
+            const b = mk('b', field, signed(v), v == null ? '' : v >= 0 ? 'pt-pos' : 'pt-neg');
+            return b;
+          };
+          nums.append(
+            head(''),
+            head('Normal'),
+            head('Hard'),
+            head('Smart'),
+            num('smart_normal'),
+            num('smart_hard'),
+            head('Expert'),
+            num('expert_normal'),
+            num('expert_hard'),
+          );
+          const wins = document.createElement('p');
+          wins.className = 'pt-muted';
+          wins.append(
+            'Smart wins ',
+            mk('span', 'smart_wins_normal', String(r.smart_wins_normal)),
+            ' of 32 on Normal · top scorers ',
+            mk('span', 'top_scorer', r.top_scorer),
+          );
+          card.append(top, mk('p', 'idea', r.idea), mk('p', 'playbook', r.playbook, 'pt-book'), nums, wins);
+          return card;
+        }),
+      );
+    });
+  }
+
+  dash.draw('ideas', (tb) => {
+    const d = dash.data('ideas');
+    if (d.status !== 'ok') {
+      tb.replaceChildren();
+      const tr = tb.insertRow();
+      const td = tr.insertCell();
+      td.colSpan = 4;
+      td.textContent = d.status === 'error' ? 'The ideas didn’t load.' : '—';
+      return;
+    }
+    tb.replaceChildren(
+      ...d.data.map((r) => {
+        const tr = document.createElement('tr');
+        for (const f of ['idea', 'detail', 'plan', 'status']) {
+          const td = tr.insertCell();
+          if (f === 'status') {
+            const s = document.createElement('span');
+            s.className = 'pt-pill';
+            s.dataset.s = r.status;
+            s.textContent = r.status;
+            td.append(s);
+          } else td.textContent = r[f] || '—';
+        }
+        return tr;
+      }),
+    );
+  });
+</script>
