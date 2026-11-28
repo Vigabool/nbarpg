@@ -25,7 +25,14 @@ export const CLASS_INFO: Record<Cls, { name: string; role: string; icon: string;
     defense: 'Strip the Ball',
     defenseText: 'Knocks the ball loose from a goblin on the ram (two at Elite), or Steals from a Champion that’s Slowed or Exposed: a stop.',
   },
-  wizard: { name: 'Wizard', role: 'the shooter', icon: '✦', hp: 22, defense: 'Ward', defenseText: 'Armor on one ally through the enemy turn.' },
+  wizard: {
+    name: 'Wizard',
+    role: 'the shooter',
+    icon: '✦',
+    hp: 22,
+    defense: 'Ward',
+    defenseText: 'Armor on one ally through the enemy turn: with Protect or Close Out on the same hit, often a stop.',
+  },
   ranger: {
     name: 'Ranger',
     role: 'the wing scorer',
@@ -633,7 +640,7 @@ export const ENEMY_INFO: Record<EnemyKind, EnemyInfo> = {
     mirrors: 'assists leader',
     job: 'War Drum (automatic): the ram hits +2 while it stands. Each enemy turn it casts one: Call the Pack (goblins to the ram) when fewer than 4 are on the ram, otherwise the Barrier, a wall in front of the whole horde for your next possession until a damaging hit breaks it.',
   },
-  hexer: { name: 'Goblin Hexer', icon: '🔮', mirrors: 'top scorer', job: 'Setup: Hex Exposes a hero for the finisher after it.' },
+  hexer: { name: 'Goblin Hexer', icon: '🔮', mirrors: 'top scorer', job: 'Setup: Hex Exposes a hero for the finisher after it, and takes away its Quick.' },
   sharpshooter: {
     name: 'Goblin Sharpshooter',
     icon: '🎯',
@@ -681,7 +688,7 @@ export const CRYPT_INFO: Partial<Record<EnemyKind, EnemyInfo>> = {
     name: 'Necromancer',
     icon: '🧙',
     mirrors: 'top scorer',
-    job: 'Setup: Enervate drains a touch from a hero and adds 2 to the next hit. Taking it down sets the Ritual back 3.',
+    job: 'Setup: Enervate drains a touch from a hero (and its Quick) and adds 2 to the next hit. Taking it down sets the Ritual back 3.',
   },
   sharpshooter: {
     name: 'Skeletal Archer',

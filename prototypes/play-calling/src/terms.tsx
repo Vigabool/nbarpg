@@ -21,7 +21,7 @@ export const TERMS: Record<string, { name: string; def: string }> = {
   taunted: { name: 'Taunted', def: 'This enemy attacks the Warrior on the horde’s turn.' },
   quick: {
     name: 'Quick',
-    def: 'The first hit on this enemy each possession misses. A cheap hit first, a Slow, or a Sure hit gets past it. A hero made Quick (Spacing’s pass) dodges the first horde hit that turn: a stop.',
+    def: 'The first hit on this enemy each possession misses. A cheap hit first, a Slow, or a Sure hit gets past it. A hero made Quick (Spacing’s pass) dodges the first horde hit that turn: a stop. The horde’s Hex (Enervate in the Crypt) takes a hero’s Quick away.',
   },
   barrier: {
     name: 'Barrier',
@@ -74,7 +74,7 @@ export const TERMS: Record<string, { name: string; def: string }> = {
   },
   raiseDead: { name: 'Raise Dead', def: 'The Wight’s cast when bone piles are on the floor: every pile rises at once, at the HP it had before it crumbled.' },
   unholyVigor: { name: 'Unholy Vigor', def: 'The Wight’s passive: the Ritual grows 1 more each turn while it stands (and isn’t Disabled).' },
-  enervate: { name: 'Enervate', def: 'The Necromancer’s setup: the targeted hero loses a touch, and the next hit +2.' },
+  enervate: { name: 'Enervate', def: 'The Necromancer’s setup: the targeted hero loses a touch and any Quick, and the next hit +2.' },
   deathBolt: { name: 'Death Bolt', def: 'The Lich, every other enemy turn: 1.5× its damage to the lowest-HP hero, ignoring Armor.' },
   consecrate: { name: 'Consecrate', def: 'Close an open grave for good with holy damage (+3). An open grave raises a skeleton at the start of every quarter.' },
   turnover: {
@@ -107,7 +107,10 @@ export const TERMS: Record<string, { name: string; def: string }> = {
     name: 'Close Out',
     def: 'The Ranger’s defense when not in the play: Slows one enemy, so its next hit deals half. A halved hit into Protect’s Armor is usually a stop, and a Slowed Champion can be stolen from.',
   },
-  ward: { name: 'Ward', def: 'The Wizard’s defense when not in the play: Armor on one ally through the horde’s turn.' },
+  ward: {
+    name: 'Ward',
+    def: 'The Wizard’s defense when not in the play: Armor (8, more with a better defensive night) on one ally through the horde’s turn. On the hero the Warrior protects, or against a Slowed hit, it can make a stop.',
+  },
   triage: { name: 'Triage', def: 'The Cleric’s defense when not in the play: heals the most injured hero after the horde’s turn.' },
   stripBall: {
     name: 'Strip the Ball',

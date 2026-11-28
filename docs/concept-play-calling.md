@@ -619,3 +619,24 @@ Buttons, numbers and rules stay the same in both. It's stored per browser, like 
       - Champion Race: +21.8 / +5.2.
 
     The expert bot's Goblin Horde margins rose 5–9 a game, so difficulty needs a re-tune before shipping to friends.
+- **Ward fixed, and Quick checked (Nov 28).**
+  - **Ward** now gives Armor of 8 × the Wizard's defense tier (was 4 ×), the same as Protect. Automatic defense puts it on the horde's target even when the Warrior protects that hero.
+  - It still never stops a full hit alone. With Close Out it stops 17% (Goblin Horde) and 20% (Crypt) of hits, and stacked with Protect 30% (Crypt). Sitting the shooter now buys stops.
+  - Stops a game: Goblin Horde 3.4, Crypt 2.0.
+  - A **Blink** version (Ward makes its ally Quick) was rejected. It is a sure stop from one defender: half of all hits stopped, 5.3 a game.
+  - **Spacing's Quick is rare:** smart bot, 32 built rosters, books built around Spacing. The Crypt had 0 dodges, and the Goblin Horde had 14 in 64 games. A Quick finisher is rarely the hero the horde goes after that turn.
+  - The horde now has an answer anyway: **Hex** (Enervate in the Crypt) takes a hero's Quick away. That cut the Goblin Horde's 14 dodges to 4. It mirrors the party's own answers to the horde's Quick (a Slow, or a cheap hit first).
+  - **Plans** (smart bot, Normal / Hard; expert bot in brackets):
+
+    | Encounter | Plan | Margin |
+    | --- | --- | --- |
+    | Goblin Horde | Default book | +17.7 / +10.8 (+39.8 / +28.9) |
+    | Goblin Horde | Clear the Ram | +21.5 / +12.3 (+27.6 / +21.2) |
+    | Goblin Horde | Hunt Champions | +24.8 / +19.4 (+34.0 / +27.9) |
+    | Goblin Horde | Lockdown | −1.7 / −11.6 (+5.9 / −1.3) |
+    | Crypt | Default book | +23.5 / +11.5 (+46.6 / +36.3) |
+    | Crypt | Fire Volume | +23.0 / +9.2 (+33.4 / +23.8) |
+    | Crypt | Holy Chain | +39.6 / +20.7 (+47.8 / +31.1) |
+    | Crypt | Champion Race | +23.3 / +7.7 (+33.1 / +22.2) |
+
+    Holy Chain gained the most (+9 and +7), because its Wizard is off the ball most possessions. Both encounters are now clearly too easy and need a difficulty re-tune.

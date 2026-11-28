@@ -36,6 +36,12 @@ export interface Tuning {
   hordeHitPoints: number;
   /** Help Defense: Protect's Armor before the Warrior's defense tier. Alone it never stops a full hit. */
   protectArmor: number;
+  /** Ward's Armor before the Wizard's defense tier. */
+  wardArmor: number;
+  /** Test switch: Ward makes its ally Quick instead of giving Armor (Blink). */
+  wardQuick?: boolean;
+  /** The Hexer's Hex (Enervate in the Crypt) takes away a hero's Quick. */
+  hexClearsQuick?: boolean;
   /** The horde's fast break when your finisher is stopped. */
   turnoverPoints: number;
   /** The Crypt: Ritual points that raise the Lich (then it starts over). */
@@ -60,6 +66,8 @@ export const DEFAULT_TUNING: Tuning = {
   championHp: 1.25,
   hordeHitPoints: 2,
   protectArmor: 8,
+  wardArmor: 8,
+  hexClearsQuick: true,
   turnoverPoints: 2,
   ritualMax: 22,
   ritualPer: 2,
@@ -1304,7 +1312,7 @@ export function autoDefense(g: Game, inPlay: Set<Cls>): Defense {
   }
   if (off.has('wizard')) {
     const hs = activeHeroes(g).filter((h) => h.cls !== d.protect);
-    const t = target && target !== d.protect && hs.some((h) => h.cls === target) ? target : [...hs].sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0]?.cls;
+    const t = target && activeHeroes(g).some((h) => h.cls === target) ? target : [...hs].sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0]?.cls;
     if (t) d.ward = t;
   }
   // The Rogue steals from the horde's hitter when Close Out (or the play) leaves it Slowed or Exposed; otherwise it strips the ball.
@@ -1444,8 +1452,8 @@ function enemyTurn(g: Game, inPlay: Set<Cls>, defense: Defense, frames: Frame[])
     if (e) e.slowed = true;
   }
   if (off.has('wizard') && defense.ward) {
-    const a = Math.round(4 * tm(g.heroes.wizard.defTier));
-    g.heroes[defense.ward].armor += a;
+    if (g.tuning.wardQuick) g.heroes[defense.ward].quick = true;
+    else g.heroes[defense.ward].armor += Math.round(g.tuning.wardArmor * tm(g.heroes.wizard.defTier));
   }
   // The Steal: the Rogue picks the pocket of a Champion that's Slowed or Exposed; it drops out of the horde's play.
   const stealFrom = off.has('rogue') && defense.steal ? onField(g).find((e) => e.id === defense.steal) : undefined;
@@ -1575,10 +1583,12 @@ function enemyTurn(g: Game, inPlay: Set<Cls>, defense: Defense, frames: Frame[])
           const t = call!.target ? g.heroes[call!.target] : undefined;
           const drained = !!t && t.benched === 0 && t.touches > 0;
           if (drained) t!.touches -= 1;
+          const unquick = !!t && t.quick && !!g.tuning.hexClearsQuick;
+          if (unquick) t!.quick = false;
           bonus = 2;
           frames.push({
             game: clone(g),
-            text: `${actor.name} · Enervate: the ${t ? CLASS_INFO[t.cls].name : 'party'} ${drained ? 'loses a touch' : 'has no touch to lose'}, and the next hit +2.`,
+            text: `${actor.name} · Enervate: the ${t ? CLASS_INFO[t.cls].name : 'party'} ${drained ? 'loses a touch' : 'has no touch to lose'}${unquick ? ' and loses Quick' : ''}, and the next hit +2.`,
             side: 'horde',
             actor: actor.id,
             target: t?.cls,
@@ -1588,10 +1598,12 @@ function enemyTurn(g: Game, inPlay: Set<Cls>, defense: Defense, frames: Frame[])
         case 'hex': {
           const t = call!.target ? g.heroes[call!.target] : undefined;
           if (t && t.benched === 0) t.exposed = true;
+          const unquick = !!t && t.quick && !!g.tuning.hexClearsQuick;
+          if (unquick) t!.quick = false;
           bonus = 3;
           frames.push({
             game: clone(g),
-            text: `${actor.name} · Hex: the ${t ? CLASS_INFO[t.cls].name : 'party'} is Exposed.`,
+            text: `${actor.name} · Hex: the ${t ? CLASS_INFO[t.cls].name : 'party'} is Exposed${unquick ? ' and loses Quick' : ''}.`,
             side: 'horde',
             actor: actor.id,
             target: t?.cls,

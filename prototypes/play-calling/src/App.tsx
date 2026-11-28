@@ -3493,7 +3493,7 @@ function Menu(props: {
           {fields.map((f) => (
             <label key={f.k} htmlFor={`tune-${f.k}`} style={{ display: 'contents' }}>
               <span>{f.label}</span>
-              <input id={`tune-${f.k}`} type="number" step={f.step} value={t[f.k]} onChange={(e) => setT({ ...t, [f.k]: Number(e.target.value) })} />
+              <input id={`tune-${f.k}`} type="number" step={f.step} value={Number(t[f.k])} onChange={(e) => setT({ ...t, [f.k]: Number(e.target.value) })} />
             </label>
           ))}
         </div>
