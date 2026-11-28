@@ -68,6 +68,8 @@ export interface Tuning {
   phylacteryHp: number;
   /** The phylactery's takedown value. */
   phylacteryPoints: number;
+  /** The Wraith's Wail: this share of its hit, every enemy turn, ignoring Armor. */
+  wailMult: number;
   /** The Wraith re-forms this many possessions after it's destroyed, while the phylactery stands. */
   wraithReform: number;
   /** The Crypt raises 1 skeleton per this many opposing points. */
@@ -105,6 +107,7 @@ export const DEFAULT_TUNING: Tuning = {
   lichHp: 2.5,
   phylacteryHp: 30,
   phylacteryPoints: 4,
+  wailMult: 0.5,
   wraithReform: 2,
   skeletonPer: 60,
   ramCap: 6,
@@ -1730,6 +1733,14 @@ function enemyTurn(g: Game, inPlay: Set<Cls>, defense: Defense, frames: Frame[])
       .filter((x) => !x.untargetable)
       .sort((a, b) => a.hp - b.hp)[0];
     if (target && !lich.disabled) hordeHit(g, lich, target.cls, Math.round(lich.damage * 0.5), defense, off, frames, 'Death Bolt', { ignoreArmor: true });
+  }
+  // The Wraith: a Wail every enemy turn, part of its hit (wailMult) on the lowest-HP hero, ignoring Armor (a lesser Death Bolt).
+  const wraith = onField(g).find((e) => e.kind === 'wraith');
+  if (wraith && !wraith.disabled) {
+    const target = activeHeroes(g)
+      .filter((x) => !x.untargetable)
+      .sort((a, b) => a.hp - b.hp)[0];
+    if (target) hordeHit(g, wraith, target.cls, Math.round(wraith.damage * (g.tuning.wailMult - 1)), defense, off, frames, 'Wail', { ignoreArmor: true });
   }
   // Sanctuary freezes the horde's objective: no ram, no pillage, no Ritual.
   if (g.sanctuary > 0)

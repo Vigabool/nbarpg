@@ -2145,7 +2145,15 @@ function callRows(g: Game, horde: Sim['horde'] | undefined): CallRow[] {
       key: 'bolt',
       label: `${name(bolt[0].actor)} → Death Bolt`,
       value: val(bolt),
-      detail: [...bolt.map((x) => x.t), 'Death Bolt ignores Armor and hits the lowest-HP hero, every other turn.'],
+      detail: [...bolt.map((x) => x.t), 'Death Bolt ignores Armor and hits the lowest-HP hero (1.5× the Lich’s hit), every turn.'],
+    });
+  const wail = take((x) => /· Wail/.test(x.t));
+  if (wail.length)
+    rows.push({
+      key: 'wail',
+      label: `${name(wail[0].actor)} → Wail`,
+      value: val(wail),
+      detail: [...wail.map((x) => x.t), 'The Wraith Wails every turn: its hit on the lowest-HP hero, ignoring Armor. Break the phylactery so it stays down.'],
     });
 
   // A turnover during your possession.

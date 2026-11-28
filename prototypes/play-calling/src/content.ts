@@ -757,7 +757,7 @@ export const CRYPT_INFO: Partial<Record<EnemyKind, EnemyInfo>> = {
   wraith: {
     name: 'Wraith',
     icon: '👻',
-    job: 'What’s left of the Necromancer after an early takedown. Intangible: only Wizard spells and holy hits touch it, and the first one makes it solid for the possession. Destroyed, it re-forms 2 possessions later at half HP while the phylactery stands.',
+    job: 'What’s left of the Necromancer after an early takedown. Wail: every enemy turn it hits the lowest-HP hero, ignoring Armor. Intangible: only Wizard spells and holy hits touch it, and the first one makes it solid for the possession. Destroyed, it re-forms 2 possessions later at half HP while the phylactery stands.',
   },
   phylactery: {
     name: 'Phylactery',
@@ -859,7 +859,7 @@ export const CRYPT_PLAYS: HordePlay[] = [
     target: 'disruptor',
     steps: [
       { actors: ['cutthroat'], kind: 'enervate', optional: true },
-      { actors: ['sharpshooter', 'ogre', 'wraith', 'cutthroat'], kind: 'hit' },
+      { actors: ['sharpshooter', 'ogre', 'cutthroat'], kind: 'hit' },
     ],
   },
   {
@@ -870,7 +870,7 @@ export const CRYPT_PLAYS: HordePlay[] = [
     target: 'cleric',
     steps: [
       { actors: ['cutthroat'], kind: 'enervate', optional: true },
-      { actors: ['sharpshooter', 'wraith', 'cutthroat'], kind: 'hit' },
+      { actors: ['sharpshooter', 'cutthroat'], kind: 'hit' },
     ],
   },
   {
@@ -892,7 +892,7 @@ export const CRYPT_PLAYS: HordePlay[] = [
     target: 'lowest',
     steps: [
       { actors: ['lich'], kind: 'command', optional: true },
-      { actors: ['ogre', 'sharpshooter', 'wraith', 'cutthroat'], kind: 'hit' },
+      { actors: ['ogre', 'sharpshooter', 'cutthroat'], kind: 'hit' },
     ],
   },
 ];

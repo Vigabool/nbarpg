@@ -65,7 +65,7 @@ export const TERMS: Record<string, { name: string; def: string }> = {
   },
   wraith: {
     name: 'Wraith',
-    def: 'The Necromancer after an early takedown: his soul fled into the phylactery. Intangible. Destroyed, it re-forms 2 possessions later at half HP while the phylactery stands.',
+    def: 'The Necromancer after an early takedown: his soul fled into the phylactery. Wail: every enemy turn it hits the lowest-HP hero, ignoring Armor. Intangible. Destroyed, it re-forms 2 possessions later at half HP while the phylactery stands.',
   },
   restless: {
     name: 'Restless Dead',
