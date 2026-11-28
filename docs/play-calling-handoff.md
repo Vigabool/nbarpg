@@ -2,6 +2,8 @@
 
 For a new thread picking up the play-calling prototype (`prototypes/play-calling/`). The design history and every tuning result are in `docs/concept-play-calling.md`; open ideas are in `docs/backlog.md` ("Play-calling prototype: ideas to come back to"). This file holds what those don't: how the user likes to work, where things live, how the numbers are made, and what's unresolved. Current as of Nov 28, 2026.
 
+**Keep this file current.** When work on the prototype changes something recorded here (a link, a convention, the tuning targets or method, the state of play, an open decision, or a rejected option), update this file in the same commit. Change the "Current as of" date when you do.
+
 ## Where things live
 
 | What | Where | Notes |
