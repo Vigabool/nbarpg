@@ -409,12 +409,13 @@ export function EncounterScreen(props: {
                 {e === 'crypt' ? (
                   <>
                     <span className="small">
-                      Boss: {enemyInfo('lich', e).icon} <strong>Lich</strong> · the Ritual and three open graves
+                      Boss: {enemyInfo('lich', e).icon} <strong>the Necromancer</strong>, becoming a Lich · the ritual, three open graves and a phylactery
                     </span>
                     <span className="small muted">
                       <Rich>
-                        Restless Dead: weapon kills leave bone piles that rise again; fire or a Blessed finisher (the Cleric’s Guiding Light passed to it)
-                        destroys them for good. The Ritual grows with every skeleton and bone pile; when it completes, the Lich rises. The Wraith is Intangible.
+                        His ritual scores every turn until halftime, and his skeletons ward him. Break the ward and take him down to stop it, or face the Lich
+                        after halftime. Weapon kills leave bone piles that rise again; fire or a Blessed finisher (the Cleric’s Guiding Light passed to it)
+                        destroys the dead for good.
                       </Rich>
                     </span>
                   </>
@@ -691,8 +692,8 @@ export function GamesScreen(props: { state: SetupState; onChange: (s: SetupState
           <span className="small">
             {crypt ? (
               <>
-                💀 {goblins} skeletons (1 per {DEFAULT_TUNING.skeletonPer} opposing points), plus one a quarter from each open grave · 🕯 the Ritual grows by 1
-                per skeleton and bone pile, up to {DEFAULT_TUNING.ritualCap} at once
+                💀 {goblins} skeletons guard the Necromancer (1 per {DEFAULT_TUNING.skeletonPer} opposing points), plus one a turn from each open grave · 🕯 the
+                ritual scores {DEFAULT_TUNING.ritualClock} a turn until halftime, when he becomes the Lich
               </>
             ) : (
               <>

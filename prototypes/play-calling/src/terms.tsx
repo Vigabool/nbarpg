@@ -40,7 +40,7 @@ export const TERMS: Record<string, { name: string; def: string }> = {
   slowed: { name: 'Slowed', def: 'Loses Quick, and its next hit deals half.' },
   stripped: {
     name: 'Stripped',
-    def: 'Knocked off the ram by Strip the Ball: it doesn’t push this turn (the ram hits a quarter softer for each), but still counts as crew. In the Crypt, a stripped skeleton is pinned away from the Ritual and doesn’t feed it.',
+    def: 'Knocked off the ram by Strip the Ball: it doesn’t push this turn (the ram hits a quarter softer for each), but still counts as crew. In the Crypt, a stripped skeleton is pinned: it doesn’t guard the Necromancer next possession.',
   },
   warDrum: { name: 'War Drum', def: 'While the Shaman stands (and isn’t Disabled), the ram hits +2.' },
   callPack: {
@@ -48,8 +48,24 @@ export const TERMS: Record<string, { name: string; def: string }> = {
     def: 'The Shaman summons 2 goblins (3 if Great or better) when fewer than 4 are on the ram. The Chieftain calls 2 every other turn.',
   },
   ritual: {
-    name: 'The Ritual',
-    def: 'The Crypt’s objective. It grows each enemy turn by 1 per skeleton and bone pile (up to 6: the circle holds six, and the rest wait their turn), and 2 more while the Wight stands; the horde scores 1 per 2 Ritual points, and 1 more each turn it grows. When it completes (at 22), the horde scores 8 and it starts over; the first time, the Lich rises early. Destroying the dead for good sets it back 1; the Necromancer, 3.',
+    name: 'The ritual',
+    def: 'The Crypt’s objective. The Necromancer is turning himself into a Lich: until halftime the ritual scores 2 each enemy turn (1 more while the Wight stands; the Warrior guarding the circle halves it). Take him down before halftime to break it (+6). Still standing at halftime, he becomes the Lich.',
+  },
+  warded: {
+    name: 'Warded',
+    def: 'The Necromancer can’t be hit while 3 or more skeletons stand. Bone piles don’t count, and neither does a skeleton Strip the Ball pinned, so fire, holy kills and the Rogue open the way. The open graves raise more every turn.',
+  },
+  phylactery: {
+    name: 'Phylactery',
+    def: 'The jar that holds the Necromancer’s soul. Only holy damage touches it. While it stands the Lich takes half damage, and the Wraith keeps re-forming. Breaking it scores 4.',
+  },
+  lich: {
+    name: 'Lich',
+    def: 'The Necromancer after the ritual completes at halftime. A Death Bolt every enemy turn (1.5× its hit to the lowest-HP hero, ignoring Armor), half damage while the phylactery stands, and worth 12.',
+  },
+  wraith: {
+    name: 'Wraith',
+    def: 'The Necromancer after an early takedown: his soul fled into the phylactery. Intangible. Destroyed, it re-forms 2 possessions later at half HP while the phylactery stands.',
   },
   restless: {
     name: 'Restless Dead',
@@ -57,7 +73,7 @@ export const TERMS: Record<string, { name: string; def: string }> = {
   },
   pile: {
     name: 'Bone pile',
-    def: 'A crumbled skeleton. It still feeds the Ritual, can’t be hit, and rises next possession with half its HP (or at once, at full strength, if the Wight casts Raise Dead).',
+    def: 'A crumbled skeleton. It doesn’t guard the Necromancer, can’t be hit, and rises next possession with half its HP (or at once, at full strength, if the Wight casts Raise Dead).',
   },
   blessed: {
     name: 'Blessed',
@@ -70,16 +86,19 @@ export const TERMS: Record<string, { name: string; def: string }> = {
   fire: { name: 'Fire', def: 'Fireball and Meteor. In the Crypt, fire destroys the dead for good.' },
   intangible: {
     name: 'Intangible',
-    def: 'The Wraith: only Wizard spells and holy (Blessed) hits touch it, and the first one makes it solid for the rest of the possession. Other hits pass through it, and a finisher that only passes through is a turnover.',
+    def: 'The Necromancer’s Wraith: only Wizard spells and holy (Blessed) hits touch it, and the first one makes it solid for the rest of the possession. Other hits pass through it, and a finisher that only passes through is a turnover.',
   },
   raiseDead: { name: 'Raise Dead', def: 'The Wight’s cast when bone piles are on the floor: every pile rises at once, at the HP it had before it crumbled.' },
   unholyVigor: {
     name: 'Unholy Vigor',
-    def: 'The Wight’s passive: the Ritual grows 2 more each turn while it stands (and isn’t Disabled), on top of the six dead the circle holds.',
+    def: 'The Wight’s passive: the ritual scores 1 more each turn while it stands (and isn’t Disabled).',
   },
-  enervate: { name: 'Enervate', def: 'The Necromancer’s setup: the targeted hero loses a touch and any Quick, and the next hit +2.' },
-  deathBolt: { name: 'Death Bolt', def: 'The Lich, every other enemy turn: 1.5× its damage to the lowest-HP hero, ignoring Armor.' },
-  consecrate: { name: 'Consecrate', def: 'Close an open grave for good with holy damage (+3). An open grave raises a skeleton at the start of every quarter.' },
+  enervate: { name: 'Paralyzing Claws', def: 'The Ghoul’s setup: the targeted hero loses a touch and any Quick, and the next hit +2.' },
+  deathBolt: { name: 'Death Bolt', def: 'The Lich, every enemy turn: 1.5× its damage to the lowest-HP hero, ignoring Armor.' },
+  consecrate: {
+    name: 'Consecrate',
+    def: 'Close an open grave for good with holy damage (+3). An open grave raises a skeleton every enemy turn while the ritual lasts.',
+  },
   turnover: {
     name: 'Turnover',
     def: 'Your finisher is Blocked, evaded, swallowed by the Barrier, or (in the Crypt) passes through the Wraith or hits a grave without holy damage: the horde scores 2 on the fast break. A cheap hit first, or a Sure finisher, avoids it.',
@@ -104,7 +123,7 @@ export const TERMS: Record<string, { name: string; def: string }> = {
   },
   protect: {
     name: 'Protect',
-    def: 'The Warrior’s defense when not in the play: Armor (8, more with a better defensive night) on one hero through the horde’s turn, or guard the objective (brace the gate, halving the ram; in the Crypt, guard the circle, halving the Ritual).',
+    def: 'The Warrior’s defense when not in the play: Armor (8, more with a better defensive night) on one hero through the horde’s turn, or guard the objective (brace the gate, halving the ram; in the Crypt, guard the circle, halving what the ritual scores).',
   },
   closeOut: {
     name: 'Close Out',
@@ -117,7 +136,7 @@ export const TERMS: Record<string, { name: string; def: string }> = {
   triage: { name: 'Triage', def: 'The Cleric’s defense when not in the play: heals the most injured hero after the horde’s turn.' },
   stripBall: {
     name: 'Strip the Ball',
-    def: 'The Rogue’s defense when not in the play: knocks goblins off the ram so they don’t push this turn. In the Crypt it pins skeletons away from the Ritual.',
+    def: 'The Rogue’s defense when not in the play: knocks goblins off the ram so they don’t push this turn. In the Crypt it pins a skeleton so it doesn’t guard the Necromancer next possession.',
   },
 };
 
@@ -163,9 +182,17 @@ const FORMS: [string, string][] = [
   ['Bone piles', 'pile'],
   ['Raise Dead', 'raiseDead'],
   ['Unholy Vigor', 'unholyVigor'],
+  ['Paralyzing Claws', 'enervate'],
   ['Enervate', 'enervate'],
   ['Death Bolt', 'deathBolt'],
+  ['ritual', 'ritual'],
   ['Ritual', 'ritual'],
+  ['warded', 'warded'],
+  ['ward', 'warded'],
+  ['phylactery', 'phylactery'],
+  ['Phylactery', 'phylactery'],
+  ['Lich', 'lich'],
+  ['Wraith', 'wraith'],
   ['Blessed', 'blessed'],
   ['holy', 'holy'],
   ['Holy', 'holy'],

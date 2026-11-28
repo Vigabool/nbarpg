@@ -164,13 +164,13 @@ Parked from design discussions (see `docs/concept-play-calling.md` and the Play 
 1. **Stops score.** Built as stops and fast breaks (Help Defense, the Steal, Spacing's Quick, Crit after a stop; see the concept doc, Nov 28). Ward now matches Protect (Armor 8 ×), and Hex/Enervate take away a hero's Quick. Difficulty now comes from the horde's scoring, not HP (the objective's push +1 a turn, Champion hits 3 on Hard). Still to do: Lockdown is barely even for the expert bot and loses for the smart bot.
 2. **Full-court press.** Choose to run with all five heroes and no defenders for one possession: big offense, an unopposed horde turn. Sanctuary is the safe version.
 3. **Specials as plans.** Each double-double/triple-double special should unlock a plan, not just hit harder: Volley as the Ranger's own crew clear, Chain Lightning Exposing every Champion, and so on (Sanctuary now freezes the objective).
-4. **A Lich that matters.** It falls to one Fireball without firing; more HP, or a rise that's likelier to come early.
+4. **A Lich that matters.** Done in the Crypt rework: it's the halftime payoff, with 2.5× the boss's HP, a Death Bolt every turn and the phylactery's shield.
 5. **A cold shooter in the Crypt.** Answered by Holy Chain: with a cold Wizard on the sample week it wins 56–28 (Normal) and 56–46 (Hard), where the default book loses 52–76 and 50–86. Keep checking with `OFFNIGHT=wizard`.
 6. **Objectives for the other encounters:** the Dragon's Lair's Hoard (push your luck: a Steal step and a Wake meter) and the Giant's Hall's Hearth (a tug-of-war that scores at the end of each quarter).
 7. **Possession time.** Playtests run 80–120 seconds a possession against a target of about 20.
 8. **Critical Taunt is in five of six plans.** With Backstab ×2.5 against a Taunt, the Rogue scores 22–29 a game in every book that has it. Without it, the best Goblin Horde book is +13 on Normal and +1 on Hard. Consider ×2 or other strong Goblin Horde finishers.
-9. **The runaway Ritual: fixed** (the circle holds six; Unholy Vigor +2, a skeleton per 33). A cold-Wizard night is now a loss of 12–24 instead of 36–42. `ritualCap`, `ritualStep`, `vigor` and `ramCap` stay as difficulty levers.
-10. **Holy Chain is the Crypt's best plan** (+23.8 / +13.3 against about +13 / 0 for the others, down from +29.9 / +19.5 before the circle's limit). Fine while Smite is the answer to a cold shooter; watch it in playtests.
+9. **The runaway Ritual:** superseded by the Crypt rework (Nov 28). The ritual is now a flat clock to halftime.
+10. **The Crypt rework, to watch in playtests:** whether skeletons left standing after halftime (they do nothing once the ritual ends) feel like clutter; whether Face the Lich is thin on Hard (+1.3); whether Fire Volume, with no holy damage, needs another way past the graves.
 
 ## Later / parked
 

@@ -3,6 +3,7 @@ import {
   CLASS_INFO,
   CLASSES,
   DEFAULT_PLAYBOOK,
+  suggestedPlaybook,
   ENEMY_INFO,
   hordePlays,
   enemyInfo,
@@ -53,9 +54,11 @@ import {
   pushing,
   ramHit,
   piles,
-  ritualGain,
-  ritualFeeders,
-  ritualCrowd,
+  ritualPoints,
+  wardCount,
+  wight,
+  warded,
+  phylactery,
   graveForecast,
   shamanCast,
   warDrum,
@@ -135,7 +138,7 @@ interface Saved {
 }
 const KEY = 'play-calling-prototype-v1';
 /** Bump when DEFAULT_TUNING changes, so players' saved tuning (which stores every value) picks up the new defaults. */
-const TUNING_VERSION = 8;
+const TUNING_VERSION = 9;
 function load(): Saved {
   try {
     return JSON.parse(localStorage.getItem(KEY) ?? '{}') as Saved;
@@ -475,7 +478,7 @@ export function App() {
           game={game}
           live={false}
           playbook={playbook}
-          onSuggest={() => setActive(DEFAULT_PLAYBOOK)}
+          onSuggest={() => setActive(suggestedPlaybook(game.encounter))}
           onChange={(slot) => setModal({ kind: 'library', slot })}
           onEdit={(slot) => setModal({ kind: 'designer', play: playbook[slot], slot })}
           onTipOff={() => setScreen('game')}
@@ -743,10 +746,13 @@ export function App() {
                 ...((game.encounter === 'crypt'
                   ? [
                       [
-                        `+1 for every ${tuning.ritualPer} Ritual points, +${tuning.pushPoints} each turn it grows`,
-                        `The Ritual grows each turn by 1 per skeleton and bone pile (the circle holds ${tuning.ritualCap}: more than that wait their turn), and ${tuning.vigor} more while the Wight stands. Destroying the dead for good sets it back 1, the Necromancer 3.`,
+                        `+${tuning.ritualClock} a turn from the ritual, until halftime`,
+                        `The Necromancer chants each enemy turn (${tuning.vigor} more while the Wight stands). Take him down before halftime to break it; he can’t be hit while ${tuning.wardMin} or more skeletons stand.`,
                       ],
-                      [`+${tuning.ritualFill} when the Ritual completes`, `At ${tuning.ritualMax}, and it starts over. The first time, the Lich rises early.`],
+                      [
+                        'The Lich after halftime',
+                        `If the Necromancer still stands at halftime he becomes the Lich: a Death Bolt every turn (1.5× its hit, ignoring Armor) and worth ${tuning.lichPoints} to take down.`,
+                      ],
                     ]
                   : [
                       [
@@ -768,7 +774,7 @@ export function App() {
           </div>
           <p className="small muted">
             <Rich>
-              {`Heroes who aren’t in your play defend: the Warrior Protects, the Ranger Closes Out, the Wizard Wards, the Cleric heals (Triage) and the Rogue Strips the Ball ${game.encounter === 'crypt' ? '(pinning a skeleton away from the Ritual)' : 'off the ram'}.`}
+              {`Heroes who aren’t in your play defend: the Warrior Protects, the Ranger Closes Out, the Wizard Wards, the Cleric heals (Triage) and the Rogue Strips the Ball ${game.encounter === 'crypt' ? '(pinning a skeleton so it doesn’t guard the Necromancer)' : 'off the ram'}.`}
             </Rich>
           </p>
         </ModalShell>
@@ -1461,7 +1467,7 @@ function PlanScreen(props: {
                     <span className="tier">×{goblins.length}</span>
                   </span>
                   <strong>{crypt ? 'Skeletons' : 'Goblins'}</strong>
-                  <span className="small muted">{crypt ? 'feed the Ritual' : 'crew the ram'}</span>
+                  <span className="small muted">{crypt ? 'guard the Necromancer' : 'crew the ram'}</span>
                 </button>
               </div>
               {openChamp && (
@@ -1508,8 +1514,14 @@ function PlanScreen(props: {
                 <div className="mini-grid">
                   <button className={`mini ${open === 'ritual' ? 'on' : ''}`} aria-expanded={open === 'ritual'} onClick={() => toggle('ritual')}>
                     <span>🕯</span>
-                    <strong>The Ritual</strong>
-                    <span className="small muted">theirs · {g.ritual.max} to raise the Lich</span>
+                    <strong>Stop the ritual</strong>
+                    <span className="small muted">
+                      {g.ritual.phase === 'ritual'
+                        ? `theirs · +${ritualPoints(g)} a turn to halftime`
+                        : g.ritual.phase === 'broken'
+                          ? 'broken'
+                          : 'the Lich has risen'}
+                    </span>
                   </button>
                   <button className={`mini ${open === 'bounty' ? 'on' : ''}`} aria-expanded={open === 'bounty'} onClick={() => toggle('bounty')}>
                     <span>🎯</span>
@@ -1521,11 +1533,16 @@ function PlanScreen(props: {
                     <strong>Consecrate the graves</strong>
                     <span className="small muted">3 graves · +3 each</span>
                   </button>
+                  <button className={`mini ${open === 'phylactery' ? 'on' : ''}`} aria-expanded={open === 'phylactery'} onClick={() => toggle('phylactery')}>
+                    <span>⚱️</span>
+                    <strong>Break the phylactery</strong>
+                    <span className="small muted">{phylactery(g) ? `${phylactery(g)!.hp} HP · +${g.tuning.phylacteryPoints}` : 'broken'}</span>
+                  </button>
                 </div>
                 {open === 'ritual' && (
                   <div className="panel detail small">
                     <Rich>
-                      {`The Ritual grows each enemy turn by 1 per skeleton and bone pile (up to ${g.tuning.ritualCap} at once: the circle holds ${g.tuning.ritualCap}), and ${g.tuning.vigor} more while the Wight stands. The horde scores 1 per ${g.tuning.ritualPer} Ritual points, and ${g.tuning.pushPoints} more each turn it grows. At ${g.ritual.max} it completes: +${g.tuning.ritualFill}, and it starts over; the first time, the Lich rises early. Destroying the dead for good sets it back 1; the Necromancer, 3. Strip the Ball pins a skeleton away from it, and the Warrior can guard the circle to halve it.`}
+                      {`The Necromancer is turning himself into a Lich. Until halftime the ritual scores ${g.tuning.ritualClock} each enemy turn (${g.tuning.vigor} more while the Wight stands; the Warrior guarding the circle halves it). He never attacks, and he can’t be hit while ${g.tuning.wardMin} or more skeletons stand (bone piles and pinned skeletons don’t count; fire and holy kills stay down). Take him down before halftime and the ritual breaks: +${g.tuning.necroBounty}, but his soul flees into the phylactery and he rises as a Wraith. Still standing at halftime, he becomes the Lich: a Death Bolt every turn, worth ${g.tuning.lichPoints}.`}
                     </Rich>
                   </div>
                 )}
@@ -1538,8 +1555,15 @@ function PlanScreen(props: {
                 {open === 'graves' && (
                   <div className="panel detail small">
                     <Rich>
-                      Three open graves raise a skeleton each at the start of every quarter. Only holy damage (a Cleric hit, or a Blessed finisher) consecrates
-                      one, closing it for good: +3 each. Hitting one without holy damage is a turnover.
+                      Three open graves each raise a skeleton every enemy turn while the ritual lasts. Only holy damage (a Cleric hit, or a Blessed finisher)
+                      consecrates one, closing it for good: +3 each. Hitting one without holy damage is a turnover.
+                    </Rich>
+                  </div>
+                )}
+                {open === 'phylactery' && (
+                  <div className="panel detail small">
+                    <Rich>
+                      {`It holds the Necromancer’s soul. Only holy damage touches it (${g.tuning.phylacteryHp} HP, +${g.tuning.phylacteryPoints} when it breaks). While it stands the Lich takes half damage, and the Wraith re-forms ${g.tuning.wraithReform} possessions after each takedown.`}
                     </Rich>
                   </div>
                 )}
@@ -1876,12 +1900,19 @@ function Objectives(props: { game: Game }) {
     return (
       <div className="panel objectives">
         <div className="gate">
-          <span title="The Necromancer's ritual to raise the Lich">🕯 Ritual</span>
-          <div className="bar ritual" role="meter" aria-valuenow={g.ritual.value} aria-valuemin={0} aria-valuemax={g.ritual.max} aria-label="Ritual">
-            <i style={{ width: `${(g.ritual.value / g.ritual.max) * 100}%` }} />
+          <span title="The Necromancer's ritual to become the Lich">🕯 Ritual</span>
+          <div
+            className="bar ritual"
+            role="meter"
+            aria-valuenow={Math.min(g.possession, 6)}
+            aria-valuemin={0}
+            aria-valuemax={6}
+            aria-label="Ritual: possessions to halftime"
+          >
+            <i style={{ width: `${g.ritual.phase === 'ritual' ? (Math.min(g.possession, 6) / 6) * 100 : 100}%` }} />
           </div>
           <span className="num small">
-            {g.ritual.value}/{g.ritual.max}
+            {g.ritual.phase === 'ritual' ? `${Math.max(0, 6 - g.possession)} to halftime` : g.ritual.phase === 'broken' ? 'broken ✓' : 'the Lich'}
           </span>
         </div>
         <div className="objline">
@@ -1890,7 +1921,8 @@ function Objectives(props: { game: Game }) {
             {g.bounty === 'open' ? (g.possession <= 2 ? `open until Q1 ends (+${g.tuning.bountyPoints})` : 'open') : g.bounty === 'won' ? 'won ✓' : 'expired'}
           </span>
           <span>🪦 Graves: {open ? `${open} open` : 'all consecrated ✓'}</span>
-          {g.ritual.fills > 0 && <span>☠️ Ritual completed ×{g.ritual.fills}</span>}
+          {g.ritual.phase === 'ritual' && <span>🛡 Necromancer {warded(g) ? `warded (${wardCount(g)} skeletons)` : 'open: no ward'}</span>}
+          {phylactery(g) ? <span>⚱️ Phylactery {phylactery(g)!.hp} HP</span> : <span>⚱️ Phylactery broken ✓</span>}
         </div>
       </div>
     );
@@ -1994,42 +2026,28 @@ function callRows(g: Game, horde: Sim['horde'] | undefined): CallRow[] {
   const strip = lines.find((x) => x.actor === 'rogue' && /Strip the Ball/.test(x.t));
   const ramRow: CallRow = {
     key: 'ram',
-    label: crypt ? (pound ? 'Feed the Ritual' : 'Ritual') : g.gate.breached ? 'Pillage' : pound ? 'Pound the Gate' : 'Ram → Gate',
+    label: crypt ? '🕯 Ritual' : g.gate.breached ? 'Pillage' : pound ? 'Pound the Gate' : 'Ram → Gate',
     value: val(ramLines),
     detail: [],
   };
   if (ramLines.some((x) => /Sanctuary holds/.test(x.t))) ramRow.detail.push('Sanctuary holds: the horde’s objective is frozen this turn.');
   else if (crypt) {
-    const grow = ramLines.find((x) => /Ritual grows/.test(x.t));
-    if (!horde) ramRow.detail.push('Each skeleton and bone pile adds 1 to the Ritual each turn, and the Wight 1 more.');
-    else if (!grow) ramRow.detail.push('Nothing feeds the Ritual this turn.');
+    if (g.ritual.phase !== 'ritual')
+      ramRow.detail.push(g.ritual.phase === 'broken' ? 'The ritual is broken: it scores nothing more.' : 'The ritual is done: the Lich has risen.');
     else {
-      const d = Number(/grows (\d+)/.exec(grow.t)?.[1] ?? 0);
-      const scored = pts(ramLines);
-      const after = grow.game.ritual;
+      const scored = pts(ramLines.filter((x) => /The ritual/.test(x.t)));
       ramRow.detail.push(
-        `The Ritual grows ${d} and scores ${scored} point${scored === 1 ? '' : 's'} (1 per ${g.tuning.ritualPer} Ritual points, +${g.tuning.pushPoints} for growing): ${after.fills > g.ritual.fills ? 'it completes' : `${after.value}/${after.max} after this turn`}.`,
+        `The ritual scores ${horde ? scored : ritualPoints(g)} this turn (${g.tuning.ritualClock}${wight(g) ? `, and ${g.tuning.vigor} more for the Wight's Unholy Vigor` : ''}), every turn until halftime.`,
       );
-      const why = /\(([^)]*)\)/.exec(grow.t)?.[1];
-      if (why) ramRow.detail.push(`${why[0].toUpperCase()}${why.slice(1)}.`);
-      if (after.fills > g.ritual.fills)
-        ramRow.detail.push(
-          `The Ritual completes: +${g.tuning.ritualFill}${g.enemies.some((e) => e.kind === 'lich' && !e.arrived) ? ', and the Lich rises early' : ''}.`,
-        );
-      else {
-        const per = Math.max(1, d);
-        ramRow.detail.push(`At this pace it completes in about ${Math.ceil((after.max - after.value) / per)} more turns.`);
-      }
-      if (strip) {
-        const saved = (horde.ramNoStrip ?? scored) - scored;
-        ramRow.detail.push(`The Rogue is pinning a skeleton away from it${saved > 0 ? `, saving ${saved} point${saved === 1 ? '' : 's'}` : ''}.`);
-      }
-      const f = graveForecast(g);
-      if (f && f.graves + f.wave > 0)
-        ramRow.detail.push(
-          `When Q${f.quarter} starts${f.possessionsLeft === 1 ? ' (after this possession)' : ''}, ${f.graves ? `the open graves add ${f.graves} skeleton${f.graves > 1 ? 's' : ''}` : ''}${f.graves && f.wave ? ' and ' : ''}${f.wave ? `${f.wave} more arrive` : ''}: the Ritual will grow faster.`,
-        );
-      ramRow.detail.push('Destroying the dead for good sets it back 1; the Necromancer, 3.');
+      ramRow.detail.push(
+        warded(g)
+          ? `The Necromancer is warded: ${wardCount(g)} skeletons stand (he opens below ${g.tuning.wardMin}). Fire and holy kills stay down; bone piles don't guard.`
+          : `The Necromancer is open: fewer than ${g.tuning.wardMin} skeletons guard him. Take him down to break the ritual (+${g.tuning.necroBounty}).`,
+      );
+      if (strip) ramRow.detail.push('The Rogue is pinning a skeleton: it won’t guard him next possession.');
+      ramRow.detail.push(
+        `${Math.max(0, 6 - g.possession)} possession${6 - g.possession === 1 ? '' : 's'} to halftime, when a standing Necromancer becomes the Lich.`,
+      );
     }
   } else if (g.gate.breached) ramRow.detail.push('The gate is down: every goblin on the field pillages for 1 a turn.', ...ramLines.map((x) => x.t));
   else if (!horde) ramRow.detail.push('Each goblin pushing the ram adds a quarter of its hit on the gate.');
@@ -2105,7 +2123,7 @@ function callRows(g: Game, horde: Sim['horde'] | undefined): CallRow[] {
         value: 'RAISE DEAD',
         detail: [
           'Raise Dead: every bone pile rises now, at the HP it had before it crumbled.',
-          'Disable the Wight or take it down to stop it; it also adds 1 to the Ritual each turn.',
+          'Disable the Wight or take it down to stop it; it also adds 1 to the ritual each turn.',
         ],
       });
   }
@@ -2114,10 +2132,10 @@ function callRows(g: Game, horde: Sim['horde'] | undefined): CallRow[] {
   if (gf && gf.graves > 0)
     rows.push({
       key: 'graves',
-      label: `🪦 Graves → Q${gf.quarter}`,
+      label: '🪦 Graves',
       value: `+${gf.graves} 💀`,
       detail: [
-        `${gf.possessionsLeft === 1 ? 'After this possession' : `In ${gf.possessionsLeft} possessions`}, when Q${gf.quarter} starts, each open grave raises a skeleton: ${gf.graves} more feeding the Ritual 1 a turn each.`,
+        `Each open grave raises a skeleton every enemy turn while the ritual lasts: ${gf.graves} more guarding the Necromancer this turn.`,
         'Consecrate a grave with holy damage (a finisher Guiding Light passed to, or a Cleric hit) to close it for good: +3.',
       ],
     });
@@ -2213,7 +2231,10 @@ function statusChips(g: Game, e: Enemy) {
   if (e.intangible) out.push(e.solid ? { t: 'Solid', c: 'ball' } : { t: '👻 Intangible', c: 'cont' });
   if (e.undead !== undefined && e.kind !== 'goblin') out.push({ t: '💀 Restless', c: 'cont' });
   if (e.wight && !e.disabled) out.push({ t: '🧟 Unholy Vigor', c: 'cont' });
-  if (e.kind === 'grave') out.push({ t: 'Holy only', c: 'cont' });
+  if (e.kind === 'grave' || e.kind === 'phylactery') out.push({ t: 'Holy only', c: 'cont' });
+  if (e.necro && g.ritual.phase === 'ritual') out.push(warded(g) ? { t: `🛡 Warded (${wardCount(g)})`, c: 'cont' } : { t: 'Open', c: 'ball' });
+  if (e.kind === 'lich' && phylactery(g)) out.push({ t: '⚱️ Half damage', c: 'cont' });
+  if (e.kind === 'wraith' && phylactery(g)) out.push({ t: '⚱️ Re-forms', c: 'cont' });
   if (e.taunted) out.push({ t: 'Taunted', c: 'ball' });
   if (e.disabled) out.push({ t: 'Disabled', c: 'ball' });
   if (e.exposed > 1) out.push({ t: 'Marked', c: 'ball' });
@@ -2257,7 +2278,7 @@ function WaveBanner({ wave, crypt, onClose }: { wave: Wave; crypt?: boolean; onC
 function ramProjection(horde: Sim['horde'] | undefined): { d: number; pts: number } | undefined {
   if (!horde) return undefined;
   const gate = horde.lines.filter((x) => x.target === 'gate');
-  const hit = gate.find((x) => /hits the gate|Ritual grows/.test(x.t));
+  const hit = gate.find((x) => /hits the gate|The ritual/.test(x.t));
   return { d: hit ? Number(/(?:for|grows) (\d+)/.exec(hit.t)?.[1] ?? 0) : 0, pts: gate.reduce((s2, x) => s2 + (x.pts ?? 0), 0) };
 }
 
@@ -2333,6 +2354,8 @@ function Board(props: {
               key={e.id}
               className={`ecard ${shielded ? 'shielded' : ''} ${props.picking ? 'target' : ''} ${isPicked(e.id) ? 'picked' : ''} ${ci >= 0 ? 'inCall' : ''} ${hit(e.id) ? 'hit' : ''}`}
               onClick={() => props.onPick(e.id)}
+              disabled={!!props.picking && !!e.necro && warded(g)}
+              title={props.picking && e.necro && warded(g) ? `Warded: ${wardCount(g)} skeletons guard him` : undefined}
               aria-pressed={props.picks ? pickNo(e.id) > 0 : undefined}
             >
               {pickNo(e.id) > 0 && <span className="pickno corner">{pickNo(e.id)}</span>}
@@ -2344,12 +2367,11 @@ function Board(props: {
                 {e.player
                   ? `${e.player} · ${tierLabel(e.tier!)}`
                   : e.kind === 'grave'
-                    ? (() => {
-                        const f = graveForecast(g);
-                        return f ? `Raises a skeleton in Q${f.quarter}` : 'Done raising';
-                      })()
+                    ? graveForecast(g)
+                      ? 'Raises a skeleton every turn'
+                      : 'Quiet now'
                     : e.kind === 'phylactery'
-                      ? 'The Lich’s soul jar'
+                      ? 'Holds his soul · holy only'
                       : 'Treasure'}
               </span>
               <div className={`bar ${e.kind === 'wagon' ? 'gate' : 'horde'}`}>
@@ -2379,19 +2401,19 @@ function Board(props: {
             <strong>🕯 Ritual</strong>
             <span className="small muted">
               {(() => {
+                if (g.ritual.phase === 'broken') return 'broken';
+                if (g.ritual.phase === 'lich') return 'done: the Lich has risen';
                 if (g.sanctuary > 0) return 'frozen by Sanctuary';
-                const d = props.ram ? props.ram.d : ritualGain(g, ritualFeeders(g));
-                if (d <= 0) return 'stalled';
-                const pts = props.ram
-                  ? props.ram.pts
-                  : Math.floor((g.ritual.total + d) / g.tuning.ritualPer) - Math.floor(g.ritual.total / g.tuning.ritualPer) + g.tuning.pushPoints;
-                return `grows ${d} (${pts} point${pts === 1 ? '' : 's'}) · ${g.ritual.value}/${g.ritual.max}`;
+                const pts = props.ram ? props.ram.pts : ritualPoints(g);
+                return `+${pts} a turn · ${Math.max(0, 6 - g.possession)} to halftime`;
               })()}
             </span>
           </div>
-          {ritualCrowd(g) > ritualFeeders(g) && (
+          {g.ritual.phase === 'ritual' && (
             <span className="small muted">
-              {ritualFeeders(g)} of {ritualCrowd(g)} feeding: the circle holds {g.tuning.ritualCap}.
+              {warded(g)
+                ? `🛡 ${wardCount(g)} skeletons ward the Necromancer: he opens below ${g.tuning.wardMin}.`
+                : `The Necromancer is open: fewer than ${g.tuning.wardMin} skeletons guard him.`}
             </span>
           )}
           <div className="gob-row">
@@ -2552,7 +2574,7 @@ function HeroRow(props: { game: Game; inPlay: Set<Cls>; defense: Defense | null;
     if (d.steal) return { t: `Steal ${short(d.steal)}`, full: `Steal → ${short(d.steal)}` };
     return {
       t: 'Strip',
-      full: g.encounter === 'crypt' ? 'Strip the Ball: pins a skeleton away from the Ritual' : 'Strip the Ball: knocks a goblin off the ram',
+      full: g.encounter === 'crypt' ? 'Strip the Ball: pins a skeleton so it doesn’t guard the Necromancer' : 'Strip the Ball: knocks a goblin off the ram',
     };
   };
   return (
@@ -2631,7 +2653,7 @@ function DefenseLine(props: {
         ...heroOpts,
         ...(props.game.gate.breached
           ? []
-          : [{ v: 'gate', t: props.game.encounter === 'crypt' ? 'the circle (halves the Ritual)' : 'the gate (halves the ram)' }]),
+          : [{ v: 'gate', t: props.game.encounter === 'crypt' ? 'the circle (halves the ritual)' : 'the gate (halves the ram)' }]),
       ],
       'protect',
     );
@@ -3071,7 +3093,9 @@ function Halftime(props: {
           Q3 brings {arrivals.map((e) => (e.player ? `the ${e.name} (${e.player})` : `the ${e.name}`)).join(', ')} and{' '}
           {g.enemies.filter((e) => e.kind === 'goblin' && e.quarter === 3).length} more {g.encounter === 'crypt' ? 'skeletons' : 'goblins'}.
           {g.encounter === 'crypt'
-            ? ` The Ritual is at ${g.ritual.value}/${g.ritual.max}.`
+            ? g.ritual.phase === 'ritual'
+              ? ' The ritual completes: the Necromancer rises as the Lich (a Death Bolt every turn; half damage while the phylactery stands).'
+              : ' The ritual is broken. His Wraith keeps re-forming while the phylactery stands.'
             : g.gate.breached
               ? ' The gate is down.'
               : ` The gate is at ${g.gate.hp}/${g.gate.max}.`}
@@ -3561,11 +3585,11 @@ function Guide(props: { onClose: () => void }) {
     ['Touches', 'From each player’s true usage this week (shots, free throws, turnovers and assists). Out of touches, a hero can’t be in a play.'],
     [
       'Defense',
-      'Heroes not in the play defend: the Warrior Protects, the Ranger Closes Out, the Wizard Wards, the Cleric heals (Triage), and the Rogue Strips the Ball (a goblin off the ram, or a skeleton away from the Ritual). Protect and Ward add Armor, or the Warrior guards the objective; Close Out Slows an enemy (half damage).',
+      'Heroes not in the play defend: the Warrior Protects, the Ranger Closes Out, the Wizard Wards, the Cleric heals (Triage), and the Rogue Strips the Ball (a goblin off the ram, or a skeleton pinned so it doesn’t guard the Necromancer). Protect and Ward add Armor, or the Warrior guards the objective; Close Out Slows an enemy (half damage).',
     ],
     [
       'The horde',
-      'In the Goblin Horde its goblins push the ram automatically (in the Crypt, its dead feed the Ritual): each one pushing adds a quarter of the hit, so knocking goblins off slows the ram. Its Champions run one called play each turn and score 2 for a finisher that damages a hero (3 on Hard) and 4 for a hero they take down. If your finisher is Blocked, evaded or swallowed by the Barrier, that’s a turnover: the horde scores 2 on the fast break.',
+      'In the Goblin Horde its goblins push the ram automatically (in the Crypt, its skeletons guard the Necromancer): each one pushing adds a quarter of the hit, so knocking goblins off slows the ram. Its Champions run one called play each turn and score 2 for a finisher that damages a hero (3 on Hard) and 4 for a hero they take down. If your finisher is Blocked, evaded or swallowed by the Barrier, that’s a turnover: the horde scores 2 on the fast break.',
     ],
     [
       'Statuses',
@@ -3573,7 +3597,7 @@ function Guide(props: { onClose: () => void }) {
     ],
     [
       'The Crypt',
-      'The second encounter. Its objective is the Ritual instead of the ram: it grows with every skeleton and bone pile, and raises the Lich when it completes. Weapon kills leave bone piles that rise again; fire or a Blessed finisher (the Cleric’s Guiding Light passed to it) destroys the dead for good. The Wraith is Intangible, and three open graves raise skeletons until consecrated.',
+      'The second encounter. The Necromancer is turning himself into a Lich: his ritual scores every turn until halftime, and his skeletons ward him while 3 or more stand. Break the ward (fire and holy kills stay down; weapon kills leave bone piles that rise again), close the graves that keep raising skeletons, and take him down to break the ritual, though he rises again as a Wraith while his phylactery stands. Or fight his creations and face the Lich after halftime.',
     ],
     ['Timeouts', 'Two per game. A timeout takes back your last possession.'],
     ['Halftime', 'A box score, the horde’s adjustment, and up to two changes to your playbook. Fallen heroes return.'],

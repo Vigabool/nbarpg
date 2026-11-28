@@ -726,3 +726,26 @@ Buttons, numbers and rules stay the same in both. It's stored per browser, like 
     - The Goblin Horde is unchanged.
     - Sample week, Crypt: expert 62–37 and 62–48, smart 60–53 and 60–64.
     - Off night with Holy Chain: 63–50 and 63–58.
+- **The Crypt reworked: the Necromancer's transformation (Nov 28).** The encounter now tells one story. The Necromancer is turning himself into a Lich, and the heroes either stop the ritual before halftime or face the Lich after it.
+  - **The ritual:** scores a flat 2 each enemy turn until halftime (`ritualClock`), 1 more while the Wight stands (Unholy Vigor, `vigor`). The Warrior guarding the circle halves it. There's no meter and no crowd scaling, so it can't run away. The circle limit, `ritualStep`, the meter's settings and the setbacks for destroying the dead are gone.
+  - **The ward:** the Necromancer never attacks, and he can't be hit while 3 or more skeletons stand (`wardMin`). Bone piles don't count, and neither do skeletons Strip the Ball pinned (they're out for the next possession), so fire, holy kills and the Rogue open the way.
+    - The skeletons all stand guard from the start: 1 per 60 opposing points (`skeletonPer`), about 9.
+    - Each open grave raises one more every enemy turn while the ritual lasts, so closing the graves comes first.
+    - The board shows "🛡 Warded (n)", and the Necromancer can't be picked as a target while warded.
+  - **Stopping the ritual:** take him down before halftime for a bounty (+3, `necroBounty`). The ritual breaks and the graves go quiet. His soul flees into the phylactery and he rises next possession as the **Wraith**: Intangible, a hitter. Destroyed, it re-forms 2 possessions later at half HP (`wraithReform`) while the phylactery stands.
+  - **The Lich:** a Necromancer still standing at halftime becomes the Lich. It has a Death Bolt every turn (1.5× its hit to the lowest-HP hero, ignoring Armor), 2.5× the boss's HP (`lichHp`; one Backstab was killing it before it ever acted), and it's worth 12 (`lichPoints`).
+  - **The phylactery:** on the field from the start, holy damage only, 30 HP, worth 4. While it stands the Lich takes half damage and the Wraith keeps re-forming.
+  - **The cast:** the Wraith's old Champion slot (the steals leader) is now the **Ghoul**, whose Paralyzing Claws take a touch, the old Enervate. The weakest of the Necromancer's creations is there from the start, the rest arrive in Q2, and no new skeletons arrive in waves.
+  - **Suggested plays:** the Crypt's are Critical Taunt, Kick Out, Shut It Down and Twin Smite (`CRYPT_PLAYBOOK`), because the general ones have no holy damage to close a grave.
+  - **Plans** (smart bot on 32 built rosters, Normal / Hard; expert bot in brackets):
+
+    | Plan | Margin | Notes |
+    | --- | --- | --- |
+    | Stop the Ritual (Critical Taunt, Kick Out, Shut It Down, Twin Smite) | +17.8 / +6.4 (+25.9 / +16.7) | Breaks the ritual in 34% of games |
+    | Face the Lich (Critical Taunt, Crack the Shell, Spread the Floor, Light the Way) | +12.0 / +1.3 (+20.0 / +13.4) | Never breaks it |
+    | Fire Volume (no holy) | +9.2 / −3.8 (+24.2 / +12.8) | |
+    | The general default playbook | +6.6 / −7.0 | No holy damage |
+
+    Close games run 20–52%.
+  - **Sample week:** expert 64–44 and 64–55, smart 55–48 and 55–58. With a cold Wizard, the smart bot loses 49–60 and 49–72.
+  - **Tuning path:** a guard of 17 never broke (the graves refill it), so the guard went to about 9. Lich HP ×2.5 and the clock at 2 kept both paths viable. A bounty of 3 instead of 6 narrowed the gap between them.

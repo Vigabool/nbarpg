@@ -622,25 +622,25 @@ export const PLANS: { id: string; encounter: Encounter; name: string; idea: stri
     playbook: ['kick-out', 'frost-bolt', 'light-the-way', 'twin-smite'],
   },
   {
+    id: 'cr-stop',
+    encounter: 'crypt',
+    name: 'Stop the Ritual',
+    idea: 'Twin Smite closes the graves and Kick Out burns the guard down; once fewer than 3 skeletons stand, Critical Taunt takes the Necromancer before halftime.',
+    playbook: ['critical-taunt', 'kick-out', 'shut-it-down', 'twin-smite'],
+  },
+  {
+    id: 'cr-lich',
+    encounter: 'crypt',
+    name: 'Face the Lich',
+    idea: 'Leave the ritual running: Light the Way’s Blessed Aimed Shots take the lieutenants and the phylactery, then Critical Taunt brings down the Lich.',
+    playbook: ['critical-taunt', 'crack-the-shell', 'spread-the-floor', 'light-the-way'],
+  },
+  {
     id: 'cr-fire',
     encounter: 'crypt',
     name: 'Fire Volume',
-    idea: 'The shooter carries it: Fireball and Flurry keep the Ritual starved, Critical Taunt takes the Champions.',
+    idea: 'No holy damage: Fireball and Flurry burn the guard down, but the graves stay open, so the Necromancer is hard to reach.',
     playbook: ['critical-taunt', 'kick-out', 'shut-it-down', 'spread-the-floor'],
-  },
-  {
-    id: 'cr-holy',
-    encounter: 'crypt',
-    name: 'Holy Chain',
-    idea: 'The Cleric carries it: Smite arcs and Blessed Flurries make the dead stay down. No Fireball.',
-    playbook: ['critical-taunt', 'shut-it-down', 'twin-smite', 'holy-flurry'],
-  },
-  {
-    id: 'cr-champs',
-    encounter: 'crypt',
-    name: 'Champion Race',
-    idea: 'Double Team and Pick and Pop pile damage on the Champions; one Fireball play keeps the Ritual in reach.',
-    playbook: ['critical-taunt', 'kick-out', 'pick-and-pop', 'double-team'],
   },
 ];
 /** A move's action as this encounter plays it (the Crypt adds holy and fire). */
@@ -657,9 +657,13 @@ export function buffShort(m: Move, encounter?: string): string {
   return base;
 }
 export const DEFAULT_PLAYBOOK = ['critical-taunt', 'kick-out', 'frost-bolt', 'spread-the-floor'];
+/** The Crypt's suggested plays: it needs holy damage (Twin Smite) to close the graves. */
+export const CRYPT_PLAYBOOK = ['critical-taunt', 'kick-out', 'shut-it-down', 'twin-smite'];
+export const suggestedPlaybook = (encounter?: string) => (encounter === 'crypt' ? CRYPT_PLAYBOOK : DEFAULT_PLAYBOOK);
 
 /** The Goblin Horde's playbook, in priority order. */
-export type EnemyKind = 'goblin' | 'shaman' | 'hexer' | 'sharpshooter' | 'cutthroat' | 'ogre' | 'chieftain' | 'wagon' | 'lich' | 'phylactery' | 'grave';
+export type EnemyKind =
+  'goblin' | 'shaman' | 'hexer' | 'sharpshooter' | 'cutthroat' | 'ogre' | 'chieftain' | 'wagon' | 'lich' | 'phylactery' | 'grave' | 'wraith';
 /** The encounters this prototype can play. */
 export type Encounter = 'goblin-horde' | 'crypt';
 export type EnemyInfo = { name: string; icon: string; mirrors?: string; job: string };
@@ -702,6 +706,7 @@ export const ENEMY_INFO: Record<EnemyKind, EnemyInfo> = {
   },
   wagon: { name: 'Loot wagon', icon: '📦', job: 'A treasure chest: 3 points and 5 gold when broken. Armor 2. No bucket for hitting it.' },
   lich: { name: 'Lich', icon: '☠️', mirrors: 'best opposing performance', job: 'The Crypt’s boss.' },
+  wraith: { name: 'Wraith', icon: '👻', job: 'The Crypt’s Necromancer after an early takedown.' },
   phylactery: { name: 'Phylactery', icon: '⚱️', job: 'The Lich’s soul jar.' },
   grave: { name: 'Open grave', icon: '🪦', job: 'Raises a skeleton each quarter.' },
 };
@@ -711,19 +716,19 @@ export const CRYPT_INFO: Partial<Record<EnemyKind, EnemyInfo>> = {
   goblin: {
     name: 'Skeleton',
     icon: '💀',
-    job: 'Feeds the Ritual: each skeleton (and each bone pile) adds 1 a turn. Restless: a weapon kill leaves a bone pile that rises next possession with half its HP; fire or a Blessed finisher destroys it for good, and only then does it score.',
+    job: 'Guards the Necromancer: while 3 or more skeletons stand, he can’t be hit. Restless: a weapon kill leaves a bone pile that rises next possession with half its HP; fire or a Blessed finisher destroys it for good, and only then does it score.',
   },
   shaman: {
     name: 'Wight',
     icon: '🧟',
     mirrors: 'assists leader',
-    job: 'Unholy Vigor (automatic): the Ritual gains 2 more each turn while it stands. On an enemy turn with bone piles on the floor, it casts Raise Dead: every pile rises at once, at the HP it had before it crumbled.',
+    job: 'Unholy Vigor (automatic): the ritual scores 1 more each turn while it stands. On an enemy turn with bone piles on the floor, it casts Raise Dead: every pile rises at once, at the HP it had before it crumbled.',
   },
   hexer: {
     name: 'Necromancer',
     icon: '🧙',
     mirrors: 'top scorer',
-    job: 'Setup: Enervate drains a touch from a hero (and its Quick) and adds 2 to the next hit. Taking it down sets the Ritual back 3.',
+    job: 'Works the ritual and never attacks. Warded while 3 or more skeletons stand. Take him down before halftime and the ritual breaks (a bounty); his soul flees into the phylactery and he rises as a Wraith. Still standing at halftime, he becomes the Lich.',
   },
   sharpshooter: {
     name: 'Skeletal Archer',
@@ -732,10 +737,10 @@ export const CRYPT_INFO: Partial<Record<EnemyKind, EnemyInfo>> = {
     job: 'Ranged finisher. Quick: the first hit on it each possession misses.',
   },
   cutthroat: {
-    name: 'Wraith',
-    icon: '👻',
+    name: 'Ghoul',
+    icon: '🦴',
     mirrors: 'steals leader',
-    job: 'Intangible: only Wizard spells and Blessed hits touch it, and the first one makes it solid for the possession; other hits pass through it.',
+    job: 'Setup: Paralyzing Claws take a touch from a hero (and its Quick) and add 2 to the next hit.',
   },
   ogre: {
     name: 'Bone Knight',
@@ -747,12 +752,22 @@ export const CRYPT_INFO: Partial<Record<EnemyKind, EnemyInfo>> = {
     name: 'Lich',
     icon: '☠️',
     mirrors: 'best opposing performance',
-    job: 'The boss. Arrives in Q3, or early if the Ritual completes first. Death Bolt every other enemy turn: 1.5× damage to the lowest-HP hero, ignoring Armor.',
+    job: 'The Necromancer, transformed at halftime if he was still standing. Death Bolt every enemy turn: 1.5× damage to the lowest-HP hero, ignoring Armor. Takes half damage while the phylactery stands.',
+  },
+  wraith: {
+    name: 'Wraith',
+    icon: '👻',
+    job: 'What’s left of the Necromancer after an early takedown. Intangible: only Wizard spells and holy hits touch it, and the first one makes it solid for the possession. Destroyed, it re-forms 2 possessions later at half HP while the phylactery stands.',
+  },
+  phylactery: {
+    name: 'Phylactery',
+    icon: '⚱️',
+    job: 'Holds the Necromancer’s soul. Only holy damage touches it. While it stands the Lich takes half damage and the Wraith keeps re-forming. Breaking it scores.',
   },
   grave: {
     name: 'Open grave',
     icon: '🪦',
-    job: 'Raises a skeleton at the start of each quarter. Only holy damage (a Blessed finisher or a Cleric hit) consecrates it, closing it for good: +3.',
+    job: 'Raises a skeleton every enemy turn while the ritual lasts. Only holy damage (a Blessed finisher or a Cleric hit) consecrates it, closing it for good: +3.',
   },
 };
 
@@ -761,10 +776,10 @@ export const CRYPT_INFO: Partial<Record<EnemyKind, EnemyInfo>> = {
 export function defenseText(cls: Cls, encounter: Encounter = 'goblin-horde'): string {
   const crypt = encounter === 'crypt';
   if (cls === 'warrior')
-    return `Gives one ally Armor against the horde’s hit (with Close Out, usually a stop), or ${crypt ? 'guards the circle (halves the Ritual’s growth)' : 'braces the gate (halves the ram)'}.`;
+    return `Gives one ally Armor against the horde’s hit (with Close Out, usually a stop), or ${crypt ? 'guards the circle (halves what the ritual scores)' : 'braces the gate (halves the ram)'}.`;
   if (cls === 'rogue')
     return `${
-      crypt ? 'Pins a skeleton away from the Ritual so it doesn’t feed it this turn' : 'Knocks the ball loose from a goblin on the ram'
+      crypt ? 'Pins a skeleton so it doesn’t guard the Necromancer next possession' : 'Knocks the ball loose from a goblin on the ram'
     } (two at Elite), or Steals from a Champion that’s Slowed or Exposed: a stop.`;
   return CLASS_INFO[cls].defenseText;
 }
@@ -843,8 +858,8 @@ export const CRYPT_PLAYS: HordePlay[] = [
     when: 'a hero destroyed 2 or more of the dead for good last possession',
     target: 'disruptor',
     steps: [
-      { actors: ['hexer'], kind: 'enervate' },
-      { actors: ['cutthroat', 'sharpshooter', 'ogre'], kind: 'hit' },
+      { actors: ['cutthroat'], kind: 'enervate', optional: true },
+      { actors: ['sharpshooter', 'ogre', 'wraith', 'cutthroat'], kind: 'hit' },
     ],
   },
   {
@@ -854,8 +869,8 @@ export const CRYPT_PLAYS: HordePlay[] = [
     when: 'the Cleric healed 10 or more last possession',
     target: 'cleric',
     steps: [
-      { actors: ['hexer'], kind: 'enervate' },
-      { actors: ['sharpshooter', 'cutthroat'], kind: 'hit' },
+      { actors: ['cutthroat'], kind: 'enervate', optional: true },
+      { actors: ['sharpshooter', 'wraith', 'cutthroat'], kind: 'hit' },
     ],
   },
   {
@@ -865,19 +880,19 @@ export const CRYPT_PLAYS: HordePlay[] = [
     when: 'a hero is below a third of their HP',
     target: 'wounded',
     steps: [
-      { actors: ['lich', 'hexer'], kind: 'command', optional: true },
+      { actors: ['lich'], kind: 'command', optional: true },
       { actors: ['ogre'], kind: 'toss' },
     ],
   },
   {
     id: 'pound',
     short: 'default',
-    name: 'Feed the Ritual',
+    name: 'Grave Assault',
     when: 'otherwise',
     target: 'lowest',
     steps: [
       { actors: ['lich'], kind: 'command', optional: true },
-      { actors: ['ogre', 'cutthroat', 'sharpshooter', 'hexer'], kind: 'hit' },
+      { actors: ['ogre', 'sharpshooter', 'wraith', 'cutthroat'], kind: 'hit' },
     ],
   },
 ];

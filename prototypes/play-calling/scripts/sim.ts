@@ -4,7 +4,7 @@
  * A cold night for one hero on the sample week: OFFNIGHT=wizard (with or without ENC=crypt).
  * Rosters a player might build (auto-draft, suggested heroes, Smart pick) for the first N weeks: ROSTERS=6 npx tsx …/sim.ts
  */
-import { DEFAULT_PLAYBOOK, PLANS, TEMPLATES, type Play } from '../src/content';
+import { PLANS, TEMPLATES, suggestedPlaybook, type Play } from '../src/content';
 import {
   DEFAULT_TUNING,
   activeHeroes,
@@ -32,7 +32,7 @@ const plan = process.env.STRATEGY ? PLANS.find((p) => p.id === process.env.STRAT
 if (process.env.STRATEGY && !plan) throw new Error(`No plan ${process.env.STRATEGY}`);
 // PLAYBOOK=a,b,c,d tries a playbook that isn't a plan yet.
 const custom = process.env.PLAYBOOK?.split(',');
-const book: Play[] = (custom ?? plan?.playbook ?? DEFAULT_PLAYBOOK).map((id) => TEMPLATES.find((t) => t.id === id)!);
+const book: Play[] = (custom ?? plan?.playbook ?? suggestedPlaybook(process.env.ENC)).map((id) => TEMPLATES.find((t) => t.id === id)!);
 /** The expert bot's book: every saved play (or the plan's), plus each hero's Iso. */
 const fullBook: Play[] = [...(plan || custom ? book : TEMPLATES), ...CLASSES.map(isoPlay)];
 
@@ -168,7 +168,7 @@ if (process.env.ROSTERS) {
         const sm = play(difficulty, 'smart', 1);
         if (process.env.DEBUG)
           console.log(
-            `  ${difficulty} expert horde ${JSON.stringify(e.stats.horde)} ritual ${JSON.stringify(e.ritual)} party ${JSON.stringify(e.stats.party)} | smart horde ${JSON.stringify(sm.stats.horde)} ritual fills ${sm.ritual.fills}`,
+            `  ${difficulty} expert horde ${JSON.stringify(e.stats.horde)} ritual ${JSON.stringify(e.ritual)} party ${JSON.stringify(e.stats.party)} | smart horde ${JSON.stringify(sm.stats.horde)} ritual ${sm.ritual.phase}`,
           );
         totals[difficulty][0] += e.party - e.horde;
         totals[difficulty][1] += sm.party - sm.horde;
