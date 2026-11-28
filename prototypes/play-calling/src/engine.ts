@@ -33,6 +33,8 @@ export interface Tuning {
   usagePerTouch: number;
   hordeDamage: number;
   championHp: number;
+  /** Hard: Champions' HP and damage ×. */
+  hardMult: number;
   hordeHitPoints: number;
   /** Help Defense: Protect's Armor before the Warrior's defense tier. Alone it never stops a full hit. */
   protectArmor: number;
@@ -54,7 +56,7 @@ export interface Tuning {
   skeletonPer: number;
 }
 export const DEFAULT_TUNING: Tuning = {
-  gateHp: 70,
+  gateHp: 60,
   goblinHp: 9,
   shotPoints: 2,
   championPoints: 4,
@@ -63,7 +65,8 @@ export const DEFAULT_TUNING: Tuning = {
   // A drafted lineup's picked games total about 136 true usage (median over weeks 1–20 and all four draft modes), so 3.8 gives about 36 touches.
   usagePerTouch: 3.8,
   hordeDamage: 1,
-  championHp: 1.25,
+  championHp: 1.45,
+  hardMult: 1.12,
   hordeHitPoints: 2,
   protectArmor: 8,
   wardArmor: 8,
@@ -72,7 +75,7 @@ export const DEFAULT_TUNING: Tuning = {
   ritualMax: 22,
   ritualPer: 2,
   ritualFill: 8,
-  skeletonPer: 37,
+  skeletonPer: 35,
 };
 export type Difficulty = 'normal' | 'hard';
 
@@ -327,7 +330,7 @@ export function newGame(tuning: Tuning = DEFAULT_TUNING, difficulty: Difficulty 
       lastStand: false,
     };
   }
-  const mult = difficulty === 'normal' ? 1 : 1.12;
+  const mult = difficulty === 'normal' ? 1 : tuning.hardMult;
   let id = 1;
   const champs = week.champions.map((c) => {
     const kind = ROLE_OF[c.kind];

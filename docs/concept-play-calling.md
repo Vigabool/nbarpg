@@ -640,3 +640,29 @@ Buttons, numbers and rules stay the same in both. It's stored per browser, like 
     | Crypt | Champion Race | +23.3 / +7.7 (+33.1 / +22.2) |
 
     Holy Chain gained the most (+9 and +7), because its Wizard is off the ball most possessions. Both encounters are now clearly too easy and need a difficulty re-tune.
+- **Difficulty re-tuned (Nov 28).** Target: the smart bot with the default playbook about +12 on Normal and +2 on Hard on the 32 built rosters, as at the last calibration, with the expert bot still winning most games. Horde damage stays as it is, so stop rates hold.
+  - Champion HP alone (×1.5) hit that target but squeezed out the books without Critical Taunt: Clear the Ram fell to +8.2 / −15.9. So the tuning splits the pressure between Champion HP and each objective:
+    - Champion HP ×1.45 (was 1.25).
+    - Gate HP 60 (was 70).
+    - In the Crypt, 1 skeleton per 35 opposing points (was 37).
+    - Hard stays at ×1.12 on Champions, now `hardMult` in the tuning.
+    - `TUNING_VERSION` 6.
+  - **Results** (Normal / Hard; expert bot in brackets):
+
+    | Encounter | Plan | Smart bot | Expert bot |
+    | --- | --- | --- | --- |
+    | Goblin Horde | Default book | +12.6 / +0.8 | +32.1 / +16.7 |
+    | Goblin Horde | Hunt Champions | +18.5 / +6.3 | +27.9 / +12.7 |
+    | Goblin Horde | Clear the Ram | +10.1 / −7.3 | +17.3 / +1.8 |
+    | Goblin Horde | Lockdown | −10.3 / −18.7 | +1.7 / −6.5 |
+    | Crypt | Default book | +18.0 / −3.8 | +36.3 / +23.7 |
+    | Crypt | Holy Chain | +22.8 / +3.7 | +30.1 / +14.7 |
+    | Crypt | Fire Volume | +17.0 / −4.1 | +27.6 / +16.2 |
+    | Crypt | Champion Race | +15.9 / −6.7 | +27.1 / +15.8 |
+  - **Sample week:**
+    - Goblin Horde: expert 65–34 and 58–38, smart 63–49 and 58–44.
+    - Crypt: expert 62–18 and 56–66, smart 55–38 and 52–81.
+  - **Off night** (cold Wizard):
+    - Goblin Horde, smart bot: 50–43 on Normal, 52–78 on Hard.
+    - Crypt, default book: 52–56 and 50–126. The Ritual runs away, the open item in the backlog.
+    - Crypt, Holy Chain: 62–33 and 56–42, so Holy Chain is still the answer to a cold shooter.
