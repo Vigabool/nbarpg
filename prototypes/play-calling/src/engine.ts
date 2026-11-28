@@ -62,6 +62,10 @@ export interface Tuning {
   ritualFill: number;
   /** The Crypt raises 1 skeleton per this many opposing points. */
   skeletonPer: number;
+  /** Test: at most this many dead feed the Ritual at once (0 = no limit). */
+  ritualCap?: number;
+  /** Test: each completion raises the next one's threshold by this much. */
+  ritualStep?: number;
 }
 export const DEFAULT_TUNING: Tuning = {
   gateHp: 70,
@@ -544,7 +548,10 @@ export function ritualGain(g: Game, feeders: number, boost = 0): number {
   return feeders + (wight(g) ? 1 : 0) + boost + g.ramBonus;
 }
 /** Skeletons and bone piles feeding the Ritual (pinned skeletons don't). */
-export const ritualFeeders = (g: Game) => pushing(g).length + piles(g).length;
+export const ritualFeeders = (g: Game) => {
+  const n = pushing(g).length + piles(g).length;
+  return g.tuning.ritualCap ? Math.min(n, g.tuning.ritualCap) : n;
+};
 /** Whether the Wight will cast Raise Dead (it needs bone piles on the floor). */
 export const wightCast = (g: Game): 'raise' | null => (wight(g) && piles(g).length ? 'raise' : null);
 export const skeletonsStand = (g: Game) => onField(g).some((e) => e.kind === 'goblin');
@@ -1763,6 +1770,7 @@ function ritualTurn(g: Game, off: Set<Cls>, defense: Defense, boost: number, fra
   if (r.value >= r.max) {
     r.value = 0;
     r.fills += 1;
+    if (g.tuning.ritualStep) r.max += g.tuning.ritualStep;
     pts += g.tuning.ritualFill;
     const lich = g.enemies.find((e) => e.kind === 'lich');
     if (lich && !lich.arrived) {
