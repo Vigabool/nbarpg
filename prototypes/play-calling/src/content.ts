@@ -95,6 +95,10 @@ export interface Move {
   action: string;
   enablerText?: string;
   note?: string;
+  /** The action in the Crypt, where it does more (holy or fire against the dead). */
+  cryptAction?: string;
+  /** The pass in the Crypt, when it differs. */
+  cryptEnabler?: string;
 }
 
 const M = (m: Move) => m;
@@ -199,8 +203,11 @@ export const MOVES: Move[] = [
     kind: 'enabler',
     targets: 'none',
     enabler: { kind: 'guided' },
-    action: 'lights a lane through the defense',
-    enablerText: 'Guided (ignores Taunt; in the Crypt, Blessed too)',
+    action: 'lights a lane: the finisher it passes to ignores Taunt',
+    cryptAction:
+      'lights a lane: the finisher it passes to ignores Taunt and is Blessed (its hits are holy: ×1.5 against the dead, and the dead it kills stay down)',
+    enablerText: 'Guided (ignores Taunt)',
+    cryptEnabler: 'Guided and Blessed (ignores Taunt; its hits are holy)',
     note: 'The answer to a Taunting big: the finisher hits whoever you aim at.',
   }),
   M({
@@ -214,7 +221,9 @@ export const MOVES: Move[] = [
     effect: 'healAlly',
     amount: 5,
     action: '9 damage that Pierces, and heals the most injured hero 5',
-    note: 'With Split it hits a second enemy and heals a second hero. In the Crypt it is holy: ×1.5 against the dead, and each kill arcs to the next skeleton (up to 3 kills).',
+    cryptAction:
+      '9 holy damage that Pierces (×1.5 against the dead), and heals the most injured hero 5. Each kill arcs to the next skeleton, up to 3 kills, and the dead it kills stay down',
+    note: 'With Split it hits a second enemy and heals a second hero.',
   }),
   M({
     id: 'sanctuary',
@@ -225,6 +234,7 @@ export const MOVES: Move[] = [
     targets: 'primary',
     effect: 'sanctuary',
     action: '8 damage; for this and the next enemy turn the horde’s objective is frozen and every hero has Armor +3',
+    cryptAction: '8 holy damage (×1.5 against the dead); for this and the next enemy turn the Ritual is frozen and every hero has Armor +3',
     note: 'Two possessions to go all in on offense: put your defenders in the play.',
   }),
   M({
@@ -236,6 +246,7 @@ export const MOVES: Move[] = [
     targets: 'primary',
     effect: 'revive',
     action: '8 damage, and fallen heroes return at full HP',
+    cryptAction: '8 holy damage (×1.5 against the dead), and fallen heroes return at full HP',
   }),
   // Rogue
   M({
@@ -340,6 +351,7 @@ export const MOVES: Move[] = [
     targets: 'multi',
     count: 3,
     action: '8 damage to each of up to three enemies',
+    cryptAction: '8 fire damage to each of up to three enemies: the dead it kills stay down',
   }),
   M({
     id: 'lightning',
@@ -361,7 +373,17 @@ export const MOVES: Move[] = [
     sure: true,
     action: '10 damage to every enemy, Sure',
   }),
-  M({ id: 'meteor', cls: 'wizard', name: 'Meteor', kind: 'legendary', damage: 20, targets: 'all', sure: true, action: '20 damage to every enemy, Sure' }),
+  M({
+    id: 'meteor',
+    cls: 'wizard',
+    name: 'Meteor',
+    kind: 'legendary',
+    damage: 20,
+    targets: 'all',
+    sure: true,
+    action: '20 damage to every enemy, Sure',
+    cryptAction: '20 fire damage to every enemy, Sure: the dead it kills stay down',
+  }),
   // Ranger
   M({
     id: 'mark',
@@ -621,6 +643,19 @@ export const PLANS: { id: string; encounter: Encounter; name: string; idea: stri
     playbook: ['critical-taunt', 'kick-out', 'pick-and-pop', 'double-team'],
   },
 ];
+/** A move's action as this encounter plays it (the Crypt adds holy and fire). */
+export const moveAction = (m: Move, encounter?: string) => (encounter === 'crypt' && m.cryptAction) || m.action;
+/** A move's pass as this encounter plays it. */
+export const moveEnabler = (m: Move, encounter?: string) => (encounter === 'crypt' && m.cryptEnabler) || m.enablerText;
+/** A pass in a word or two, for move cards: Split + Quick for Spacing, Guided + Blessed in the Crypt. */
+export function buffShort(m: Move, encounter?: string): string {
+  if (!m.enabler) return '';
+  if (m.enabler.kind === 'armor') return 'Armor';
+  const base = (m.enablerText ?? '').split(' (')[0];
+  if (m.enabler.quick) return `${base} + Quick`;
+  if (m.enabler.kind === 'guided' && encounter === 'crypt') return 'Guided + Blessed';
+  return base;
+}
 export const DEFAULT_PLAYBOOK = ['critical-taunt', 'kick-out', 'frost-bolt', 'spread-the-floor'];
 
 /** The Goblin Horde's playbook, in priority order. */

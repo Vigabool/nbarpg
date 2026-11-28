@@ -19,6 +19,9 @@ import {
   type Play,
   type PlayStep,
   type Tier,
+  moveAction,
+  moveEnabler,
+  buffShort,
 } from './content';
 import {
   DEFAULT_TUNING,
@@ -1084,7 +1087,7 @@ function BuilderSheet(props: {
     if (i === 3) return st.picks?.length ? `→ ${st.picks.map(name).join(', ')}` : st.target ? `→ ${name(st.target)}` : 'pick a target';
     return st.target ? `→ ${name(st.target)}` : '→ finisher’s target';
   };
-  const buffText = (m: Move) => (m.enabler ? (m.enabler.kind === 'armor' ? 'Armor' : m.enablerText?.split(' (')[0]) : '');
+  const buffText = (m: Move) => buffShort(m, g.encounter);
   const off = defenders(g, new Set(slots.filter((s): s is BuildStep => !!s).map((s) => s.cls)));
   const roleText = (c: Cls) => {
     const d = props.defense;
@@ -1218,7 +1221,7 @@ function BuilderSheet(props: {
                       )}
                     </span>
                     <span className="small">
-                      <Rich>{m.action}</Rich>
+                      <Rich>{moveAction(m, getWeek().encounter)}</Rich>
                     </span>
                     {used && <span className="small err">used this game</span>}
                   </button>
@@ -1751,7 +1754,7 @@ function PlaySlot(props: { play: Play; open: boolean; onToggle: () => void; onCh
                 Step {step! + 1} · {CLASS_INFO[s.cls].name} ({lastName(hero.player)}) · {m.name}
               </strong>
               <span>
-                <b>Action:</b> <Rich>{m.action}</Rich>.
+                <b>Action:</b> <Rich>{moveAction(m, getWeek().encounter)}</Rich>.
               </span>
               {isFinisher(m) ? (
                 <span>
@@ -1759,7 +1762,7 @@ function PlaySlot(props: { play: Play; open: boolean; onToggle: () => void; onCh
                 </span>
               ) : (
                 <span>
-                  <b>Pass to the {CLASS_INFO[next!.cls].name}:</b> <Rich>{m.enablerText}</Rich>.{' '}
+                  <b>Pass to the {CLASS_INFO[next!.cls].name}:</b> <Rich>{moveEnabler(m, getWeek().encounter)}</Rich>.{' '}
                   {passHelps(m, nextMove) ? <span className="ok">✓ boosts {nextMove?.name}</span> : <span className="err">– wasted on {nextMove?.name}</span>}
                 </span>
               )}
@@ -2717,9 +2720,9 @@ function ReplayBody(props: { replay: Replay; beats: Beat[]; beat: number }) {
                         <Rich>{put.f.result}</Rich>
                       </span>
                     )}
-                    {next && mv.enablerText && (
+                    {next && moveEnabler(mv, getWeek().encounter) && (
                       <span className="sc-pass">
-                        → <Rich>{mv.enablerText}</Rich> to the {CLASS_INFO[next.cls].name}
+                        → <Rich>{moveEnabler(mv, getWeek().encounter)}</Rich> to the {CLASS_INFO[next.cls].name}
                       </span>
                     )}
                     {(kos > 0 || pts > 0) && (
@@ -3267,7 +3270,7 @@ function Designer(props: { tuning: Tuning; difficulty: Difficulty; initial?: Pla
   };
   const inOther = (c: Cls, i: number) => slots.some((x, j) => j !== i && x?.cls === c);
   const finMove = finisher ? MOVE[finisher.move] : undefined;
-  const buffLabel = (m: Move) => (m.enabler ? (m.enabler.kind === 'armor' ? 'Armor' : (m.enablerText?.split(' (')[0] ?? '')) : '');
+  const buffLabel = (m: Move) => buffShort(m, getWeek().encounter);
 
   // Preview against one enemy, with the whole horde on the floor (so Taunt and Block are up; the Barrier is left down).
   const preview = useMemo(() => {
@@ -3371,7 +3374,7 @@ function Designer(props: { tuning: Tuning; difficulty: Difficulty; initial?: Pla
                     )}
                   </span>
                   <span className="small">
-                    <Rich>{m.action}</Rich>
+                    <Rich>{moveAction(m, getWeek().encounter)}</Rich>
                   </span>
                 </button>
               ))}
@@ -3388,7 +3391,7 @@ function Designer(props: { tuning: Tuning; difficulty: Difficulty; initial?: Pla
             const helps = passHelps(m, finMove);
             return (
               <span key={i} className="small">
-                {CLASS_INFO[st.cls].icon} {m.name}: <Rich>{m.enablerText ?? 'no buff'}</Rich>{' '}
+                {CLASS_INFO[st.cls].icon} {m.name}: <Rich>{moveEnabler(m, getWeek().encounter) ?? 'no buff'}</Rich>{' '}
                 {!finMove ? (
                   <span className="muted">(add a finisher)</span>
                 ) : helps ? (
@@ -3641,11 +3644,11 @@ function HeroDetail(props: { game: Game; cls: Cls; onClose: () => void }) {
               </span>
             )}
             <span className="small">
-              <Rich>{m.action}</Rich>
-              {m.enablerText ? (
+              <Rich>{moveAction(m, getWeek().encounter)}</Rich>
+              {moveEnabler(m, getWeek().encounter) ? (
                 <>
                   {' '}
-                  · pass: <Rich>{m.enablerText}</Rich>
+                  · pass: <Rich>{moveEnabler(m, getWeek().encounter)}</Rich>
                 </>
               ) : (
                 ''
